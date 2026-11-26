@@ -1,6 +1,6 @@
 // The record job (record.mjs) against a real git remote (a bare repository on disk) and a stand-in for the GitHub CLI
-// that keeps pull requests in a JSON file and logs every call: the branch, the data files, the table and the link.
-// The workflow never opens, edits or approves a pull request; a maintainer does.
+// that logs every call: the branch, the data files, the table and the link. The job never calls the GitHub CLI at
+// all: it doesn't open, read or approve pull requests (a maintainer opens one), and its link is always the compare page.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -25,20 +25,13 @@ const variant = (model, app = "0.1.0") => {
 };
 const body = (report) => ["### Report", "", "```json", JSON.stringify(report, null, 2), "```", "", "### Notes", "", "_No response_", "", "### Privacy", "", "- [X] This report contains no personal data", ""].join("\n");
 
-// The GitHub CLI: `pr list` answers from the JSON file; anything else is refused. Every call is logged.
+// A GitHub CLI that answers like one with an open pull request from a branch named device-data (a fork can have one),
+// and logs every call, so a test can prove nothing ever asked it.
 const FAKE_GH = `
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 const args = process.argv.slice(2);
 appendFileSync(process.env.FAKE_GH_CALLS, JSON.stringify(args) + "\\n");
-if (process.env.FAKE_GH_FAIL === "1") { console.error("HTTP 403: Resource not accessible by integration"); process.exit(1); }
-const flag = (n) => args[args.indexOf(n) + 1];
-if (args[0] !== "pr" || args[1] !== "list") { console.error("refused: " + args.slice(0, 2).join(" ")); process.exit(1); }
-const prs = JSON.parse(readFileSync(process.env.FAKE_GH_STATE, "utf8"));
-const fields = flag("--json").split(",");
-const out = prs
-  .filter((p) => p.headRefName === flag("--head") && (!args.includes("--base") || p.baseRefName === flag("--base")) && (flag("--state") !== "open" || p.state === "OPEN"))
-  .map((p) => Object.fromEntries(fields.map((f) => [f, p[f]])));
-process.stdout.write(JSON.stringify(out));
+process.stdout.write(JSON.stringify([{ url: "https://github.com/o/r/pull/666", headRefName: "device-data" }]));
 `;
 
 /** A remote with a default branch holding docs/devices.md, a shallow checkout of it, and the stand-in CLI on PATH. */
@@ -59,11 +52,9 @@ function world() {
   writeFileSync(join(bin, "fake-gh.mjs"), FAKE_GH);
   writeFileSync(join(bin, "gh"), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, "fake-gh.mjs")}" "$@"\n`);
   chmodSync(join(bin, "gh"), 0o755);
-  const state = join(root, "prs.json");
-  writeFileSync(state, "[]");
   const calls = join(root, "gh-calls.jsonl");
   writeFileSync(calls, "");
-  const env = { PATH: `${bin}${delimiter}${process.env.PATH}`, FAKE_GH_STATE: state, FAKE_GH_CALLS: calls };
+  const env = { PATH: `${bin}${delimiter}${process.env.PATH}`, FAKE_GH_CALLS: calls };
   const checkout = () => {
     const dir = mkdtempSync(join(root, "checkout-"));
     execFileSync("git", ["clone", "-q", "--depth=1", url, dir], { stdio: "ignore" });
@@ -75,20 +66,18 @@ function world() {
     writeFileSync(p, JSON.stringify({ issue: { number: n, body: body(report) } }));
     return p;
   };
-  /** A maintainer opens the pull request from device-data. */
-  const openPr = (number) => writeFileSync(state, JSON.stringify([{ number, state: "OPEN", headRefName: BRANCH, baseRefName: "main", url: `https://github.com/o/r/pull/${number}` }]));
   const ghCalls = () => readFileSync(calls, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
   const branchFiles = () => {
     const dir = mkdtempSync(join(root, "look-"));
     execFileSync("git", ["clone", "-q", "-b", BRANCH, url, dir], { stdio: "ignore" });
     return { files: readdirSync(join(dir, "data", "devices")).sort(), doc: readFileSync(join(dir, "docs", "devices.md"), "utf8"), log: git(dir, "log", "--format=%s", "origin/main..HEAD") };
   };
-  return { root, seed, url, env, checkout, file, openPr, ghCalls, branchFiles };
+  return { root, seed, url, env, checkout, file, ghCalls, branchFiles };
 }
 
 /** record() with the stand-in CLI on PATH and no waiting between tries. */
-function recordIn(w, issue, report, extraEnv = {}) {
-  const env = { ...w.env, ...extraEnv };
+function recordIn(w, issue, report) {
+  const env = w.env;
   const saved = Object.fromEntries(Object.keys(env).map((k) => [k, process.env[k]]));
   Object.assign(process.env, env);
   try {
@@ -113,7 +102,7 @@ function mergeIntoMain(w, how) {
   git(w.seed, "push", "-q", "origin", "HEAD:main");
 }
 
-test("reports go onto the device-data branch, and the link is the compare page; the workflow never opens a pull request", () => {
+test("reports go onto the device-data branch, and the link is always the compare page; the GitHub CLI is never called", () => {
   const w = world();
   try {
     assert.deepEqual(recordIn(w, 1, GOOD), { changed: true, url: COMPARE });
@@ -124,10 +113,8 @@ test("reports go onto the device-data branch, and the link is the compare page; 
     assert.match(look.doc, /\| Examplecorp EX-1000 \|/);
     assert.match(look.doc, /\| Examplecorp EX-2000 \|/);
     assert.deepEqual(look.log.split("\n"), ["Device report from issue #2", "Device report from issue #1"]);
-    // It only ever reads pull requests: no create, edit, review or merge.
-    const calls = w.ghCalls();
-    assert.ok(calls.length > 0);
-    assert.ok(calls.every((a) => a[0] === "pr" && a[1] === "list"), JSON.stringify(calls));
+    // The GitHub CLI was never called: no pull request is opened, read, edited or approved.
+    assert.deepEqual(w.ghCalls(), []);
     // The same report again (an edit to the notes): nothing new, no commit, no comment.
     assert.deepEqual(recordIn(w, 2, other), { changed: false });
     assert.equal(w.branchFiles().log.split("\n").length, 2);
@@ -136,22 +123,13 @@ test("reports go onto the device-data branch, and the link is the compare page; 
   }
 });
 
-test("once a maintainer has opened the pull request from device-data, the link is that pull request", () => {
+test("an open pull request from any branch named device-data, a fork's included, never becomes the link", () => {
   const w = world();
   try {
-    recordIn(w, 1, GOOD);
-    w.openPr(12);
-    assert.deepEqual(recordIn(w, 2, variant("EX-2000")), { changed: true, url: "https://github.com/o/r/pull/12" });
-  } finally {
-    rmSync(w.root, { recursive: true, force: true });
-  }
-});
-
-test("when pull requests can't be read, the report is still recorded and the link is the compare page", () => {
-  const w = world();
-  try {
-    assert.deepEqual(recordIn(w, 1, GOOD, { FAKE_GH_FAIL: "1" }), { changed: true, url: COMPARE });
-    assert.deepEqual(w.branchFiles().files, [reportFileName(GOOD)]);
+    // The stand-in CLI would answer with a fork's pull request if anything asked it.
+    assert.deepEqual(recordIn(w, 1, GOOD), { changed: true, url: COMPARE });
+    assert.deepEqual(recordIn(w, 2, variant("EX-2000")), { changed: true, url: COMPARE });
+    assert.deepEqual(w.ghCalls(), []);
   } finally {
     rmSync(w.root, { recursive: true, force: true });
   }
@@ -230,7 +208,7 @@ test("a push that loses a race is tried again on top of the winner", () => {
 test("only a valid report from the form is recorded", () => {
   const w = world();
   try {
-    assert.throws(() => recordIn(w, 8, { ...GOOD, serial: "R58M1234ABC" }), /doesn't pass/);
+    assert.throws(() => recordIn(w, 8, { ...GOOD, serial: "TEST-SERIAL-0000" }), /doesn't pass/);
     assert.throws(() => recordIn(w, "8; rm -rf /", GOOD), /not a number/);
   } finally {
     rmSync(w.root, { recursive: true, force: true });

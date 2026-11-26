@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The device-report workflow's record job: adds the report from the issue in the event file to the device-data
-// branch (data/devices and the table in docs/devices.md). It never opens, edits or approves a pull request: a
+// branch (data/devices and the table in docs/devices.md). It never opens, reads, edits or approves a pull request: a
 // maintainer opens one from device-data and merges it. It runs from the default branch's checkout, with that
 // checkout's scripts, and writes only into a worktree of the branch.
 //
@@ -10,8 +10,9 @@
 //
 //   ISSUE=12 BASE=main GITHUB_REPOSITORY=o/r GITHUB_EVENT_PATH=... RUNNER_TEMP=... GITHUB_OUTPUT=... node scripts/devices/record.mjs
 //
-// Appends changed=true|false and url=<link> to GITHUB_OUTPUT: the pull request a maintainer opened from device-data,
-// else the page that compares the branch with the default branch.
+// Appends changed=true|false and url=<link> to GITHUB_OUTPUT. The link is always the page that compares device-data
+// with the default branch, which also shows a maintainer's pull request from it. It never names a pull request: a
+// search by branch name would also match a fork's branch called device-data.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -42,27 +43,15 @@ function reportFrom(eventPath) {
   return found.report;
 }
 
-/**
- * Where the reporter can follow the report: the open pull request a maintainer made from device-data, else the page
- * comparing the branch with the default branch. Reading pull requests is only for this link, so if it fails the
- * compare page stands in.
- */
-function linkFor(repo, base, cwd) {
-  const found = tryRun("gh", ["pr", "list", "--repo", repo, "--head", BRANCH, "--base", base, "--state", "open", "--json", "url", "--limit", "1"], cwd);
-  if (found.ok) {
-    try {
-      const url = JSON.parse(found.out)[0]?.url;
-      if (typeof url === "string" && url.startsWith("https://")) return url;
-    } catch {
-      // Not what gh prints: the compare page below.
-    }
-  }
+/** Where the reporter can follow the report: the page comparing device-data with the default branch. */
+export function compareUrl(repo, base) {
   return `https://github.com/${repo}/compare/${base}...${BRANCH}`;
 }
 
 export function record({ issue, base, repo, eventPath, temp, cwd = process.cwd(), wait = (ms) => execFileSync("sleep", [String(ms / 1000)]) }) {
   if (!/^[0-9]+$/.test(String(issue))) throw new Error("ISSUE is not a number");
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(repo))) throw new Error("GITHUB_REPOSITORY is not owner/name");
+  if (!/^[A-Za-z0-9_./-]+$/.test(String(base))) throw new Error("BASE is not a branch name");
   const number = Number(issue);
   const report = reportFrom(eventPath);
   const data = join(temp, BRANCH);
@@ -98,7 +87,7 @@ export function record({ issue, base, repo, eventPath, temp, cwd = process.cwd()
     if (!pushed && attempt < TRIES) wait(1000 * attempt + Math.floor(Math.random() * 2000));
   }
   if (!pushed) throw new Error(`couldn't push ${BRANCH} after ${TRIES} tries`);
-  return { changed: true, url: linkFor(repo, base, cwd) };
+  return { changed: true, url: compareUrl(repo, base) };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

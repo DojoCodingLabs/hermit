@@ -3,8 +3,9 @@ name: Device report
 # Issue ops for the Device lab (docs/devices.md). A device report filed with the issue form is checked against
 # docs/devices/schema.json and the privacy rules; when it passes, it goes into data/devices and the device table on the
 # device-data branch, and the issue gets a thank-you with the link. A maintainer opens a pull request from device-data
-# and merges it: this workflow never opens, edits or approves a pull request. When the report doesn't pass, a comment
-# says what is wrong, and editing the issue runs the check again.
+# and merges it: this workflow never opens, reads, edits or approves a pull request, and its link is always the page
+# comparing device-data with the default branch. When the report doesn't pass, a comment says what is wrong, and
+# editing the issue runs the check again.
 #
 # Nothing from the issue is ever run. scripts/devices/validate.mjs reads the issue from the event file as data and
 # parses the report with JSON.parse; the issue's text never goes into a command. The only value from the event that
@@ -60,7 +61,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write # push the device-data branch
-      pull-requests: read # link the pull request a maintainer opened from device-data, if there is one
       issues: write # thank the reporter, with the link
     steps:
       # The default branch, with credentials kept for the push. Nothing from the issue is checked out.
@@ -71,7 +71,6 @@ jobs:
       - name: Write the report and the table on the device-data branch
         id: record
         env:
-          GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
           BASE: ${{ github.event.repository.default_branch }}
         run: node scripts/devices/record.mjs

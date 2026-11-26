@@ -1,0 +1,107 @@
+name: Bug report
+description: Something in Hermit doesn't work the way it should.
+title: "Bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Two things before you start:
+
+        - **Security problems don't go here.** Report them privately: see the [security policy](https://github.com/DojoCodingLabs/hermit/security/policy).
+        - **Leave out personal data.** No real names, phone numbers, messages, mail or screenshots of your chats. Describe them, or use made-up examples.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you saw. Quote the exact text on the screen if there was any.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that shows the bug, with made-up data.
+      placeholder: |
+        1. Open the chat in airplane mode.
+        2. Ask "remind me to call Ana at 9 PM".
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Chat
+        - Memory
+        - Reminders and calendar
+        - Messages
+        - Email
+        - Approvals and the cage
+        - Activity log
+        - Web reading and web tasks
+        - Night shift
+        - Connectors
+        - Vault, forms and logins
+        - Wallet (testnet)
+        - Settings and privacy
+        - Model download, speed or answers
+        - Build, setup or tests
+        - Website
+        - Docs
+        - Something else
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options:
+        - On an Android phone
+        - On my computer (tests, evals or a build)
+        - On the website
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Phone and Android version
+      description: Only if it happened on a phone.
+      placeholder: "Pixel 8, Android 15"
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      description: The output of `git rev-parse --short HEAD`, or the version on the About screen.
+      placeholder: "1a2b3c4"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste only what matters, with personal data removed.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send it
+      options:
+        - label: I removed personal data from everything above.
+          required: true
+        - label: I searched open and closed issues, and this isn't one of them.
+          required: true

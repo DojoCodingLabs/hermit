@@ -1,0 +1,4 @@
+# actionlint settings for this repository's workflows. They run on GitHub-hosted runners only, so there are no
+# self-hosted runner labels to declare: actionlint reports any runner label it doesn't know.
+self-hosted-runner:
+  labels: []

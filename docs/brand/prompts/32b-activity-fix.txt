@@ -1,0 +1,4 @@
+Edit image 1. Change only the third row, the one labeled "Blocked: send to unknown number":
+- Replace its small red shield-with-checkmark icon with a coral (#B4483A) shield containing a small bold "X" mark instead of a checkmark.
+- Replace that row's mascot with the "blocked" pose from image 2: the crab withdrawn inside its shell with the big claw sealing the shell opening like a door.
+Keep everything else in the image exactly as it is: all other rows, text, colors, layout, device frame.

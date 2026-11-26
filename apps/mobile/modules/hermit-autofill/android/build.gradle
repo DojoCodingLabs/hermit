@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.dojocoding.hermit.autofill'
+version = '0.1.0'
+
+android {
+  namespace "io.dojocoding.hermit.autofill"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // SL-20: inline suggestions (the keyboard's suggestion strip, Android 11 and later) are built with InlineSuggestionUi.
+  implementation "androidx.autofill:autofill:1.1.0"
+  // The exact-origin vectors shared with packages/core run on the JVM (OriginMatchTest); org.json is a stub there.
+  testImplementation "junit:junit:4.13.2"
+  testImplementation "org.json:json:20240303"
+}

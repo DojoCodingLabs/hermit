@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.dojocoding.hermit.night'
+version = '0.1.0'
+
+android {
+  namespace "io.dojocoding.hermit.night"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  implementation "androidx.core:core-ktx:1.13.1"
+  // Q69: the night wake. Periodic work with a charging constraint; it survives reboots on its own.
+  implementation "androidx.work:work-runtime:2.10.1"
+  // Headless JS (HeadlessJsTaskService, HeadlessJsTaskContext, ReactHost), resolved to the app's React Native.
+  implementation 'com.facebook.react:react-android'
+}

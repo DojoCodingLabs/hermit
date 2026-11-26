@@ -1,0 +1,26 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "A single landscape brand moodboard for HERMIT, a private AI assistant that lives entirely on your phone and never sends your data anywhere. The brand metaphor: a hermit crab that carries its home on its back and keeps to itself; its shell is a safe, private home; when it needs more power it moves to a bigger shell.\n\nLAYOUT (a clean editorial grid of 6 panels on one board, equal gutters):\n1. Top left, largest panel: the logo concept, a simple hermit crab peeking out of a spiral shell, drawn as a bold, simple symbol, next to the wordmark \"HERMIT\".\n2. Top right: a phone showing a calm chat screen with one message bubble that reads \"Recuérdame llamar a mamá a las 9\" and a reply bubble that reads \"Listo. Te aviso a las 9.\"\n3. Middle left: a color palette of 5 swatches as rounded rectangles, no hex codes or labels.\n4. Middle right: the tagline set large in the brand typeface: \"Does everything. Tells no one.\"\n5. Bottom left: a texture or material sample that captures the brand's feel.\n6. Bottom right: a small illustration of the crab moving into a bigger shell.\n\nTEXT: render only these exact strings, spelled exactly: \"HERMIT\", \"Recuérdame llamar a mamá a las 9\", \"Listo. Te aviso a las 9.\", \"Does everything. Tells no one.\" No other words, numbers, labels, captions or watermarks anywhere.\n\nSTYLE DIRECTION, \"Quiet craft\": warm paper off-white background, deep ink near-black, one sea-glass green-teal accent used sparingly, plus soft sand and stone neutrals. Editorial serif for the tagline paired with a clean humanist sans for UI. Calm, premium, trustworthy, generous whitespace, like a beautifully made field notebook or a Kinfolk magazine spread. The crab symbol is a confident single-weight line or solid shape, refined and minimal. Texture panel: uncoated paper with a subtle blind-embossed shell spiral. Flat, matte, no gradients, no glow, no 3D.",
+  "size": "1536x1024",
+  "quality": "medium",
+  "n": 1,
+  "output_format": "png",
+  "mode": "generate",
+  "refs": [],
+  "outputs": [
+    "docs/brand/explorations/moodboard-quiet-craft.png"
+  ],
+  "usage": {
+    "input_tokens": 453,
+    "input_tokens_details": {
+      "image_tokens": 0,
+      "text_tokens": 453
+    },
+    "output_tokens": 1132,
+    "output_tokens_details": {
+      "image_tokens": 1132,
+      "text_tokens": 0
+    },
+    "total_tokens": 1585
+  }
+}

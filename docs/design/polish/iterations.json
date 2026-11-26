@@ -1,0 +1,271 @@
+{
+ "chat-empty": [
+  {
+   "title": "Round 1, next to Gemini's home, Claude Duet's brief and Muse",
+   "image": "chat-empty-1.png",
+   "notes": [
+    "Issue: the bar kept \"En este teléfono\" alone above a half-empty screen; the references keep the first screen to one mark and one greeting.",
+    "Issue: the greeting was a 26 dp title over a three-line paragraph; Gemini's greeting is the size of a headline and sits at the optical center.",
+    "Issue: the stage disc hugged the crab like an avatar placeholder.",
+    "Fix: the first run's bar keeps only the menu; the hello moves to the 34 dp large title; the disc grows to 1.5 times the crab in a tone just off the canvas; the block sits at the optical center with the starters as one grouped list."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "chat-empty-2.png",
+   "notes": [
+    "Better: one focal point (the staged crab and the hello), then three things to try.",
+    "Kept: the promise in two short sentences (what you say stays on this phone; Hermit asks before sending or paying), the safety line of the first run."
+   ]
+  },
+  {
+   "title": "Round 3, final",
+   "image": "chat-empty-3.png",
+   "notes": [
+    "Fixed: in Deep sea the promise wrapped differently and ended on one word; centered text now breaks into balanced lines (Android's balanced strategy, text-wrap: balance in the preview).",
+    "Stands next to Claude Duet's brief: one serif greeting, one quiet line, three things to try; the crab gets the presence Muse gives its character, without redrawing it."
+   ]
+  }
+ ],
+ "chat": [
+  {
+   "title": "Round 1, next to Claude Duet's chat, Grok Bot and ChatGPT's Work steps",
+   "image": "chat-1.png",
+   "notes": [
+    "Issue: five things competed in the bar (a status dot and label, the crab, a status line, trash, menu) over a 1px rule; the references keep one mark, one name and one menu.",
+    "Issue: square-ish bubbles at one spacing, a bordered composer beside a separate send button.",
+    "Fix: the small crab and one status word that crossfades, the menu; trash and Where Hermit runs moved into the menu; bubbles at radius 20 with a 6 dp tail corner, 4 dp within a speaker and 16 between speakers; a raised composer with the send button inside, as Gemini and Duet do."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "chat-working-2.png",
+   "notes": [
+    "Broken: the status vanished while working (stopping an Animated fade stopped the fade-in that followed); fixed in CrossFade.",
+    "Issue: the timer showed twice (bar and step) and the running step's ring was a static icon that read as frozen; now only the step shows the time, next to a live spinner.",
+    "Better: folded steps unfold with a short rise, like ChatGPT's collapsible steps."
+   ]
+  },
+  {
+   "title": "Round 3, final",
+   "image": "chat-3.png",
+   "notes": [
+    "The taint line is shorter (16 words, still every fact); the bar, the bubbles and the composer read as calmly as Duet's and Grok Bot's.",
+    "Deep sea: Hermit's bubble on the raised trench, yours on current, the composer raised; no borders anywhere."
+   ]
+  }
+ ],
+ "pay-sheet": [
+  {
+   "title": "Round 1, next to Claude Duet's payment card, Stripe Link's spend sheet and Muse's checkout",
+   "image": "pay-1.png",
+   "notes": [
+    "Issue: thirteen stacked elements, all left-aligned; the references show five to seven with one focal point.",
+    "Issue: the recipient, network and fee floated on full-width hairlines; Stripe groups such facts in quiet rounded panels.",
+    "Issue: three lines of small print above the button, and a trust line that repeated the fingerprint fact.",
+    "Fix: a centered confirmation (the asking crab, the amber mark, the question, a large tabular amount); recipient, network and fee in one inset panel; the cap meter under it; the fingerprint facts as one note; the trust line cut to \"Lo muestra Hermit, no el modelo.\" with the long explanation behind its info button."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "pay-2.png",
+   "notes": [
+    "Issue: the amber badge stayed left while everything else centered; now centered.",
+    "Issue: the cap read \"30 de 50.00 USD₮\", two decimal styles side by side; the cap is now formatted like the hold's own line.",
+    "Issue: the fingerprint note still took three lines; the copy is down to two."
+   ]
+  },
+  {
+   "title": "Round 3, final",
+   "image": "pay-3.png",
+   "notes": [
+    "One focal point (the amount), the facts grouped, one primary, a way out, a trust line: the shape of Stripe's spend sheet with Hermit's own facts (the cap, your words).",
+    "The actions sit under a hairline, so at large text the body visibly scrolls under them instead of looking cut."
+   ]
+  }
+ ],
+ "wallet": [
+  {
+   "title": "Round 1, next to Rabby's home, Rabby's GasAccount and Cue's budget card",
+   "image": "wallet-1.png",
+   "notes": [
+    "Issue: two large serif headlines competed (the page title and the balance); in the references the balance is the only headline.",
+    "Fix: the title stays small in the bar; the balance is centered as the headline with \"Dólares de prueba en Stable testnet\" right under it; Receive and Caps side by side as the primary and a tonal button, like Rabby's Withdraw and Deposit."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "wallet-2.png",
+   "notes": [
+    "Issue: the separators in \"Esta billetera\" started at two different insets (the address row isn't a plain row); every separator in a group now starts where the rows' text does.",
+    "Issue: \"Saldo\" touched the figures; 4 dp between them.",
+    "Phase 2: the latest movements on the home with relative dates, as Rabby and Apple Wallet do; it reads the history on open, so it waits for a check of its cost on the phone."
+   ]
+  },
+  {
+   "title": "Round 3, final",
+   "image": "wallet-3.png",
+   "notes": [
+    "The balance is the only headline; the address is read whole by TalkBack and copied with the button beside it.",
+    "Next (phase 2): the latest movements on the home, with relative dates."
+   ]
+  }
+ ],
+ "welcome": [
+  {
+   "title": "Round 1, next to Grok Bot's welcome, OpenClaw's security notice and Rabby's onboarding",
+   "image": "welcome-1.png",
+   "notes": [
+    "Already close: one character, one headline, one action.",
+    "Issue: the content sat high with an empty band above the button, and the honest exceptions were a boxed paragraph.",
+    "Fix: the block centered at the optical center; the three promises as one short grouped list; the exceptions one tap away in an info sheet."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "welcome-2.png",
+   "notes": [
+    "Kept: each honest exception is still said where it applies (the download, the WhatsApp sheet, the calendar permission) and in the info sheet here."
+   ]
+  },
+  {
+   "title": "Round 3, final",
+   "image": "welcome-3.png",
+   "notes": [
+    "Unchanged from round 2 but for the balanced centered lines; it holds next to Grok Bot's and OpenClaw's welcomes."
+   ]
+  }
+ ],
+ "lists": [
+  {
+   "title": "Round 1, next to Rabby's history card and Claude Duet's list",
+   "image": "lists-1.png",
+   "notes": [
+    "Issue: every Activity row repeated an outcome chip (“Hecho” on most), a hash and a date in one wrapped line; Rabby says each row's time once, in one column, and nothing else repeats.",
+    "Issue: the time followed the outcome, so it never lined up, and “Hace 40 min” broke onto a line of its own.",
+    "Issue: weekdays as Intl writes them, “mar, 10:51 p.m.” (lower case, and “mar” also reads as March) next to “Hoy”; reminders said a time to come as a raw date string.",
+    "Issue: a coral trash at rest in the bar, the alarm color for an action not yet taken; “Ya no se puede responder desde Hermit” wrapped under every stale chat.",
+    "Kept from the references: the item leads (the fact, the name, the skill in words); one quiet secondary line; no icons repeated down a column (initials for people and logins)."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "lists-2.png",
+   "notes": [
+    "Fixed: the time sits on the title's baseline at its end, tabular; the second line appears only when it says something (a blocked or failed outcome in coral, outside content in amber, “Aprobado”, how many a clear removed).",
+    "Fixed: the whole weekday, capitalized (“Martes, 10:54 p.m.”); reminders say “Mañana, 12:54 p.m.”, “Domingo, 1:54 a.m.”.",
+    "Fixed: at 200% text the time moved under the title instead of squeezing it to a word per line (TitleLine); the trash is ink; the stale line is three words.",
+    "Built row by row: the vault, the log, memories and messages are FlatLists that draw the Group look per cell, so an import of thousands doesn't build thousands of rows.",
+    "Considered and left: day sections (“Hoy”, “Ayer”) as Claude Duet groups by status; the relative time per row already says the day, and sections would split the one card."
+   ]
+  },
+  {
+   "title": "Round 3, a detail review",
+   "image": "lists-3.png",
+   "notes": [
+    "Fixed: an unknown sender's whole address ended on a lone “B”; whole addresses now read in groups of four after the 0x and break only between groups, display only (copy stays where the address is used).",
+    "Fixed: the badge “Remitente desconocido” was echoed by the sentence under it; the sentence now starts at the warning.",
+    "Fixed: “Otra acción” twice in Activity came from made-up skill ids in the sample log; the sample uses real ids and every family of skill has its icon."
+   ]
+  }
+ ],
+ "settings": [
+  {
+   "title": "Round 1, next to OpenClaw's Android settings and Doubao's permission switches",
+   "image": "settings-1.png",
+   "notes": [
+    "Issue: paragraphs under a section label started 4 dp in while the label and the rows' text started 16 dp in, so every settings screen had two left edges; field labels sat on a third.",
+    "Issue: “Cambiar” under every granted permission and beside every profile field (eight times on one screen); OpenClaw's rows open on a tap and say their state in one quiet line.",
+    "Issue: sign-in options and connect opened with 50 to 58 words of explanation; MCP and connector panels were outlined cards with their tools split by 1 px lines and Remove as a tinted button.",
+    "Issue: the search choice on Privacy was a stack of outlined radio cards and a bordered field, the old style; the briefing quoted other people's words with straight quotes."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "settings-2.png",
+   "notes": [
+    "Fixed: one text column, 16 dp in, for section labels, intros, notes, field labels and typed values; an intro is the page's subtitle.",
+    "Fixed: a granted permission opens Android's page on a tap (state and chevron); a filled profile field opens on a tap and an empty one says “Agregar”; Appearance says its current theme under its name, as OpenClaw's rows do.",
+    "Fixed: sign-in options, MCP and connect say the same facts in 21 to 46 words; servers and connectors are grouped lists with a risk tile beside each tool's words and Remove as a coral row.",
+    "Fixed: the search choice uses the kit's radio rows and field; Use, Check and Stop on the relay are primary, tonal and text, one of each.",
+    "Kept: what Dojo would see is said before the switch, every time (US-CONN-10), shorter but whole."
+   ]
+  },
+  {
+   "title": "Round 3, a detail review",
+   "image": "settings-3.png",
+   "notes": [
+    "Fixed: the section “Lo que Hermit puede usar” repeated its first row; it is “Acceso y conexiones”. Privacy's relay section is “Inicios de sesión”.",
+    "Fixed: Language says one line (“Hermit responde en el idioma en que escribes.”); the app lock says when, in one line (“Al abrir y tras un minuto fuera”); Quiet mode, the night shift's mail and MCP's read claim fit two lines.",
+    "Fixed: a permission's state sits under its title, so its description keeps the row's width; the fix-it steps open in a sheet from “Cómo hacerlo”; “1 veces” reads “1 vez”."
+   ]
+  }
+ ],
+ "details": [
+  {
+   "title": "Round 1, next to 1Password's item and Watchtower",
+   "image": "details-1.png",
+   "notes": [
+    "Issue: a memory someone else wrote was set in « » guillemets with a provenance chip; the login stacked four full-width buttons (show, copy, copy, edit) over a coral one.",
+    "Issue: the activity entry wrote “ninguno” in mono like a hash, and its time in a larger size than every other value.",
+    "Kept from 1Password: the fields as one list with each value's action beside it, the edit in the bar, the destructive action last."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "details-2.png",
+   "notes": [
+    "Fixed: curly quotes for someone else's fact, its source as a labelled line in the card; the login's copy buttons sit on the username and password rows (a fingerprint first, as before), Edit in the bar, Delete as a coral row, which is now how every detail screen ends (memory, login, MCP server, connector).",
+    "Fixed: the entry's absent values read “ninguno” in words, every value at the same size, hashes whole in mono and selectable; the time is a date, without the raw epoch.",
+    "Fixed: the caps and receive panels are raised cards with the same shadow as Card; caps say whole numbers."
+   ]
+  },
+  {
+   "title": "Round 3, a detail review",
+   "image": "details-3.png",
+   "notes": [
+    "Fixed: the entry's hashes and signature read in groups of eight with a copy button beside each (the value itself, a plain clip), so no line ends on a stray character.",
+    "Kept: the address on receive in groups of four, now the same helper as every other whole address, with Copy using the address itself."
+   ]
+  }
+ ],
+ "sheets": [
+  {
+   "title": "Round 1, next to Android's Credential Manager and 1Password's passkey sheet",
+   "image": "sheets-1.png",
+   "notes": [
+    "Issue: only the payment sheet opened centered; the credential and message sheets started left with a badge-like mark, so the sheets didn't read as one family.",
+    "Issue: the credential sheet's login source was a chip; its signed note ran five lines (the chip, the key, the fingerprint screen, the vault's second fingerprint) above the button.",
+    "Kept from the references: one centered question at the top, the account or the thing as rows that say where it comes from, one filled action."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "sheets-2.png",
+   "notes": [
+    "Fixed: every sheet opens with the same three centered things: the crab with “Necesita tu OK”, the question, and for a payment the amount.",
+    "Fixed: the login source is a quiet line beside its tile; the signed note is one line like the payment's, and the chip and key story moves to “Cómo funciona esta aprobación”, with a paragraph for signed approvals.",
+    "Checked at 200% text: the body scrolls under the pinned note and actions, nothing is cut."
+   ]
+  }
+ ],
+ "empty": [
+  {
+   "title": "Round 1, next to AutoGLM's empty home and Meta Muse",
+   "image": "empty-1.png",
+   "notes": [
+    "Issue: every empty state sat right under the title with the lower half of the screen bare; the references put the greeting at the optical center.",
+    "Issue: the vault's closed states had no page title while every other empty state had one."
+   ]
+  },
+  {
+   "title": "Round 2",
+   "image": "empty-2.png",
+   "notes": [
+    "Fixed: an empty state takes the room the page leaves and sits a little above its middle (Empty grows, the page's content fills the screen), with the stage's radial fade behind the animated crab; a page's other rows (the calendar link) settle at the foot.",
+    "Fixed: the vault's none, locked and lost states have the page title, like the rest.",
+    "Kept: one crab, one title, one line, one action; the crab's pose says the state (hello for none yet, error for lost)."
+   ]
+  }
+ ]
+}

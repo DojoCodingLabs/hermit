@@ -1,0 +1,9 @@
+A minimal flat vector logo symbol for HERMIT, a private AI assistant. Square canvas, transparent background, the mark centered with about 12 percent padding on every side.
+
+Shapes, back to front (use as few paths as possible, no gradients, no filters, no text):
+1. The shell: a solid circle-like snail shell in deep warm ink #2B221B, slightly wider than tall, with a flat base: the bottom 12 percent is cut off by a horizontal line with softly rounded corners, so it sits on the ground.
+2. The spiral: one continuous stroke in sea-glass teal #4F7C6D, round line caps, stroke width about 6 percent of the shell's width. It starts at the shell's center, winds outward clockwise for about two and a quarter turns, and its tail sweeps down and to the right, ending near the bottom-right edge of the shell where the opening is.
+3. The opening: on the right side of the shell, a crescent-shaped opening in warm sand #D5B893.
+4. The crab: one eye stalk in sand #D5B893 rising from the opening, topped by a round eye: a dark ink #2B221B circle with a thin sand ring and a small white #FFFFFF highlight dot at its upper right. The eye sits at the right edge of the shell, about 60 percent of the way down, slightly overlapping the shell outline.
+
+Style: confident geometric construction, perfectly smooth curves, even stroke width, crisp edges. It must read as a hermit crab peeking out of its spiral shell, and still read at 32 pixels.

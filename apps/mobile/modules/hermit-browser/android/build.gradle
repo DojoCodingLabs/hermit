@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.dojocoding.hermit.browser'
+version = '0.1.0'
+
+android {
+  namespace "io.dojocoding.hermit.browser"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // SL-53: one WebView profile per site (cookies, storage, cache kept apart), where the phone's WebView supports it.
+  implementation "androidx.webkit:webkit:1.12.1"
+}

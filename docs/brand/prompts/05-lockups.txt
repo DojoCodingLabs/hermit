@@ -1,0 +1,7 @@
+Logo lockup sheet for HERMIT. Image 1 is the approved symbol: use it exactly, do not redesign it.
+Show three lockups on a warm paper background (#F5EDE1), stacked vertically with generous space between them:
+1. Horizontal lockup: the symbol on the left, the wordmark "HERMIT" on the right, vertically centered on the symbol, cap height about 45 percent of the symbol height.
+2. Stacked lockup: the symbol centered above the wordmark "HERMIT".
+3. Wordmark alone: "HERMIT".
+Wordmark: the letters H-E-R-M-I-T in a clean humanist sans-serif, medium-bold weight, slightly open letter spacing, deep warm ink (#2B221B), all caps, with calm, even proportions; it must feel crafted and quiet, not techy.
+TEXT: render only "HERMIT", three times as described, spelled exactly H-E-R-M-I-T. No other words, labels, guides, numbers or watermarks.

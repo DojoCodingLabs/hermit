@@ -1,0 +1,22 @@
+Hermit
+Copyright 2026 Dojo Coding (https://dojocoding.io)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+Character art is licensed separately under CC BY 4.0 (see LICENSE-ART.md).
+
+Hermit is powered by QVAC (https://qvac.tether.io/) from Tether (https://tether.io/),
+used under the Apache License, Version 2.0. QVAC and Tether are trademarks of
+Tether Operations, S.A. de C.V. Hermit is an independent project, not affiliated
+with or endorsed by Tether.
+
+Design ideas in the agent core were informed by Hermes Agent (MIT, Nous Research),
+OpenClaw (MIT, OpenClaw Foundation) and Atomic Agent (MIT). No code from those
+projects is included at this time; any future copied code will keep its MIT notice
+in THIRD_PARTY_NOTICES.md.
+
+Fonts in docs/brand/fonts and apps/mobile/assets/fonts (Newsreader, Instrument Sans,
+JetBrains Mono) are licensed under the SIL Open Font License 1.1; the license texts
+(OFL-*.txt) are next to the font files.
+
+The app's icons in apps/mobile/src/icons come from Lucide (https://lucide.dev),
+licensed under the ISC License (see apps/mobile/src/icons/LICENSE-lucide.txt).

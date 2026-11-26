@@ -1,0 +1,27 @@
+{
+  "name": "hermit-wallet-worklet",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "The wallet worklet (Tether WDK EVM inside Bare): creates, seals, restores and reveals the seed for SL-38. Not a workspace package; the Expo config plugin (or build.mjs as a fallback) packs it for react-native-bare-kit 0.16 (Bare 1.33.4). Stable testnet only.",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@tetherto/wdk-wallet-evm": "1.0.0-beta.26",
+    "bare-crypto": "1.16.0",
+    "bare-node-runtime": "1.5.5",
+    "bip39": "3.1.0"
+  },
+  "devDependencies": {
+    "bare-link": "4.3.0",
+    "bare-pack": "3.1.0",
+    "bare-runtime": "1.38.0"
+  },
+  "overrides": {
+    "bare-module": "7.4.0",
+    "bare-realm": "2.0.2",
+    "bare-type": "1.4.0"
+  }
+}

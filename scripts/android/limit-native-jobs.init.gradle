@@ -1,0 +1,17 @@
+// Local Android builds on the shared 16 GB Mac (docs/build/local-android-build.md): pass it to Gradle with
+// `--init-script`. Each native module's CMake build otherwise runs one clang per core (Ninja's default), and two
+// Gradle workers doubled that to about 20 compilers at once. This caps every CMake build at 3 compiles and 1 link
+// through Ninja job pools. It only changes scheduling, never what is compiled; CI doesn't use it.
+allprojects { p ->
+  ["com.android.library", "com.android.application"].each { pluginId ->
+    p.plugins.withId(pluginId) {
+      p.androidComponents.finalizeDsl { android ->
+        android.defaultConfig.externalNativeBuild.cmake.arguments(
+          "-DCMAKE_JOB_POOLS=compile=3;link=1",
+          "-DCMAKE_JOB_POOL_COMPILE=compile",
+          "-DCMAKE_JOB_POOL_LINK=link"
+        )
+      }
+    }
+  }
+}

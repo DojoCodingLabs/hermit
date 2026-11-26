@@ -1,0 +1,34 @@
+{
+  "name": "@hermit/eval",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "eval": "node --experimental-strip-types src/cli.ts",
+    "eval:mac": "node --experimental-strip-types src/mac-eval.ts",
+    "spike:x402": "node --experimental-transform-types --no-warnings src/x402-spike.ts",
+    "eval:x402-merchant": "node --experimental-transform-types --no-warnings src/x402-merchant-eval.ts",
+    "eval:trajectory": "node --experimental-transform-types --no-warnings src/trajectory-eval.ts",
+    "spike:mcp": "node --experimental-transform-types --no-warnings src/mcp-spike.ts",
+    "spike:connector-draft": "node --experimental-transform-types --no-warnings src/connector-draft-eval.ts"
+  },
+  "dependencies": {
+    "@hermit/core": "workspace:*",
+    "@hermit/skills": "workspace:*",
+    "@hermit/model": "workspace:*",
+    "@hermit/runtime": "workspace:*",
+    "@hermit/sql-node": "workspace:*",
+    "@hermit/cage": "workspace:*",
+    "@hermit/payments": "workspace:*",
+    "@hermit/connectors": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2"
+  }
+}

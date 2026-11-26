@@ -1,0 +1,16 @@
+{
+  "name": "hermit-mcp-reference-server-dev",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "Desktop dev tool only: an MCP server with OAuth, built from the official TypeScript SDK's own auth router and demo provider, for the SL-51 spike (docs/research/mcp-client-spike.md). Not a workspace package, never bundled into the app.",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "express": "5.2.1",
+    "zod": "3.25.76"
+  }
+}

@@ -1,0 +1,8 @@
+# Keeps the actions the workflows pin by commit SHA up to date. Each update is a pull request that runs the same
+# checks as any other.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

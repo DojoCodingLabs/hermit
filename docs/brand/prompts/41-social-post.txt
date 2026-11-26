@@ -1,0 +1,3 @@
+Square social media post for the HERMIT launch. Image 1 is the logo symbol, image 2 the mascot sheet: use them exactly.
+Deep sea dark theme: abyss navy background (#06121D). Center: the mascot inside its shell at night, the spiral line glowing bioluminescent mint (#5EF0CF), eye stalks peeking out calmly. Above, in a large editorial serif in foam white (#E7F1F0): "Does everything." and on the next line "Tells no one." At the bottom, small sans in kelp gray (#8FA9B5): "Your AI agent. On your phone. Nowhere else."
+TEXT: render only the quoted strings, spelled exactly. No other text, no logos besides the mascot.

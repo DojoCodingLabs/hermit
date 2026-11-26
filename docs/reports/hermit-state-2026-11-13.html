@@ -1,0 +1,345 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>State of Hermit · 13 November 2026</title><style>
+@import url('../brand/fonts/fonts.css');
+@page { size: 297mm 210mm; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #F5EDE1; color: #2B221B; font-family: 'Instrument Sans', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 297mm; height: 210mm; padding: 15mm 18mm 18mm; position: relative; overflow: hidden; page-break-after: always; background: #F5EDE1; }
+footer { position: absolute; left: 18mm; right: 18mm; bottom: 8mm; display: flex; align-items: center; gap: 10px; font-size: 9pt; color: #6B5E52; border-top: 1px solid #D3C2AE; padding-top: 3mm; }
+footer img { height: 14px; } footer .sec { margin-left: auto; text-transform: uppercase; letter-spacing: 1.5px; font-size: 8pt; } footer .pn { font-family: 'JetBrains Mono'; color: #2B221B; }
+.kicker { font-size: 9.5pt; letter-spacing: 2.5px; text-transform: uppercase; color: #3B6456; font-weight: 600; margin-bottom: 3mm; }
+h2 { font-family: 'Newsreader', serif; font-weight: 500; font-size: 30pt; line-height: 1.08; letter-spacing: -0.5px; max-width: 220mm; margin-bottom: 8mm; }
+h3 { font-size: 13pt; margin-bottom: 2mm; } .h3s { font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6B5E52; margin-bottom: 3mm; }
+p { font-size: 10.5pt; line-height: 1.5; color: #6B5E52; } .lead { font-size: 12.5pt; color: #2B221B; line-height: 1.55; } .narrow { max-width: 215mm; margin: -3mm 0 7mm; }
+b { color: #2B221B; }
+.corner-mascot { position: absolute; right: 14mm; top: 11mm; width: 30mm; opacity: .95; }
+.note { position: absolute; bottom: 20mm; left: 18mm; right: 18mm; font-size: 9pt; color: #6B5E52; background: #EBDDCB; border-radius: 10px; padding: 3mm 4mm; }
+.callout { margin-top: 7mm; background: #3B6456; color: #F5EDE1; border-radius: 14px; padding: 5mm 6mm; font-size: 11pt; } .callout b { color: #F5EDE1; }
+.bar { border-radius: 999px; overflow: hidden; flex: 1; } .bar > div { height: 100%; border-radius: 999px; }
+.chip { font-size: 8.5pt; padding: 1.2mm 3mm; border-radius: 999px; white-space: nowrap; font-weight: 600; }
+.chip.ok { background: #3B6456; color: #F5EDE1; } .chip.mid { background: #EBDDCB; color: #2B221B; border: 1px solid #D3C2AE; } .chip.warn { background: #F3DEC0; color: #8A5912; }
+/* cover */
+.cover-page { padding: 0; }
+.cover { height: 100%; padding: 18mm 20mm; position: relative; background: radial-gradient(circle at 85% 70%, #EBDDCB 0, #F5EDE1 55%); }
+.cover-lockup { height: 17mm; }
+.cover-kicker { margin-top: 20mm; font-size: 10pt; letter-spacing: 3px; text-transform: uppercase; color: #3B6456; font-weight: 600; }
+.cover-title { font-family: 'Newsreader'; font-weight: 500; font-size: 58pt; line-height: 1; letter-spacing: -1.5px; margin-top: 5mm; }
+.cover-sub { font-size: 14pt; max-width: 145mm; margin-top: 7mm; color: #6B5E52; }
+.cover-stats { position: absolute; left: 20mm; bottom: 26mm; display: flex; gap: 12mm; }
+.cover-stats div { display: flex; flex-direction: column; } .cover-stats b { font-family: 'Newsreader'; font-size: 30pt; font-weight: 500; } .cover-stats small { font-size: 15pt; color: #6B5E52; }
+.cover-stats span { font-size: 9pt; color: #6B5E52; text-transform: uppercase; letter-spacing: 1px; max-width: 34mm; }
+.cover-mascot { position: absolute; right: 14mm; top: 34mm; width: 108mm; }
+.cover-by { position: absolute; left: 20mm; bottom: 11mm; font-size: 9pt; color: #6B5E52; }
+/* grids */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; margin-bottom: 9mm; }
+.card { background: #EBDDCB; border-radius: 16px; padding: 6mm; } .cicon { width: 18mm; margin-bottom: 2mm; }
+.split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 12mm; }
+.stack { display: flex; flex-direction: column; gap: 3mm; }
+.pill { display: flex; flex-direction: column; border-left: 3px solid #4F7C6D; padding: 1.5mm 4mm; } .pill span { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6B5E52; } .pill b { font-size: 11pt; font-weight: 500; }
+/* rings */
+.rings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6mm; margin-top: 6mm; }
+.ringbox { background: #EBDDCB; border-radius: 18px; padding: 7mm 5mm; text-align: center; } .ringbox p { margin-top: 4mm; font-size: 10pt; }
+/* waves */
+.waves { display: flex; flex-direction: column; gap: 2.6mm; }
+.wave { display: grid; grid-template-columns: 14mm 1fr 16mm; align-items: center; gap: 5mm; background: #EBDDCB; border-radius: 12px; padding: 2.4mm 5mm; }
+.wave.now { background: #3B6456; } .wave.now * { color: #F5EDE1 !important; } .wave.now .bar { background: rgba(245,237,225,.25) !important; } .wave.now .bar > div { background: #F5EDE1 !important; }
+.wid { font-family: 'JetBrains Mono'; font-size: 13pt; font-weight: 600; } .wtitle { font-weight: 600; font-size: 11pt; } .wdesc { font-size: 9pt; color: #6B5E52; margin: .5mm 0 1.5mm; } .wpct { font-family: 'Newsreader'; font-size: 17pt; text-align: right; }
+.wave .bar { height: 7px !important; }
+.bands { display: grid; grid-template-columns: 1fr 1.6fr 1.6fr; gap: 4mm; margin-top: 4mm; }
+.band { font-size: 9pt; padding: 3mm 4mm; border-radius: 10px; background: #4F7C6D; color: #F5EDE1; } .band b { color: #F5EDE1; margin-right: 2mm; }
+.band.v2 { background: #D5B893; color: #2B221B; } .band.v2 b { color: #2B221B; } .band.v3 { background: #D3C2AE; color: #2B221B; } .band.v3 b { color: #2B221B; }
+/* slices */
+.slices { display: grid; grid-template-columns: 1fr 1fr; gap: 2.6mm 6mm; }
+.slice { display: flex; align-items: center; gap: 3mm; background: #EBDDCB; border-radius: 10px; padding: 2.8mm 4mm; }
+.sid { font-family: 'JetBrains Mono'; font-size: 9pt; color: #3B6456; font-weight: 600; } .stitle { flex: 1; font-size: 10pt; }
+.gate { margin-top: 6mm; font-size: 10.5pt; border: 1.5px dashed #4F7C6D; border-radius: 12px; padding: 4mm 5mm; color: #6B5E52; }
+/* before after */
+.ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm 12mm; }
+.ba { background: #EBDDCB; border-radius: 14px; padding: 5mm; } .ba-label { font-weight: 600; font-size: 10.5pt; margin-bottom: 3mm; }
+.ba-row { display: flex; align-items: center; gap: 3mm; margin-top: 2mm; } .ba-tag { width: 13mm; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 1px; color: #6B5E52; }
+.ba-num { width: 18mm; text-align: right; font-family: 'Newsreader'; font-size: 17pt; } .ba-num small { font-size: 10pt; color: #6B5E52; } .muted { color: #6B5E52; }
+/* evals */
+.evals { display: flex; flex-direction: column; gap: 3.2mm; }
+.erow { display: grid; grid-template-columns: 95mm 1fr 24mm; align-items: center; gap: 6mm; }
+.ename b { display: block; font-size: 11pt; font-weight: 600; } .ename span { font-size: 8.8pt; color: #6B5E52; }
+.escore { font-family: 'Newsreader'; font-size: 19pt; text-align: right; } .escore small { font-size: 11pt; color: #6B5E52; }
+/* phone */
+.phone-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm; margin-bottom: 10mm; height: 52mm; }
+.big { background: #06121D; border-radius: 16px; padding: 6mm 5mm; display: flex; flex-direction: column; gap: 2mm; }
+.big b { font-family: 'Newsreader'; font-size: 34pt; font-weight: 500; color: #5EF0CF; } .big small { font-size: 15pt; color: #8FA9B5; } .big span { font-size: 10.5pt; color: #E7F1F0; line-height: 1.45; }
+ul { list-style: none; display: flex; flex-direction: column; gap: 3.5mm; } li { font-size: 11.5pt; line-height: 1.45; padding-left: 7mm; position: relative; color: #2B221B; }
+.ticks li::before { content: '✓'; position: absolute; left: 0; color: #3B6456; font-weight: 700; }
+.dots li::before { content: '○'; position: absolute; left: 0; color: #8A5912; font-weight: 700; }
+/* arch */
+.arch { display: flex; flex-direction: column; align-items: stretch; gap: 2mm; max-width: 245mm; }
+.arow { display: flex; gap: 6mm; } .abox { flex: 1; text-align: center; background: #EBDDCB; border-radius: 14px; padding: 5.5mm 4mm; font-weight: 600; font-size: 13pt; }
+.abox small { display: block; font-weight: 400; font-size: 9.8pt; color: #6B5E52; margin-top: 1.2mm; }
+.abox.ui { background: #D5B893; } .abox.harness { background: #3B6456; color: #F5EDE1; } .abox.harness small { color: #EBDDCB; }
+.abox.cage { background: #2B221B; color: #F5EDE1; } .abox.cage small { color: #D3C2AE; } .abox.model { background: #06121D; color: #5EF0CF; flex: 1.4; } .abox.model small { color: #8FA9B5; }
+.abox.data { border: 2px solid #4F7C6D; background: #F5EDE1; }
+.arrow { text-align: center; color: #4F7C6D; font-size: 13pt; line-height: 1; }
+.arch-legend { margin-top: 5mm; display: flex; gap: 6mm; font-size: 9pt; color: #6B5E52; } .arch-legend span:first-child { font-weight: 700; color: #2B221B; }
+/* features */
+.feats { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 5mm; height: 128mm; }
+.feat { display: flex; gap: 5mm; align-items: center; background: #EBDDCB; border-radius: 16px; padding: 5mm 6mm; } .ficon { width: 21mm; flex: none; } .feat b { font-size: 13.5pt; } .feat p { font-size: 10pt; margin-top: 1.5mm; }
+/* timeline */
+.timeline { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4mm; margin: 4mm 0 10mm; }
+.timeline::before { content: ''; position: absolute; left: 3mm; right: 3mm; top: 2.6mm; height: 2px; background: #D3C2AE; }
+.day { position: relative; } .dot { width: 5.5mm; height: 5.5mm; border-radius: 50%; background: #3B6456; border: 3px solid #F5EDE1; position: relative; }
+.ddate { font-family: 'Newsreader'; font-size: 16pt; margin: 3mm 0 1.5mm; } .dtext { font-size: 10pt; color: #6B5E52; line-height: 1.45; }
+.counters { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4mm; }
+.counters div { background: #2B221B; border-radius: 14px; padding: 5mm 4mm; display: flex; flex-direction: column; }
+.counters b { font-family: 'Newsreader'; font-size: 26pt; font-weight: 500; color: #F5EDE1; } .counters span { font-size: 9pt; color: #D3C2AE; text-transform: uppercase; letter-spacing: 1px; }
+/* map */
+.mapgrid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3mm; margin-bottom: 9mm; }
+.m { background: #EBDDCB; border-radius: 12px; padding: 4mm 3mm; display: flex; flex-direction: column; } .m b { font-family: 'Newsreader'; font-size: 22pt; font-weight: 500; } .m span { font-size: 8.5pt; color: #6B5E52; line-height: 1.3; }
+.stackbar { display: flex; height: 12mm; border-radius: 10px; overflow: hidden; } .stackbar div { display: flex; align-items: center; justify-content: center; color: #F5EDE1; font-size: 9pt; font-weight: 600; white-space: nowrap; }
+/* comp */
+.comp { width: 100%; border-collapse: separate; border-spacing: 0 1.6mm; margin-bottom: 7mm; font-size: 10.5pt; }
+.comp th { text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6B5E52; font-weight: 600; padding: 0 4mm; }
+.comp td { background: #EBDDCB; padding: 2.4mm 4mm; } .comp td:first-child { border-radius: 10px 0 0 10px; font-weight: 600; } .comp td:last-child { border-radius: 0 10px 10px 0; }
+.comp td.no { color: #B4483A; font-weight: 600; } .comp tr.hermit td { background: #3B6456; color: #F5EDE1; font-weight: 600; } .comp td.yes { color: #5EF0CF !important; }
+/* risks */
+.risks { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 6mm; height: 118mm; }
+.risk { background: #EBDDCB; border-radius: 14px; padding: 5mm; border-top: 4px solid #D3C2AE; } .risk.warn { border-top-color: #B4483A; } .risk.mid { border-top-color: #8A5912; }
+.risk { padding: 7mm 6mm; } .risk b { font-size: 13pt; } .risk p { margin-top: 3mm; font-size: 11pt; }
+/* steps */
+.steps { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 6mm; max-width: 245mm; height: 92mm; }
+.step { display: flex; gap: 5mm; background: #EBDDCB; border-radius: 16px; padding: 6mm; }
+.step span { font-family: 'Newsreader'; font-size: 30pt; color: #3B6456; line-height: 1; } .step b { font-size: 13pt; } .step p { margin-top: 1.5mm; }
+.checklist { margin-top: 7mm; display: flex; flex-wrap: wrap; gap: 2.5mm; align-items: center; max-width: 245mm; } .checklist b { font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6B5E52; margin-right: 3mm; }
+.ck { font-size: 9.5pt; padding: 1.8mm 3.5mm; border-radius: 999px; border: 1.5px solid #8A5912; color: #8A5912; } .ck::before { content: '○ '; } .ck.done { border-color: #3B6456; background: #3B6456; color: #F5EDE1; } .ck.done::before { content: '✓ '; }
+.flowh { margin-top: 9mm; } .flow { display: flex; align-items: stretch; gap: 2mm; } .flow > div { flex: 1; background: #EBDDCB; border-radius: 12px; padding: 4mm; font-weight: 600; font-size: 11pt; }
+.flow small { display: block; font-weight: 400; font-size: 8.8pt; color: #6B5E52; margin-top: 1mm; } .flow i { align-self: center; color: #4F7C6D; font-style: normal; font-size: 14pt; } .flow .last { background: #3B6456; color: #F5EDE1; } .flow .last small { color: #EBDDCB; }
+.guar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; margin-top: 7mm; max-width: 245mm; } .guar div { border-left: 3px solid #4F7C6D; padding: 1mm 4mm; } .guar b { font-size: 10.5pt; display: block; } .guar small { font-size: 9pt; color: #6B5E52; }
+.leaps { display: grid; grid-template-columns: .7fr 1fr 1fr 1fr 1fr; gap: 4mm; margin-bottom: 6mm; align-items: center; } .leaps span { font-size: 10pt; text-transform: uppercase; letter-spacing: 1.5px; color: #3B6456; font-weight: 600; }
+.leaps div:not(:first-child) { background: #EBDDCB; border-radius: 14px; padding: 4mm 5mm; } .leaps b { font-family: 'Newsreader'; font-size: 21pt; font-weight: 500; display: block; } .leaps small { font-size: 9pt; color: #6B5E52; }
+/* back */
+.back-page { background: #06121D; padding: 0; }
+.back { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: radial-gradient(circle at 50% 40%, #0D2233 0, #06121D 60%); }
+.back-lockup { height: 20mm; } .back-tag { font-family: 'Newsreader'; font-size: 24pt; color: #E7F1F0; margin-top: 5mm; }
+.back-mascot { width: 46mm; margin: 6mm 0; }
+.back-by { display: flex; gap: 14mm; align-items: center; } .dojo { display: flex; flex-direction: column; align-items: center; gap: 2mm; }
+.dojo span, .qvac span { font-size: 8.5pt; color: #8FA9B5; text-transform: uppercase; letter-spacing: 2px; } .dojo img { height: 14mm; }
+.qvac { border-left: 1px solid #1A4A5E; padding-left: 14mm; }
+.fine { position: absolute; bottom: 10mm; left: 30mm; right: 30mm; font-size: 8pt; color: #8FA9B5; }
+</style></head>
+<body><section class="page cover-page">
+<div class="cover">
+  <img class="cover-lockup" src="../brand/logo/lockup-ink.svg" alt="Hermit">
+  <div class="cover-kicker">State of the project · 13 November 2026</div>
+  <h1 class="cover-title">Does everything.<br>Tells no one.</h1>
+  <p class="cover-sub">Progress, achievements and the road to V1 of the open-source AI agent that lives entirely on your phone.</p>
+  <div class="cover-stats">
+    <div><b>22</b><span>pull requests merged</span></div>
+    <div><b>366</b><span>automated tests passing</span></div>
+    <div><b>95<small>/100</small></b><span>best blind-eval score</span></div>
+    <div><b>39<small>/40</small></b><span>on the Galaxy S26</span></div>
+  </div>
+  <img class="cover-mascot" src="../brand/mascot/png/01-idle.png" alt="">
+  <div class="cover-by">Built by <b>Dojo Coding</b> · Apache 2.0 · Project report</div>
+</div></section><section class="page ">
+<div class="kicker">01 · What Hermit is</div>
+<h2>A personal agent that never leaves your phone.</h2>
+<div class="grid3">
+  <div class="card"><img class="cicon" src="../brand/mascot/png/08-offline.png" alt=""><h3>Fully on-device</h3><p>The model runs on the phone through Tether's QVAC runtime. No server sees your messages, your memory or your calendar.</p></div>
+  <div class="card"><img class="cicon" src="../brand/mascot/png/07-blocked.png" alt=""><h3>The cage</h3><p>Every action has a risk class. Anything that sends, pays or signs in waits for your fingerprint, and every step lands in a signed log.</p></div>
+  <div class="card"><img class="cicon" src="../brand/mascot/png/01-idle.png" alt=""><h3>Open source</h3><p>Apache 2.0, built in the open. Anyone can read exactly what Hermit does with their data.</p></div>
+</div>
+<div class="split">
+  <div>
+    <h3 class="h3s">The bet</h3>
+    <p class="lead">Cloud agents (Claude Duet, ChatGPT Dots, Grok bot, Muse, Instinct) run frontier models in data centers. Hermit runs a <b>0.8 billion parameter model</b> on a phone and closes the gap with a <b>state-of-the-art harness</b>: the code around the model does the routing, the time math and the safety, so the small model only decides what code can't.</p>
+  </div>
+  <div class="stack">
+    <div class="pill"><span>Model</span><b>BotPsy-0.8B (Qwen3.5 fine-tune), Q4_K_M, about 530 MB</b></div>
+    <div class="pill"><span>Runtime</span><b>QVAC SDK 0.23 (llama.cpp) on Android</b></div>
+    <div class="pill"><span>App</span><b>Expo / React Native, SQLCipher, Keystore</b></div>
+    <div class="pill"><span>Test phone</span><b>Samsung Galaxy S26</b></div>
+  </div>
+</div>
+<img class="corner-mascot" src="../brand/mascot/png/14-listening.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">What Hermit is</span><span class="pn">02</span></footer></section><section class="page ">
+<div class="kicker">02 · Completion at a glance</div>
+<h2>The foundation is done; the first win is close.</h2>
+<div class="rings">
+  <div class="ringbox"><svg width="150" height="150" viewBox="0 0 150 150">
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#EBDDCB" stroke-width="14"/>
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#3B6456" stroke-width="14" stroke-linecap="round"
+    stroke-dasharray="427.3 427.3" transform="rotate(-90 75.0 75.0)"/>
+  <text x="50%" y="77.0" text-anchor="middle" font-family="Newsreader" font-size="40" fill="#2B221B">100%</text>
+  <text x="50%" y="100" text-anchor="middle" font-family="Instrument Sans" font-size="11" fill="#6B5E52" letter-spacing="1">FOUNDATION</text>
+</svg><p><b>Wave 0</b><br>Research, architecture, brand, PRD, scaffold, contracts</p></div>
+  <div class="ringbox"><svg width="150" height="150" viewBox="0 0 150 150">
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#EBDDCB" stroke-width="14"/>
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#4F7C6D" stroke-width="14" stroke-linecap="round"
+    stroke-dasharray="363.2 427.3" transform="rotate(-90 75.0 75.0)"/>
+  <text x="50%" y="77.0" text-anchor="middle" font-family="Newsreader" font-size="40" fill="#2B221B">85%</text>
+  <text x="50%" y="100" text-anchor="middle" font-family="Instrument Sans" font-size="11" fill="#6B5E52" letter-spacing="1">BUILT</text>
+</svg><p><b>Wave 1 · the first win</b><br>12 slices, 30 stories. Code built; phone gate not yet passed</p></div>
+  <div class="ringbox"><svg width="150" height="150" viewBox="0 0 150 150">
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#EBDDCB" stroke-width="14"/>
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#D5B893" stroke-width="14" stroke-linecap="round"
+    stroke-dasharray="85.5 427.3" transform="rotate(-90 75.0 75.0)"/>
+  <text x="50%" y="77.0" text-anchor="middle" font-family="Newsreader" font-size="40" fill="#2B221B">20%</text>
+  <text x="50%" y="100" text-anchor="middle" font-family="Instrument Sans" font-size="11" fill="#6B5E52" letter-spacing="1">OF V1</text>
+</svg><p><b>V1 overall</b><br>59 slices, 120 stories. Waves 2 to 6 are next</p></div>
+  <div class="ringbox"><svg width="150" height="150" viewBox="0 0 150 150">
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#EBDDCB" stroke-width="14"/>
+  <circle cx="75.0" cy="75.0" r="68.0" fill="none" stroke="#3B6456" stroke-width="14" stroke-linecap="round"
+    stroke-dasharray="405.9 427.3" transform="rotate(-90 75.0 75.0)"/>
+  <text x="50%" y="77.0" text-anchor="middle" font-family="Newsreader" font-size="40" fill="#2B221B">95</text>
+  <text x="50%" y="100" text-anchor="middle" font-family="Instrument Sans" font-size="11" fill="#6B5E52" letter-spacing="1">BLIND /100</text>
+</svg><p><b>Harness quality</b><br>Best score on 100 cases the harness never saw</p></div>
+</div>
+<div class="note">How these are measured: wave progress counts slices and stories from the PRD (not effort). "Built" means merged on master with tests; "verified" means proven on the Galaxy S26.</div>
+<img class="corner-mascot" src="../brand/mascot/png/03-working.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Completion</span><span class="pn">03</span></footer></section><section class="page ">
+<div class="kicker">03 · Phases</div>
+<h2>V1 ships in seven waves, then V2 and V3.</h2>
+<div class="waves"><div class="wave done"><div class="wid">W0</div><div class="wbody"><div class="wtitle">Preflight and contracts</div><div class="wdesc">CI, dev build, contracts, schema</div><div class="bar" style="background:#EBDDCB;height:12px"><div style="width:100.0%;background:#3B6456"></div></div></div><div class="wpct">100%</div></div><div class="wave now"><div class="wid">W1</div><div class="wbody"><div class="wtitle">The first win</div><div class="wdesc">Chat, memory, reminders, calendar, WhatsApp read and reply, approvals, signed log</div><div class="bar" style="background:#EBDDCB;height:12px"><div style="width:85.0%;background:#4F7C6D"></div></div></div><div class="wpct">85%</div></div><div class="wave next"><div class="wid">W2</div><div class="wbody"><div class="wtitle">Voice, email, connectors</div><div class="wdesc">Model proven on device, turn control, de-risking spikes</div><div class="bar" style="background:#EBDDCB;height:12px"><div style="width:3.0%;background:#D5B893"></div></div></div><div class="wpct">3%</div></div><div class="wave later"><div class="wid">W3</div><div class="wbody"><div class="wtitle">Eyes</div><div class="wdesc">Web reading, night shift, other apps, settings, accessibility</div><div class="bar" style="background:#EBDDCB;height:12px"><div style="width:4.0%;background:#D5B893"></div></div></div><div class="wpct">4%</div></div><div class="wave later"><div class="wid">W4</div><div class="wbody"><div class="wtitle">Hands I</div><div class="wdesc">Vault, form fill, logins, web tasks, MCP client</div><div class="bar" style="background:#EBDDCB;height:12px"><div style="width:0.0%;background:#D5B893"></div></div></div><div class="wpct">0%</div></div><div class="wave later"><div class="wid">W5</div><div class="wbody"><div class="wtitle">Hands II</div><div class="wdesc">USD₮ wallet, caps, Keystore approvals, x402</div><div class="bar" style="background:#EBDDCB;height:12px"><div style="width:0.0%;background:#D5B893"></div></div></div><div class="wpct">0%</div></div><div class="wave later"><div class="wid">W6</div><div class="wbody"><div class="wtitle">Changing phones and distribution</div><div class="wdesc">Phone transfer, Play internal track, reproducible APK, website</div><div class="bar" style="background:#EBDDCB;height:12px"><div style="width:0.0%;background:#D5B893"></div></div></div><div class="wpct">0%</div></div></div>
+<div class="bands">
+  <div class="band"><b>V1</b> The full phone-only agent · 120 stories</div>
+  <div class="band v2"><b>V2</b> Boost (a bigger shell), fine-tuned Hermit models, iOS, agent-to-agent · 44 stories</div>
+  <div class="band v3"><b>V3</b> Keep watch, Mac powers, family sharing, confidential-cloud Boost · 11 stories</div>
+</div><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Phases</span><span class="pn">04</span></footer></section><section class="page ">
+<div class="kicker">04 · Wave 1, the first win</div>
+<h2>Twelve slices: every one built, three already proven on the phone.</h2>
+<div class="slices"><div class="slice"><span class="sid">SL-09</span><span class="stitle">Spike S1: BotPsy runs on the S26</span><span class="chip ok">Proven on the S26</span></div><div class="slice"><span class="sid">SL-10</span><span class="stitle">Spike S2: encrypted database (op-sqlite, SQLCipher)</span><span class="chip ok">Proven on the S26</span></div><div class="slice"><span class="sid">SL-11</span><span class="stitle">Spike S3: model bundle and loader in the Expo build</span><span class="chip ok">Proven on the S26</span></div><div class="slice"><span class="sid">SL-02</span><span class="stitle">Chat on the phone's model, streaming, offline</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-03</span><span class="stitle">Clarifying questions and failed turns</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-04</span><span class="stitle">Remember, recall and forget with provenance</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-05</span><span class="stitle">Reminders fire offline; calendar reads and adds</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-07</span><span class="stitle">Exact reply approved with a fingerprint, then sent</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-08</span><span class="stitle">Activity log verifies its signed chain</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-01</span><span class="stitle">First launch, verified model download, permissions</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-06</span><span class="stitle">WhatsApp messages captured as untrusted</span><span class="chip mid">Built · phone check pending</span></div><div class="slice"><span class="sid">SL-12</span><span class="stitle">Spike S4: notification listener reply action</span><span class="chip warn">Built · untested on device</span></div></div>
+<div class="gate"><b>The W1 gate:</b> the first-win journey script passes end to end on the Galaxy S26. What remains is device verification, chiefly the WhatsApp listener (spike S4) and the full journey.</div>
+<img class="corner-mascot" src="../brand/mascot/png/04-asking.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">First win</span><span class="pn">05</span></footer></section><section class="page ">
+<div class="kicker">05 · The harness</div>
+<h2>Same small model, a much smarter agent.</h2>
+<p class="lead narrow">Instead of a bigger model, Hermit wraps BotPsy in code: a deterministic router, time parsing in Spanish and English, argument normalizers, constrained fallbacks, a clause planner and fixed clarifying questions. The model only decides what code cannot.</p>
+<div class="ba-grid">
+  <div class="ba">
+  <div class="ba-label">Blind holdout · 100 cases the harness never saw</div>
+  <div class="ba-row"><span class="ba-tag">Before</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:73.0%;background:#D3C2AE"></div></div><span class="ba-num muted">73</span></div>
+  <div class="ba-row"><span class="ba-tag">Now</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:95.0%;background:#3B6456"></div></div><span class="ba-num">95<small>/100</small></span></div>
+</div>
+  <div class="ba">
+  <div class="ba-label">First-win suite · 40 cases (Mac)</div>
+  <div class="ba-row"><span class="ba-tag">Before</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:55.0%;background:#D3C2AE"></div></div><span class="ba-num muted">22</span></div>
+  <div class="ba-row"><span class="ba-tag">Now</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:100.0%;background:#3B6456"></div></div><span class="ba-num">40<small>/40</small></span></div>
+</div>
+  <div class="ba">
+  <div class="ba-label">Same harness on the untrained base Qwen3.5-0.8B · blind</div>
+  <div class="ba-row"><span class="ba-tag">Before</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:60.0%;background:#D3C2AE"></div></div><span class="ba-num muted">60</span></div>
+  <div class="ba-row"><span class="ba-tag">Now</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:87.0%;background:#3B6456"></div></div><span class="ba-num">87<small>/100</small></span></div>
+</div>
+  <div class="ba">
+  <div class="ba-label">On the Galaxy S26 · first-win 40</div>
+  <div class="ba-row"><span class="ba-tag">Before</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:77.5%;background:#D3C2AE"></div></div><span class="ba-num muted">31</span></div>
+  <div class="ba-row"><span class="ba-tag">Now</span><div class="bar" style="background:#EBDDCB;height:14px"><div style="width:97.5%;background:#3B6456"></div></div><span class="ba-num">39<small>/40</small></span></div>
+</div>
+</div>
+<div class="callout"><b>Model-agnostic:</b> the harness lifts an untrained model 27 points, so the gains come from Hermit's design, not from one model's quirks.</div><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Harness</span><span class="pn">06</span></footer></section><section class="page ">
+<div class="kicker">06 · Eval scoreboard</div>
+<h2>Measured, not assumed: about 430 cases and 30 conversations.</h2>
+<div class="evals"><div class="erow"><div class="ename"><b>Virtual-assistant set</b><span>time, memory, calendar, messaging, chat, ask, decline</span></div><div class="bar" style="background:#EBDDCB;height:16px"><div style="width:98.4%;background:#4F7C6D"></div></div><div class="escore">122<small>/124</small></div></div><div class="erow"><div class="ename"><b>Development holdout</b><span>written blind, now used for development</span></div><div class="bar" style="background:#EBDDCB;height:16px"><div style="width:94.4%;background:#4F7C6D"></div></div><div class="escore">85<small>/90</small></div></div><div class="erow"><div class="ename"><b>Messaging set</b><span>WhatsApp read, reply, groups, contacts</span></div><div class="bar" style="background:#EBDDCB;height:16px"><div style="width:100.0%;background:#3B6456"></div></div><div class="escore">50<small>/50</small></div></div><div class="erow"><div class="ename"><b>Memory and decline set</b><span>remember, recall, forget, and saying no</span></div><div class="bar" style="background:#EBDDCB;height:16px"><div style="width:96.7%;background:#4F7C6D"></div></div><div class="escore">58<small>/60</small></div></div><div class="erow"><div class="ename"><b>Multi-turn trajectories (4 seeds)</b><span>30 whole conversations through the real runtime</span></div><div class="bar" style="background:#EBDDCB;height:16px"><div style="width:96.7%;background:#4F7C6D"></div></div><div class="escore">116<small>/120</small></div></div><div class="erow"><div class="ename"><b>Parity scenarios</b><span>matching Instinct, Grok bot and Muse on the VA menu</span></div><div class="bar" style="background:#EBDDCB;height:16px"><div style="width:100.0%;background:#3B6456"></div></div><div class="escore">7<small>/7</small></div></div><div class="erow"><div class="ename"><b>Privacy scenarios</b><span>injections, leaks and approvals</span></div><div class="bar" style="background:#EBDDCB;height:16px"><div style="width:100.0%;background:#3B6456"></div></div><div class="escore">6<small>/6</small></div></div></div>
+<div class="note">The blind holdout is the honest judge: its cases are never read or tuned on. Every other set is development data. Numbers from the Mac eval lab, which runs the exact phone model file.</div>
+<img class="corner-mascot" src="../brand/mascot/png/05-done.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Evals</span><span class="pn">07</span></footer></section><section class="page ">
+<div class="kicker">07 · On the Galaxy S26</div>
+<h2>Real phone, real heat, real numbers.</h2>
+<div class="phone-grid">
+  <div class="big"><b>39<small>/40</small></b><span>first-win cases correct on the phone</span></div>
+  <div class="big"><b>7.0 s</b><span>median first action, fast route (11.3 s with full thinking)</span></div>
+  <div class="big"><b>7 to 13×</b><span>fewer prompt tokens with the new stable prompt prefix (Mac)</span></div>
+  <div class="big"><b>61 °C</b><span>chip peak in a sustained eval; the thermal guard stops runs automatically</span></div>
+</div>
+<div class="split">
+  <div><h3 class="h3s">Speed work done</h3><ul class="ticks">
+    <li>Device-adaptive runtime: threads, batch and thinking budget per phone and per temperature</li>
+    <li>KV cache on, with a byte-stable prompt prefix and a warm-up when a chat opens</li>
+    <li>Live progress: instant intent, a "Pensando" panel, streamed answers</li>
+  </ul></div>
+  <div><h3 class="h3s">Still to prove on the phone</h3><ul class="dots">
+    <li>The in-chat cache gain (second message in the same conversation)</li>
+    <li>Why fast-route calls run to their token cap on QVAC</li>
+    <li>The WhatsApp listener reply action (spike S4)</li>
+  </ul></div>
+</div>
+<img class="corner-mascot" src="../brand/mascot/png/10-boost.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">On the phone</span><span class="pn">08</span></footer></section><section class="page ">
+<div class="kicker">08 · Architecture</div>
+<h2>Everything runs inside the phone.</h2>
+<div class="arch">
+  <div class="arow"><div class="abox ui">Chat UI<br><small>streaming · Pensando panel · approval sheets</small></div></div>
+  <div class="arrow">▼</div>
+  <div class="arow"><div class="abox">Runtime<br><small>sessions · history window · live events</small></div><div class="abox">Agent loop<br><small>pick → validate → normalize → cage → execute</small></div></div>
+  <div class="arrow">▼</div>
+  <div class="arow">
+    <div class="abox harness">Harness<br><small>router · clause planner · time parser · normalizers · fixed questions · constrained fallback</small></div>
+    <div class="abox cage">The cage<br><small>risk classes · fingerprint approvals · untrusted seal · signed log</small></div>
+  </div>
+  <div class="arrow">▼</div>
+  <div class="arow"><div class="abox model">QVAC (llama.cpp) · BotPsy-0.8B<br><small>native tool calls · thinking budget · KV cache</small></div><div class="abox data">Encrypted SQLite<br><small>memory · reminders · messages · audit chain</small></div></div>
+</div>
+<div class="guar"><div><b>Model never on the network</b><small>QVAC runs it on the phone's CPU or GPU</small></div><div><b>A fingerprint for every send</b><small>exact text and recipient on the sheet</small></div><div><b>Untrusted content sealed</b><small>messages and pages can inform, never command</small></div><div><b>Signed hash chain</b><small>every step, verifiable on the phone</small></div></div>
+<div class="arch-legend"><span>9 packages</span><span>core · cage · skills · agent · model · runtime · copy · eval · sql-node</span><span>about 7,500 lines of product code, 2,900 lines of tests</span></div><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Architecture</span><span class="pn">09</span></footer></section><section class="page ">
+<div class="kicker">09 · What works today</div>
+<h2>The first-win feature set, built and tested.</h2>
+<div class="feats"><div class="feat"><img class="ficon" src="../brand/mascot/png/12-remember.png" alt=""><div><b>Memory</b><p>Remember, recall and forget, with provenance; forgetting also scrubs the chat the model sees</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/14-listening.png" alt=""><div><b>Reminders</b><p>Fire offline; list and cancel; times understood in Spanish and English</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/03-working.png" alt=""><div><b>Calendar</b><p>Read a day, add events with real start and end times</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/04-asking.png" alt=""><div><b>WhatsApp</b><p>Messages read as untrusted content; replies sent only after a fingerprint approval</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/07-blocked.png" alt=""><div><b>Approvals</b><p>Exact text and recipient shown; stale or changed replies are blocked</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/05-done.png" alt=""><div><b>Signed log</b><p>Every step recorded and the hash chain verified on the phone</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/02-thinking.png" alt=""><div><b>Live progress</b><p>Instant intent, a live reasoning panel and streamed answers</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/10-boost.png" alt=""><div><b>Multi-request</b><p>Several asks in one message are planned and done in order</p></div></div><div class="feat"><img class="ficon" src="../brand/mascot/png/15-quiet.png" alt=""><div><b>Bilingual</b><p>Latin American Spanish, voseo included, and English</p></div></div></div><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Features</span><span class="pn">10</span></footer></section><section class="page ">
+<div class="kicker">10 · Achievements</div>
+<h2>Six days from first commit to a working agent on a phone.</h2>
+<div class="timeline"><div class="day"><div class="dot"></div><div class="ddate">8 Nov</div><div class="dtext">Research, architecture spec, brand palette and type; QVAC, WDK, vault and P2P studied</div></div><div class="day"><div class="dot"></div><div class="ddate">9 Nov</div><div class="dtext">Brand book; Wave 0 scaffold with the core contracts, the cage, skills and the eval harness</div></div><div class="day"><div class="dot"></div><div class="ddate">10 Nov</div><div class="dtext">Agent core merged; the crab becomes the logo and mascot; the agentic-first PRD (175 stories)</div></div><div class="day"><div class="dot"></div><div class="ddate">11 Nov</div><div class="dtext">Phone spikes: BotPsy runs on the S26; model layer, approvals, onboarding and listener merged</div></div><div class="day"><div class="dot"></div><div class="ddate">12 Nov</div><div class="dtext">Harness overhaul: blind 73 → 95; parity skills; thermal-guarded phone evals; live streaming</div></div><div class="day"><div class="dot"></div><div class="ddate">13 Nov</div><div class="dtext">Prompt-cache work, harness fixes and research merged (PRs #21, #22); 366 tests green</div></div></div>
+<div class="leaps"><div><span>Biggest leaps</span></div><div><b>73 → 95</b><small>blind score, harness overhaul</small></div><div><b>31 → 39</b><small>of 40 on the S26, old harness vs new</small></div><div><b>7 to 13×</b><small>fewer prompt tokens per call</small></div><div><b>7 / 7</b><small>competitor-parity scenarios passing</small></div></div>
+<div class="counters">
+  <div><b>136</b><span>commits</span></div><div><b>22</b><span>PRs merged</span></div><div><b>22</b><span>research reports</span></div>
+  <div><b>175</b><span>user stories mapped</span></div><div><b>47</b><span>decision records</span></div><div><b>366</b><span>tests passing</span></div>
+</div><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Achievements</span><span class="pn">11</span></footer></section><section class="page ">
+<div class="kicker">11 · The product map</div>
+<h2>An exhaustive PRD keeps every agent on the same page.</h2>
+<div class="mapgrid">
+  <div class="m"><b>27</b><span>epics</span></div><div class="m"><b>175</b><span>user stories</span></div><div class="m"><b>64</b><span>screens with stable IDs</span></div>
+  <div class="m"><b>85</b><span>functional requirements</span></div><div class="m"><b>21</b><span>architecture decisions</span></div><div class="m"><b>26</b><span>product decisions</span></div>
+  <div class="m"><b>59</b><span>V1 slices</span></div><div class="m"><b>12</b><span>cross-cutting contracts</span></div><div class="m"><b>37</b><span>questions decided</span></div>
+</div>
+<div class="split">
+  <div><h3 class="h3s">Stories by release</h3>
+    <div class="stackbar"><div style="flex:120;background:#3B6456">V1 · 120</div><div style="flex:44;background:#4F7C6D">V2 · 44</div><div style="flex:11;background:#D5B893;color:#2B221B">V3 · 11</div></div>
+  </div>
+  <div><h3 class="h3s">V1 slices by wave</h3>
+    <div class="stackbar"><div style="flex:12;background:#3B6456">W1 12</div><div style="flex:15;background:#4F7C6D">W2 15</div><div style="flex:13;background:#6E9488">W3 13</div><div style="flex:9;background:#D5B893;color:#2B221B">W4 9</div><div style="flex:5;background:#D3C2AE;color:#2B221B">W5 5</div><div style="flex:5;background:#EBDDCB;color:#2B221B">W6 5</div></div>
+  </div>
+</div>
+<h3 class="h3s flowh">How the work flows</h3>
+<div class="flow"><div>PRD<small>175 stories, stable IDs</small></div><i>→</i><div>Waves<small>first win, then W2 to W6</small></div><i>→</i><div>Slices<small>vertical, one packet each</small></div><i>→</i><div>Coding agents<small>parallel, narrow context</small></div><i>→</i><div>CI + review<small>tests, typecheck, lint, APK</small></div><i>→</i><div class="last">Merged<small>22 PRs so far</small></div></div>
+<img class="corner-mascot" src="../brand/mascot/png/12-remember.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Product map</span><span class="pn">12</span></footer></section><section class="page ">
+<div class="kicker">12 · Where Hermit stands</div>
+<h2>The only one that is private by construction.</h2>
+<table class="comp"><thead><tr><th>Assistant</th><th>Where it runs</th><th>Model</th><th>Fully on-device</th></tr></thead>
+<tbody><tr><td>Claude Duet</td><td>Cloud VM</td><td>Frontier</td><td class='no'>No</td></tr><tr><td>ChatGPT Dots</td><td>Cloud</td><td>Frontier</td><td class='no'>No</td></tr><tr><td>Grok bot</td><td>Cloud</td><td>Frontier</td><td class='no'>No</td></tr><tr><td>Meta Muse</td><td>Cloud</td><td>Frontier</td><td class='no'>No</td></tr><tr><td>Instinct</td><td>Cloud</td><td>Proprietary</td><td class='no'>No</td></tr><tr><td>Atomic</td><td>Local + cloud planner</td><td>Local</td><td class='no'>No</td></tr><tr class="hermit"><td>Hermit</td><td>Your phone</td><td>BotPsy-0.8B + harness</td><td class="yes">Yes</td></tr></tbody></table>
+<div class="split">
+  <div><h3 class="h3s">Parity goal (Q31)</h3><p>Match the best competitor in each feature family and beat all of them on privacy. Reminder list and cancel, multi-request planning and catch-up summaries already match Instinct, Grok bot and Muse on the assistant menu.</p></div>
+  <div><h3 class="h3s">The on-phone bet (PDR-026)</h3><p>Open-ended web tasks and purchases run on Boost for now. Doing them fully on the phone with a sub-1B model is a standing goal. Nobody has published that result yet.</p></div>
+</div><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Position</span><span class="pn">13</span></footer></section><section class="page ">
+<div class="kicker">13 · Open items</div>
+<h2>What needs a decision or a proof.</h2>
+<div class="risks">
+  <div class="risk warn"><b>Q14 · Tether logo approval</b><p>Written OK on the QVAC and Tether logos before anything public (site, X posts).</p></div>
+  <div class="risk"><b>Q38 · Tainted turns on Boost</b><p>An open web task is untrusted from its first page; the PRD forbids sending those to Boost. It blocks V2 web work only.</p></div>
+  <div class="risk"><b>Opt-in cloud path</b><p>Whether to offer the hardest few percent of requests to the cloud with explicit consent. Logged; to be asked with data.</p></div>
+  <div class="risk mid"><b>Phone verification</b><p>WhatsApp listener (S4), the full first-win journey, the in-chat cache gain and the fast-route token cap.</p></div>
+  <div class="risk mid"><b>Cross-language recall</b><p>A fact saved in English is not always found by a Spanish question.</p></div>
+  <div class="risk"><b>Parallel eval runs</b><p>Two crashes from parallel load; evals now run one at a time behind a lock.</p></div>
+</div>
+<img class="corner-mascot" src="../brand/mascot/png/07-blocked.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Open items</span><span class="pn">14</span></footer></section><section class="page ">
+<div class="kicker">14 · Next</div>
+<h2>From "built" to "proven", then the hands.</h2>
+<div class="steps">
+  <div class="step"><span>1</span><div><b>Pass the W1 gate</b><p>The first-win journey end to end on the S26, the WhatsApp listener, the in-chat cache probe.</p></div></div>
+  <div class="step"><span>2</span><div><b>Ship the faster prompt</b><p>The stable prefix becomes the default once the phone shows the in-chat gain.</p></div></div>
+  <div class="step"><span>3</span><div><b>Wave 2</b><p>Voice notes, email, the connector catalog and the spikes that de-risk wallet, web tasks and Play policy.</p></div></div>
+  <div class="step"><span>4</span><div><b>Train a Hermit model</b><p>Distill the harness into the weights: on-policy distillation and preference training on act, ask and decline.</p></div></div>
+</div>
+<div class="checklist"><b>W1 gate checklist</b>
+<span class="ck done">Model on the S26</span><span class="ck done">Encrypted database</span><span class="ck done">Bundle and loader</span><span class="ck done">39/40 on the phone</span>
+<span class="ck">WhatsApp listener (S4)</span><span class="ck">First-win journey end to end</span><span class="ck">In-chat cache probe</span></div>
+<img class="corner-mascot" src="../brand/mascot/png/02-thinking.png" alt=""><footer><img src="../brand/logo/symbol-ink.svg" alt=""><span>State of Hermit · 13 November 2026</span><span class="sec">Next</span><span class="pn">15</span></footer></section><section class="page back-page">
+<div class="back">
+  <img class="back-lockup" src="../brand/logo/lockup-foam.svg" alt="Hermit">
+  <p class="back-tag">Does everything. Tells no one.</p>
+  <img class="back-mascot" src="../brand/mascot/png/09-sleeping-dark.png" alt="">
+  <div class="back-by">
+    <div class="dojo"><span>Built by</span><img src="../brand/partners/dojocoding-lockup-white.png" alt="Dojo Coding"></div>
+    <div class="qvac"><span>Runs on QVAC by Tether</span></div>
+  </div>
+  <p class="fine">Project report. Hermit is an independent open-source project by Dojo Coding and is not affiliated with or endorsed by Tether. QVAC and Tether names are used descriptively; logo use awaits Tether's written approval (Q14).</p>
+</div></section></body></html>

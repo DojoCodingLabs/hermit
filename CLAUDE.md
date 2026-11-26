@@ -1,0 +1,15 @@
+# Hermit
+
+Read [AGENTS.md](AGENTS.md) before you change anything. It is the guide for this repository, and it wins over this file.
+
+The top five rules:
+
+1. Data stays on the phone: no telemetry, analytics, ads or crash reporters, no server for core features, and no network calls in `packages/*`.
+2. The cage decides every skill call: everything goes through `decide()` and the audit log, and untrusted text (messages, web, mail, other bots) never counts as the user's words.
+3. Money and logins always need the code-written approval sheet and the fingerprint, in every mode. Sending and other outward actions need the approval sheet by default (Ask mode); only a permission mode the user picks on purpose, behind explicit warnings, may let them run without asking. Changing what any mode allows is an RFC. Sheets and cards show only text the code wrote.
+4. Every UI string lives in `packages/copy`, in es-419 and en, with matching keys and placeholders, plain words and no em or en dashes.
+5. Write the failing test first, use made-up data only, keep the evals from regressing, and run every gate before a pull request.
+
+The full guide, imported for Claude Code:
+
+@AGENTS.md

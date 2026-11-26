@@ -1,0 +1,10 @@
+UI mockup: the HERMIT approval sheet, light theme. A bottom sheet slides over a dimmed chat.
+Sheet content (warm paper #F5EDE1, 28 pt top radius):
+- At the top of the sheet, the mascot in the "asking for approval" pose holding a tiny envelope, small.
+- Heading in the editorial serif: "Send this message?"
+- A card in shell beige (#EBDDCB) with two labeled rows: label "To" with value "Ana · WhatsApp", label "Message" with value "Running 10 minutes late, see you soon".
+- A small amber (#8A5912) note with a caution icon: "Suggested after reading a message from Ana".
+- A large pill button in deep sea-glass (#3B6456) with a fingerprint icon and paper-white text "Approve with fingerprint".
+- A text button below it: "Don't send".
+TEXT: render only the quoted strings, spelled exactly. No other text.
+DESIGN SYSTEM (use exactly): Android phone screen, modern Samsung flagship proportions, shown flat and front-on in a thin dark device frame centered on a plain warm paper (#F5EDE1) backdrop. Typography: clean humanist sans for UI, an editorial serif only for large headings. Generous spacing, 16 pt card radius, pill buttons, quiet hierarchy. Describe it as a real shipping product, not concept art. Image 1 is the logo symbol, image 2 is the mascot character sheet: use them exactly when they appear, do not redesign them.

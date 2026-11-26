@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="130" height="22" role="img" aria-label="status: pre-alpha">
+  <title>status: pre-alpha</title>
+  <clipPath id="r"><rect width="130" height="22" rx="11"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="55" height="22" fill="#2B221B"/>
+    <rect x="55" width="75" height="22" fill="#8A5912"/>
+  </g>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600">
+    <text x="27.5" y="15" text-anchor="middle" fill="#D5B893">status</text>
+    <text x="92.5" y="15" text-anchor="middle" fill="#F5EDE1">pre-alpha</text>
+  </g>
+</svg>

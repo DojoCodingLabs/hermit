@@ -1,0 +1,3 @@
+Product photo-style mockup of a heavyweight t-shirt in deep warm ink (#2B221B), laid flat on warm paper (#F5EDE1), soft natural light. Image 1 is the logo symbol: use it exactly.
+Front chest print, centered: the logo symbol in its paper-and-sea-glass colors, and beneath it two lines of small letter-spaced capitals in paper white: "ANTI UI." and "UX CLUB."
+TEXT: render only "ANTI UI." and "UX CLUB.", spelled exactly. No other text, no brand tags.

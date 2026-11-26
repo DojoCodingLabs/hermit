@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android shows these outside Hermit's JS: the autofill picker, and the suggestion in the dropdown or the keyboard. -->
+<resources>
+  <string name="hermit_autofill_label" translatable="false">Hermit</string>
+  <string name="hermit_autofill_dataset">Fill from your Hermit profile</string>
+  <!-- SL-36: a vault login, by its name (never its username). -->
+  <string name="hermit_autofill_login">Log in with Hermit: %1$s</string>
+</resources>

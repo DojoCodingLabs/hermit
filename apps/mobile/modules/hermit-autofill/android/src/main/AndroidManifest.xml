@@ -1,0 +1,45 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    SL-20 and SL-35: an Android autofill service. It does nothing until the user picks Hermit as the autofill service in
+    Android's settings, and it offers a locked suggestion only where the profile has something to fill.
+  -->
+  <!--
+    The service reads the requester's signing certificate (Requester.certDigests). Android 11 and later hide other
+    packages; the trusted browsers are named here. Whether Android also shows the app being filled to its autofill
+    service without a query is a phone check (docs/research/autofill-spike.md, Q80).
+  -->
+  <queries>
+    <package android:name="com.android.chrome" />
+    <package android:name="com.sec.android.app.sbrowser" />
+    <package android:name="org.mozilla.firefox" />
+  </queries>
+
+  <application>
+    <service
+      android:name=".HermitAutofillService"
+      android:label="@string/hermit_autofill_label"
+      android:permission="android.permission.BIND_AUTOFILL_SERVICE"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.service.autofill.AutofillService" />
+      </intent-filter>
+      <meta-data
+        android:name="android.autofill"
+        android:resource="@xml/hermit_autofill_service" />
+    </service>
+
+    <!-- The dataset's authentication: started only through Hermit's own PendingIntent, so not exported. -->
+    <activity
+      android:name=".AutofillAuthActivity"
+      android:exported="false"
+      android:excludeFromRecents="true"
+      android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+    <!-- The settings link Android shows next to Hermit in the autofill picker; it only opens Hermit's own screen. -->
+    <activity
+      android:name=".AutofillSettingsActivity"
+      android:exported="true"
+      android:excludeFromRecents="true"
+      android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+  </application>
+</manifest>

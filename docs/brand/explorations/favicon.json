@@ -1,0 +1,30 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "A tiny-size version of the HERMIT logo symbol for favicons and status-bar icons at 16 to 24 pixels. Image 1 is the approved symbol: simplify it radically while keeping it recognizably the same mark.\n- Only two shapes: a solid round shell in deep warm ink (#2B221B) with a thick sea-glass teal (#4F7C6D) spiral of at most two turns, and a single round eye dot peeking at the shell opening on the right.\n- Very thick strokes, no thin details, no eye stalk, no legs, no highlight.\n- Must read clearly when shrunk to 16 by 16 pixels.\n- Fully transparent background, one centered mark filling about 80 percent of the canvas. No text, no frame, no shadow.",
+  "size": "1024x1024",
+  "quality": "high",
+  "n": 2,
+  "output_format": "png",
+  "background": "transparent",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/masters/symbol-light.png"
+  ],
+  "outputs": [
+    "docs/brand/explorations/favicon-1.png",
+    "docs/brand/explorations/favicon-2.png"
+  ],
+  "usage": {
+    "input_tokens": 2406,
+    "input_tokens_details": {
+      "image_tokens": 2048,
+      "text_tokens": 358
+    },
+    "output_tokens": 3512,
+    "output_tokens_details": {
+      "image_tokens": 3512,
+      "text_tokens": 0
+    },
+    "total_tokens": 5918
+  }
+}

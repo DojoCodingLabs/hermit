@@ -1,0 +1,29 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "Logo lockup sheet for HERMIT. Image 1 is the approved symbol: use it exactly, do not redesign it.\nShow three lockups on a warm paper background (#F5EDE1), stacked vertically with generous space between them:\n1. Horizontal lockup: the symbol on the left, the wordmark \"HERMIT\" on the right, vertically centered on the symbol, cap height about 45 percent of the symbol height.\n2. Stacked lockup: the symbol centered above the wordmark \"HERMIT\".\n3. Wordmark alone: \"HERMIT\".\nWordmark: the letters H-E-R-M-I-T in a clean humanist sans-serif, medium-bold weight, slightly open letter spacing, deep warm ink (#2B221B), all caps, with calm, even proportions; it must feel crafted and quiet, not techy.\nTEXT: render only \"HERMIT\", three times as described, spelled exactly H-E-R-M-I-T. No other words, labels, guides, numbers or watermarks.",
+  "size": "1024x1536",
+  "quality": "high",
+  "n": 2,
+  "output_format": "png",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/masters/symbol-light.png"
+  ],
+  "outputs": [
+    "docs/brand/explorations/lockups-1.png",
+    "docs/brand/explorations/lockups-2.png"
+  ],
+  "usage": {
+    "input_tokens": 2404,
+    "input_tokens_details": {
+      "image_tokens": 2048,
+      "text_tokens": 356
+    },
+    "output_tokens": 2744,
+    "output_tokens_details": {
+      "image_tokens": 2744,
+      "text_tokens": 0
+    },
+    "total_tokens": 5148
+  }
+}

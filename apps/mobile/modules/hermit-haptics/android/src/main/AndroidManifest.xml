@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- No permission: View.performHapticFeedback is the window's own touch feedback, not the Vibrator service (which
+       needs VIBRATE). It follows the phone's "Touch feedback" setting and does nothing when that is off. -->
+</manifest>

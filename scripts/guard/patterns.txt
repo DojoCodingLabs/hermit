@@ -1,0 +1,134 @@
+# Patterns the PR guard checks in public docs: every line a pull request adds under docs/ or to a top-level
+# Markdown file. The Guard workflow runs `node scripts/guard/check.mjs --patterns scripts/guard/patterns.txt`.
+#
+# Format: one pattern per line. /source/flags is a JavaScript regular expression; any other line is plain text,
+# matched without regard to case. Lines starting with # are comments. A failure names the pattern by its line number.
+# This file is public, so it holds only patterns that are safe to publish.
+#
+# What they keep out of the docs: quotes and narration of what a person said or asked (write a decision as what was
+# decided), transcripts and agent run logs, personal data and local paths, and secrets.
+
+# ---- Quotes and narration: state what was decided, not who said what ----
+
+# A quote introduced as someone's own words.
+/\bin (his|her) (own )?words\b/i
+
+# The same, in Spanish.
+/\ben sus (propias )?palabras\b/i
+
+# A decision credited to a person instead of stated as a decision.
+/\b(resolved|answered|decided|approved|ruled|chosen|picked)\b[^\n.]{0,40}\bby (the )?(founder|owner|ceo)\b/i
+
+# Narration of what a founder said, asked, wanted or wrote.
+/\bthe founder(['’]s)? (asked|said|says|wants|wanted|chose|picked|decided|answered|named|told|wrote|considers|shared|pasted|cited|found|called|describes|requirement|question|brief|answer|words|premise|note|links)\b/i
+
+# A question, request or brief credited to a person.
+/\b(question|request|brief|goal|ask) (from|stated by) (the )?(founder|owner)\b/i
+
+# The same narration, in Spanish.
+/\b(el fundador|el dueño)\s+(dijo|pidió|pidio|quiere|quería|queria|eligió|eligio|decidió|decidio|respondió|respondio|preguntó|pregunto)\b/i
+
+# How a decision prompt was answered.
+/\bnon-recommended pick\b/i
+
+# A decision log status credited to a person.
+/\bRESOLVED\b[^\n]{0,20}\((owner|founder)\b/i
+
+# Transcript turns: a line that starts with User, Assistant or a role, then a colon.
+/^\s*(\*\*)?(User|Human|Assistant|Founder|Owner|Coordinator)(\*\*)?\s*:\s/m
+
+# Agent run-log lines: a list item that starts with a date and a time.
+/^\s*- 20\d\d-\d\d-\d\d \d\d:\d\d \(/m
+
+# ---- Personal data ----
+
+# A person's mailbox at the company domain. Role mailboxes, such as privacy@, are allowed.
+/\b(?!(?:privacy|security|support|hello|hola|press|legal|abuse|noreply|no-reply|team|info)@)[a-z0-9._%+-]+@dojocoding\.io\b/i
+
+# Someone's family or private life.
+/\b(his|her|the founder['’]s) (own )?(family|wife|husband|kids|children|son|daughter|mother|father|mom|dad|brother|sister|girlfriend|boyfriend|home address|phone number|personal email)\b/i
+
+# Phone numbers with the +506 code (Costa Rica), outside the synthetic blocks the tests use.
+/(?<![\w+])\+?506[ -]?(?!8888|8777|8555|8444|8000|0000|8999)[2-8]\d{3}[ -]?\d{4}(?!\d)/
+
+# A device identifier written with its value.
+/\b(imei|meid|serial ?(no|number)?|android_id|ANDROID_SERIAL)\b\s*[:=]\s*['"]?[A-Za-z0-9]{8,}/i
+
+# adb pinned to one device's serial.
+/\badb\s+-s\s+[A-Za-z0-9:._-]{6,}/i
+
+# A MAC address. A certificate fingerprint's colon groups don't match.
+/(?<![0-9A-Fa-f][:-])\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b(?![:-][0-9A-Fa-f]{2})/
+
+# ---- Local paths that reveal a user ----
+
+# macOS home folders.
+//Users/(?!Shared/)[A-Za-z0-9._-]+//
+
+# Linux home folders. GitHub's /home/runner is allowed.
+//home/(?!runner/)[a-z_][a-z0-9_-]*//
+
+# Windows profile folders.
+/\b[A-Z]:\\Users\\[^\\\s]+\\/i
+
+# macOS per-user temp folders.
+/\/private\/var\/folders\/|\/var\/folders\/[a-z0-9_]{2}\//
+
+# ---- Secrets ----
+
+# Private keys in PEM or OpenSSH form.
+/-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY(?: BLOCK)?-----/
+
+# AWS access key IDs.
+/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/
+
+# GitHub tokens.
+/\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{60,}\b/
+
+# Slack tokens in their real shape.
+/\bxox[abposr]-\d{6,}-\d{6,}(?:-\d{6,})?-[A-Za-z0-9]{20,}\b/
+
+# Slack incoming webhooks.
+/https://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+/
+
+# Discord webhooks.
+/https://(?:ptb\.|canary\.)?discord(?:app)?\.com/api/webhooks/\d+/[\w-]+/
+
+# Google API keys.
+/\bAIza[0-9A-Za-z_-]{35}\b/
+
+# Google OAuth client secrets.
+/\bGOCSPX-[A-Za-z0-9_-]{24,}\b/
+
+# Google OAuth access tokens in their real length.
+/\bya29\.[0-9A-Za-z_-]{60,}\b/
+
+# OpenAI and Anthropic API keys.
+/\bsk-(?:proj-|ant-[a-z]+\d{2}-)?[A-Za-z0-9_-]{32,}\b/
+
+# Hugging Face tokens.
+/\bhf_[A-Za-z0-9]{34,}\b/
+
+# Stripe live keys.
+/\b(?:sk|rk)_live_[0-9A-Za-z]{24,}\b/
+
+# npm tokens.
+/\bnpm_[A-Za-z0-9]{36}\b/
+
+# JSON Web Tokens.
+/\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/
+
+# Telegram bot tokens.
+/\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b/
+
+# SendGrid keys.
+/\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b/
+
+# A 32-byte hex key next to a key word (wallet, signing or gas keys).
+/(private[_ -]?key|priv[_ -]?key|secret[_ -]?key|signing[_ -]?key|gas[_ -]?key|mnemonic|seed[_ -]?phrase)["'`\s:=]{1,6}(?:0x)?[0-9a-f]{64}\b/i
+
+# Android signing passwords. React Native's public "android" debug password is allowed.
+/\b(?:storePassword|keyPassword)\s*[=:]\s*["']?(?!android\b)[^\s"']+/i
+
+# Expo access tokens.
+/\bEXPO_TOKEN\s*[:=]\s*["']?[A-Za-z0-9_-]{20,}/i

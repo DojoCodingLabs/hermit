@@ -1,0 +1,31 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "Logo symbol for HERMIT, a private AI assistant that lives on your phone. Image 1 is the official character sheet: use exactly this character, do not redesign it.\n\nThe symbol: the tiny version from the character sheet (top row, far right): a round spiral shell in deep warm ink (#2B221B) with one sea-glass teal (#4F7C6D) spiral line that flows into the shell opening, and the hermit crab peeking out of the opening with ONE eye on a short stalk. Nothing else.\n\nRules for the mark:\n- One single centered mark with generous padding on all sides.\n- Strong, simple silhouette that still reads at 16 pixels: favor simplicity over detail. Flat vector shapes only, two colors (ink and sea-glass teal) plus the paper-white eye highlight.\n- Geometric construction: the spiral is a clean logarithmic spiral with an even stroke width; the shell outline is a smooth circle-based form.\n- Fully transparent background. No text, no letters, no frame, no shadow, no watermark, no mockup, no backdrop.",
+  "size": "1024x1024",
+  "quality": "high",
+  "n": 3,
+  "output_format": "png",
+  "background": "transparent",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/masters/character-master.png"
+  ],
+  "outputs": [
+    "docs/brand/explorations/logo-symbol-1.png",
+    "docs/brand/explorations/logo-symbol-2.png",
+    "docs/brand/explorations/logo-symbol-3.png"
+  ],
+  "usage": {
+    "input_tokens": 5214,
+    "input_tokens_details": {
+      "image_tokens": 4608,
+      "text_tokens": 606
+    },
+    "output_tokens": 5268,
+    "output_tokens_details": {
+      "image_tokens": 5268,
+      "text_tokens": 0
+    },
+    "total_tokens": 10482
+  }
+}

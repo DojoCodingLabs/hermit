@@ -1,0 +1,95 @@
+name: RFC (change a non-negotiable)
+description: Propose a change to one of the non-negotiables in AGENTS.md. Only a maintainer can accept it.
+title: "RFC: "
+labels: ["rfc", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The non-negotiables are why people can trust Hermit, so they change only through an accepted RFC. Fill in every field. [docs/rfcs/0000-template.md](https://github.com/DojoCodingLabs/hermit/blob/HEAD/docs/rfcs/0000-template.md) explains what each part needs.
+
+        Expect hard questions, and expect most RFCs to be declined. Until a maintainer accepts this one, pull requests that change the rule won't be reviewed.
+
+  - type: dropdown
+    id: rules
+    attributes:
+      label: Which non-negotiables does this change?
+      multiple: true
+      options:
+        - "1. Data stays on the phone"
+        - "2. No telemetry, ever"
+        - "3. No network in packages/*"
+        - "4. The cage decides every skill call"
+        - "5. Untrusted text is never the user"
+        - "6. Money and logins always need the sheet and the fingerprint, and sending asks by default"
+        - "7. Approval sheets and cards show only words the code wrote"
+        - "8. Testnet only, and no keys in the repo"
+        - "9. Every UI string lives in packages/copy, in both locales"
+        - "10. Tests first, with made-up data"
+        - "11. Evals don't regress, and held-out sets stay blind"
+        - "12. The logo and mascot are locked"
+        - "13. Licenses and marks"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One paragraph. What changes, and for whom.
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: The rule today, and the problem with it
+      description: Quote the rule as AGENTS.md states it, then show a real case where it gets in the way, with made-up data.
+    validations:
+      required: true
+
+  - type: textarea
+    id: change
+    attributes:
+      label: The new rule, word for word
+      description: Exactly how the rule would read in AGENTS.md.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: What could go wrong
+      description: Privacy, security and abuse. Walk through the threat model in SECURITY.md (prompt injection, approval bypass, data leaving the phone). Who could misuse this, and what stops them?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways to solve the problem, including keeping the rule as it is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How we'll know it works
+      description: The tests, eval sets and measurements that would prove the new rule holds, and what would make us undo it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: rollout
+    attributes:
+      label: Rollout and how to undo it
+      description: What ships first, what people see, and how to go back if it goes wrong.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send it
+      options:
+        - label: I read AGENTS.md and SECURITY.md.
+          required: true

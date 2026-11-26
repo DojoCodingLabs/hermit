@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.dojocoding.hermit.smsconsent'
+version = '0.1.0'
+
+android {
+  namespace "io.dojocoding.hermit.smsconsent"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // SL-56b (Q138): Google's SMS User Consent API. No SMS permission: Android shows the one message in its own dialog
+  // and hands it over only when the user taps Allow. This is the SMS retriever only, not Google Sign-In (no login
+  // broker) and nothing that reports anything (no analytics); it pulls play-services-base, -basement and -tasks.
+  implementation "com.google.android.gms:play-services-auth-api-phone:18.1.0"
+  implementation "androidx.core:core-ktx:1.13.1"
+}

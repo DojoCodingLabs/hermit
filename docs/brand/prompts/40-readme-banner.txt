@@ -1,0 +1,3 @@
+Wide GitHub README banner for HERMIT, 3:1. Image 1 is the logo symbol, image 2 the mascot sheet: use them exactly.
+Warm paper (#F5EDE1) background with a very faint embossed spiral texture on the right. Left third: the horizontal logo lockup, the symbol plus the wordmark "HERMIT" in a calm humanist sans in deep ink. Middle: the tagline in a large editorial serif, two lines: "Does everything." "Tells no one." Right: the mascot half out of its shell, idle pose, looking toward the tagline. Below the tagline in small sans: "Open-source AI agent that lives on your phone."
+TEXT: render only the quoted strings, spelled exactly. No other text, no badges.

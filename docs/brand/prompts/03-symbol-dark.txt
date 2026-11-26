@@ -1,0 +1,5 @@
+Dark-mode version of the HERMIT logo symbol. Image 1 is the approved symbol: keep the exact same shapes, proportions and composition, change only the colors.
+- The shell becomes deep ocean blue (#1A4A5E) with a soft inner luminance, and the spiral line becomes bioluminescent mint (#5EF0CF), glowing very slightly as if lit from inside the shell.
+- The crab's eye stalk stays warm sand (#D5B893); the eye stays dark with a bright highlight.
+- Keep it flat and crisp: a subtle glow only on the spiral line, no 3D, no gradients on the shell beyond a faint inner light.
+- Fully transparent background. One centered mark, generous padding. No text, no frame, no shadow, no watermark.

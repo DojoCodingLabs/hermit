@@ -1,0 +1,24 @@
+{
+  "name": "@hermit/mobile-preview",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dev-only: renders the real apps/mobile screens in a browser with sample data, for screenshots. Not part of the app.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "shoot": "node shoot.mjs",
+    "compress": "python3 -c \"import glob; from PIL import Image; [Image.open(f).convert('RGB').quantize(colors=256, dither=Image.Dither.NONE).save(f, optimize=True) for f in glob.glob('out/screens/*.png')]\"",
+    "clips": "node clips.mjs",
+    "polish": "node build.mjs && node shoot.mjs && node words.mjs dist out/screens/words.json && node clips.mjs && node polish-gallery.mjs"
+  },
+  "devDependencies": {
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "esbuild": "0.28.2",
+    "playwright-core": "1.58.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native-web": "0.21.4"
+  }
+}

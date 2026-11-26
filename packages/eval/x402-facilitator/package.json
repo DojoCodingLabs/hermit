@@ -1,0 +1,16 @@
+{
+  "name": "hermit-x402-facilitator-dev",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "Desktop dev tool only: the reference x402 facilitator (x402-foundation/x402) configured for USD₮0 on Stable testnet. Not a workspace package, never bundled into the app.",
+  "scripts": {
+    "start": "node facilitator.mjs"
+  },
+  "dependencies": {
+    "@x402/core": "2.31.0",
+    "@x402/evm": "2.31.0",
+    "viem": "2.57.19"
+  }
+}

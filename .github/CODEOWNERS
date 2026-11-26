@@ -1,0 +1,21 @@
+# Code owners are asked to review every pull request that touches their paths.
+# The maintainer owns everything. The lines after the first name the paths that hold the non-negotiables in
+# AGENTS.md, so they keep this owner even when more maintainers join the first line.
+
+*                               @juancguerrerodev
+
+# The cage: the policy, the hard limits, taint, approvals and the signed audit log.
+/packages/cage/                 @juancguerrerodev
+
+# The core: the ports, canonical hashing and the contracts every package builds on.
+/packages/core/                 @juancguerrerodev
+
+# The privacy check: the dependency denylist, and the lint rule that keeps network code out of packages.
+/scripts/check-privacy.mjs      @juancguerrerodev
+/scripts/check-privacy.test.mjs @juancguerrerodev
+/eslint.config.js               @juancguerrerodev
+
+# The PR guard, the workflows that run every check, and the rules themselves.
+/scripts/guard/                 @juancguerrerodev
+/.github/                       @juancguerrerodev
+/AGENTS.md                      @juancguerrerodev

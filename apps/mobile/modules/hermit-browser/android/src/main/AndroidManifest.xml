@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- SL-53: Hermit's in-app browser (HM-WEB-02). It needs only the network permission the app already declares. -->
+</manifest>

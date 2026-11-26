@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- FR-APP-01: set_alarm hands the alarm to the clock app (a normal permission, granted at install). -->
+  <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+</manifest>

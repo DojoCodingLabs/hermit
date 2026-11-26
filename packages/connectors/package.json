@@ -1,0 +1,26 @@
+{
+  "name": "@hermit/connectors",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./relay-protocol": "./src/relay-protocol.ts",
+    "./oauth-providers": "./src/oauth-providers.ts",
+    "./app-redirects": "./src/app-redirects.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hermit/core": "workspace:*",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0"
+  },
+  "devDependencies": {
+    "@hermit/cage": "workspace:*",
+    "@types/node": "24.19.2"
+  }
+}

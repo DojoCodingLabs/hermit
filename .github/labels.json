@@ -1,0 +1,19 @@
+[
+  { "name": "bug", "color": "d73a4a", "description": "Something doesn't work the way it should." },
+  { "name": "proposal", "color": "a2eeef", "description": "A feature idea waiting for a maintainer's decision. No code yet." },
+  { "name": "accepted", "color": "0e8a16", "description": "A maintainer accepted this. Ready for a pull request." },
+  { "name": "rfc", "color": "5319e7", "description": "Proposes a change to a non-negotiable. Only a maintainer can accept it." },
+  { "name": "needs-triage", "color": "ededed", "description": "New. A maintainer hasn't looked at it yet." },
+  { "name": "good first issue", "color": "7057ff", "description": "Small and well scoped, with a pointer to the code. A good first contribution." },
+  { "name": "help wanted", "color": "008672", "description": "Maintainers would welcome help with this." },
+  { "name": "agent-friendly", "color": "1d76db", "description": "Clear scope, the files named, a test to write first. Fine for an AI agent, with review." },
+  { "name": "device-lab", "color": "fbca04", "description": "Needs a real phone, or device data (docs/devices.md)." },
+  { "name": "model-path", "color": "f9d0c4", "description": "Touches the model, prompt, router, skills or evals. Needs eval numbers." },
+  { "name": "ui", "color": "bfdadc", "description": "Changes a screen. Needs screenshots in both themes and both languages." },
+  { "name": "copy", "color": "c5def5", "description": "UI text in packages/copy, in es-419 and en." },
+  { "name": "cage", "color": "b60205", "description": "The policy, approvals, taint or the audit log in packages/cage." },
+  { "name": "privacy", "color": "0052cc", "description": "Touches what leaves the phone, or what could." },
+  { "name": "docs", "color": "0075ca", "description": "Documentation." },
+  { "name": "out-of-scope", "color": "e4e669", "description": "Conflicts with the vision or a non-negotiable, like data leaving the phone." },
+  { "name": "duplicate", "color": "cfd3d7", "description": "Already covered by another issue or pull request." }
+]

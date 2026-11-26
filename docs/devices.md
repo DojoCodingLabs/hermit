@@ -91,10 +91,10 @@ When the lab ends, the screen shows the report in plain words first, then the ex
 - **Copy** and **Share** give you the same text, to file it later or from another device.
 
 Then a workflow in this repository checks the report against [the schema](devices/schema.json) and the privacy rules
-below. It never runs anything from the issue: it reads the report as data. If the report passes, the workflow adds it
-as `data/devices/<phone>-<hash>.json` to a pull request from the `device-data` branch and comments on your issue with
-the link; once a maintainer merges it, it appears in the table below. If something is wrong, the comment says what;
-edit the issue to fix it and the check runs again.
+below. It never runs anything from the issue: it reads the report as data. If the report passes, the workflow commits
+it as `data/devices/<phone>-<hash>.json` to the `device-data` branch and comments on your issue with the link. A
+maintainer merges that branch through a pull request, and then your report appears in the table below. If something
+is wrong, the comment says what; edit the issue to fix it and the check runs again.
 
 To check a report yourself: `node scripts/devices/validate.mjs report.json`.
 

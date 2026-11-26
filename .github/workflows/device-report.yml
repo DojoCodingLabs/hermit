@@ -2,13 +2,15 @@ name: Device report
 
 # Issue ops for the Device lab (docs/devices.md). A device report filed with the issue form is checked against
 # docs/devices/schema.json and the privacy rules; when it passes, it goes into data/devices and the device table on the
-# device-data branch, through a pull request a maintainer merges, and the issue gets a thank-you with the link. When
-# it doesn't, a comment says what is wrong, and editing the issue runs the check again.
+# device-data branch, and the issue gets a thank-you with the link. A maintainer opens a pull request from device-data
+# and merges it: this workflow never opens, reads, edits or approves a pull request, and its link is always the page
+# comparing device-data with the default branch. When the report doesn't pass, a comment says what is wrong, and
+# editing the issue runs the check again.
 #
 # Nothing from the issue is ever run. scripts/devices/validate.mjs reads the issue from the event file as data and
 # parses the report with JSON.parse; the issue's text never goes into a command. The only value from the event that
 # reaches a shell is the issue number. The scripts come from the default branch's checkout, and the token can write
-# only where a job needs it: issues to comment, and contents and pull requests in the job that records the report.
+# only where a job needs it: issues to comment, and contents in the job that records the report.
 #
 # The device-lab label also marks issues that need a real phone; one without the form's Report field is skipped.
 # Runs for different issues may overlap: scripts/devices/record.mjs retries a push that loses the race.
@@ -52,14 +54,13 @@ jobs:
         run: gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
 
   record:
-    name: Add it to the device table
+    name: Put it on the device-data branch
     needs: check
     if: needs.check.outputs.valid == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write # push the device-data branch
-      pull-requests: write # open or update its pull request
       issues: write # thank the reporter, with the link
     steps:
       # The default branch, with credentials kept for the push. Nothing from the issue is checked out.
@@ -67,10 +68,9 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
-      - name: Write the report and the table on the device-data branch, and open or update its pull request
+      - name: Write the report and the table on the device-data branch
         id: record
         env:
-          GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
           BASE: ${{ github.event.repository.default_branch }}
         run: node scripts/devices/record.mjs
@@ -80,9 +80,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
-          PR_URL: ${{ steps.record.outputs.url }}
+          LINK: ${{ steps.record.outputs.url }}
         run: |
           printf '%s\n\n%s\n' \
-            "Thanks for running the Device lab. Your report passed the checks and is in $PR_URL, which adds it to the device table in docs/devices.md once a maintainer merges it." \
-            "This issue closes when that pull request is merged." > "$RUNNER_TEMP/thanks.md"
+            "Thanks for running the Device lab. Your report passed the checks and is on the device-data branch: $LINK" \
+            "A maintainer adds it to the device table in docs/devices.md." > "$RUNNER_TEMP/thanks.md"
           gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/thanks.md"

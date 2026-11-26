@@ -136,4 +136,4 @@ jq -c '.[]' .github/labels.json | while read -r label; do
 done
 ```
 
-The device-data pull requests are opened with the workflow token, which starts no workflow. Before you merge one, run CI on its branch by hand: Actions, CI, Run workflow, branch `device-data`.
+Device reports wait on the `device-data` branch: the device-report workflow commits them there and never opens a pull request. To publish them, open a pull request from `device-data` to `main` and merge it. The workflow's pushes start no workflow, so before you merge, run CI on the branch by hand: Actions, CI, Run workflow, branch `device-data`.

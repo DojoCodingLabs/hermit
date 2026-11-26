@@ -75,8 +75,19 @@ export function isReadableType(contentType: string): boolean {
   return t === "" || t === "text/html" || t === "application/xhtml+xml" || t === "text/plain";
 }
 
-/** The web addresses in a text the user wrote, in order, without trailing punctuation. */
+/** Sentence marks that end an address in running text rather than belong to it. */
+const TRAILING = new Set([".", ",", ";", ":", "!", "?", "¿", "¡", ")", "]", "}"]);
+
+/**
+ * The web addresses in a text, in order, without trailing punctuation. The cage also runs it over text others wrote
+ * (pages and messages, for Auto's links), so it takes linear time: the trailing marks are dropped by a loop from the
+ * end, since a backtracking `[...]+$` took quadratic time on a long run of them followed by any other character.
+ */
 export function findUrls(text: string): string[] {
   const found = text.match(/(?:https?:\/\/|www\.)[^\s<>"'«»]+/gi) ?? [];
-  return found.map((u) => u.replace(/[.,;:!?¿¡)\]}]+$/, ""));
+  return found.map((u) => {
+    let end = u.length;
+    while (end > 0 && TRAILING.has(u.charAt(end - 1))) end--;
+    return u.slice(0, end);
+  });
 }

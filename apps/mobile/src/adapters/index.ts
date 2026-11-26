@@ -9,6 +9,7 @@ import { authenticateApproval, provisionApprovalKey, verifyApproval } from "./ap
 import { phoneCalendar } from "./calendar";
 import { encryptedSql } from "./op-sqlite";
 import { qvacEngine } from "./qvac-engine";
+import type { CacheOwners } from "../cache-keys";
 import { reminderNotifier, requestReminderAccess } from "./notifier";
 import { plainSecret } from "./secure";
 import { deviceSigner } from "./signer";
@@ -36,6 +37,7 @@ import { engineSlot } from "../engine-slot";
 
 export { startCapture, notificationAccessEnabled, openNotificationAccessSettings };
 export { appLockEnabled, confirmOwner, onPrompt, phoneSecurity, saveAppLock } from "./app-lock";
+export { forgetBotCaches } from "./qvac-engine";
 export { countedFetch, setOutboundSink } from "./net";
 export { actOnPermission, readPermissions } from "./permissions";
 export { requestContactsPermission } from "./contacts";
@@ -72,6 +74,13 @@ export function onModelLoading(listener: (loading: boolean) => void): () => void
   return () => void modelLoading.delete(listener);
 }
 
+/** The runtime's bots and their oldest chats, for each load's sweep of the prompt caches (../cache-keys). */
+let cacheOwners: (() => Promise<CacheOwners>) | undefined;
+/** Set once Hermit is up (hermit-context); a load before that sweeps nothing. */
+export function setCacheOwners(owners: () => Promise<CacheOwners>): void {
+  cacheOwners = owners;
+}
+
 /**
  * The loaded model, kept here so the erase (SL-26) can unload it before deleting its files and caches. It loads with
  * the threads for the cores Android allows the app at that moment, and loads again at a safe point when those change
@@ -84,7 +93,7 @@ const model = engineSlot<CompletionEngine & { close(): Promise<void> }, RuntimeP
     const profile = PROFILES[0]!;
     // The model an update made active (SL-43), else the pinned one; with no update both are the same file.
     const file = activeFile() ?? modelFile(profile.file.url.split("/").pop()!);
-    return qvacEngine(file.uri, profile, plan ? { plan, conditions: runtimeConditions } : undefined);
+    return qvacEngine(file.uri, profile, plan ? { plan, conditions: runtimeConditions } : undefined, { owners: async () => cacheOwners?.() });
   },
   onLoading: (loading) => {
     for (const l of modelLoading) l(loading);
@@ -210,6 +219,11 @@ export async function createPorts(approvals: HermitPorts["approvals"]): Promise<
       random: (n) => getRandomBytes(n),
       confirm: async () => (await trackPrompt(() => confirmWithFingerprint(translate(currentLocale(), "HM-CONN-04.installPrompt"), translate(currentLocale(), "HM-CONN-04.cancel")))) === "confirmed",
       copy: (lang, key, vars) => translate(lang, key, vars),
+    },
+    // Multi-bot (HM-BOT-03, HM-BOT-04): granting mail send, logins or pay, and turning on Don't ask, take the same
+    // strong-biometric fingerprint (no PIN fallback); the runtime writes the prompt in the app's language.
+    bots: {
+      confirm: async (prompt: string) => (await trackPrompt(() => confirmWithFingerprint(prompt, translate(currentLocale(), "common.cancel")))) === "confirmed",
     },
     // SL-57: HM-CONN-05's relays over the counted HTTPS adapter; Dojo's relay URL and client IDs (Q43) come from
     // ../dojo-config, unset until Dojo's apps exist.

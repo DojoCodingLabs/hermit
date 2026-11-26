@@ -1,8 +1,8 @@
 import type {
-  ApprovalOutcome, ApprovalPort, ApprovalRequest, ApprovalSummary, ContactsPort, FoundPerson, ModelPort, Msg, RenderContext, SessionState, SignedApprovalPayload, SkillDef,
-  SignedApprovalTerms, StopSignal, TaintSource,
+  ApprovalOutcome, ApprovalPort, ApprovalRequest, ApprovalSummary, ContactsPort, FoundPerson, ModelPort, Msg, PermissionMode, RenderContext, SessionState,
+  SignedApprovalPayload, SkillDef, SignedApprovalTerms, StopSignal, TaintSource,
 } from "@hermit/core";
-import type { AuditInput, PolicyRule, SignedApprovals } from "@hermit/cage";
+import type { AuditInput, BotCage, PolicyRule, SignedApprovals } from "@hermit/cage";
 
 export interface SkillResult {
   ok: boolean;
@@ -40,6 +40,12 @@ export interface SkillResult {
    * shift's briefing). modelText's words are for the model and are never parsed back.
    */
   items?: readonly ReadItem[];
+  /**
+   * Multi-bot (spec 6.4.1): the part of modelText other people wrote, for Auto's links, when a result mixes it with
+   * the user's own words (sent mail) or with code's own lines (a listing's head, which says back the query). Absent:
+   * all of modelText is others' words.
+   */
+  othersText?: string;
 }
 
 /** One thing a read found: an event, a message or a reminder. `who` is a sender; `allDay` events' instants are dates. */
@@ -85,6 +91,11 @@ export type HoldResult =
 export interface SkillRuntime {
   def: SkillDef;
   /**
+   * Multi-bot (spec 6.4): the connector or MCP server this skill comes from, set by code from its record, never by the
+   * model. A bot holds such a skill only when its sources list it, and what it reads counts as the web.
+   */
+  source?: string;
+  /**
    * SL-40: money only. Runs after the cage says ask and before the sheet: code checks the asset, the amount and the
    * recipient against the user's own words, the caps and the balance, and reserves the payment (reserve before
    * approve), so two payments waiting on approval can't both pass a cap. The loop releases a hold whose call never
@@ -100,6 +111,12 @@ export interface SkillRuntime {
     session: SessionState;
     approvedArgsHash?: string;
     approvedBinding?: string;
+    /**
+     * Multi-bot (spec 6.4.1): the bot's permission mode let this run without a sheet. The hash and the binding above
+     * still hold the skill to what was decided, but the user approved nothing: a skill never remembers this as the
+     * user's approval (an approved domain or search provider, an address the user sent mail to).
+     */
+    byMode?: PermissionMode;
     /** The user's own words this turn, never tool output. */
     userText?: string;
     /** What destination() gave once for this call, the one the cage decided on. The skill contacts nothing else. */
@@ -175,6 +192,16 @@ export interface LoopDeps {
   signedApprovals?: SignedApprovals;
   /** Resolving a person the user named to a number or address (PDR-028). Without it, names are never resolved. */
   people?: PeopleDeps;
+  /**
+   * Multi-bot (spec 6.4, 6.4.1): the bot this turn runs for, with its grants, sources and the mode in effect. The cage
+   * decides every call with it. Absent, every decision is today's.
+   */
+  bot?: BotCage;
+  /**
+   * The prompt cache key every model call of this turn carries: one per bot, `hermit-v1:<botId>` (spec 6.6). The
+   * default, "hermit-v1", is kept only for callers with no bot.
+   */
+  prefixCacheKey?: string;
 }
 
 /**
@@ -194,7 +221,8 @@ export type StepEvent =
   | { kind: "picked"; skill: string }
   /** `code` (SL-37): why a money or password call couldn't be asked, so the chat can say it and link the fix. */
   | { kind: "blocked"; skill: string; reason: string; code?: SignedBlockCode }
-  | { kind: "approved"; skill: string }
+  /** `byMode` (multi-bot, spec 6.4.1): the bot's permission mode let the step run without a sheet. Absent: the user approved it. */
+  | { kind: "approved"; skill: string; byMode?: PermissionMode }
   | { kind: "denied"; skill: string }
   | { kind: "executed"; skill: string; ok: boolean }
   | { kind: "repair_failed"; detail: string };

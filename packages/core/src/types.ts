@@ -1,5 +1,6 @@
 import type { FoundPerson } from "./people.ts";
 import type { SignedApprovalTerms } from "./approval-key.ts";
+import type { ReadKind, RiskTier, SkillGroup } from "./bots.ts";
 
 export type SkillId = string & { readonly __brand: "SkillId" };
 
@@ -156,6 +157,10 @@ export interface SkillDef<A = Record<string, unknown>> {
    * A spend or credential skill without it can't be approved.
    */
   approvalTerms?(args: A): SignedApprovalTerms;
+  /** Risk tier, set by code; a skill without one is high (tierOf). */
+  tier?: RiskTier;
+  /** The permission group this skill belongs to; a skill outside a bot's groups is denied in code. */
+  group?: SkillGroup;
 }
 
 export interface NormalizeContext {
@@ -204,6 +209,10 @@ export interface SessionState {
    * searching. Held in memory like approvedDomains.
    */
   approvedSearchProviders?: string[];
+  /** The bot this session belongs to; Hermit's when absent. */
+  botId?: string;
+  /** What this session has read so far (private data, the web). Held in memory only. */
+  reads?: ReadKind[];
 }
 
 export interface Msg {

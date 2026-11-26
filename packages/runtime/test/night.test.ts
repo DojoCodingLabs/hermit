@@ -9,6 +9,7 @@ import type { ApprovalRequest } from "@hermit/core";
 import { profileById, type CompletionEngine, type EngineRequest } from "@hermit/model";
 import { DEFAULT_NIGHT_SETTINGS, type DeviceState } from "@hermit/night";
 import { createHermit } from "../src/hermit.ts";
+import { recordingQueue } from "./bot-harness.ts";
 
 const PROFILE = profileById("botpsy-q4-two-stage-nothink")!;
 /** 2026-11-14 at hh:mm in Costa Rica (UTC-6). */
@@ -25,6 +26,7 @@ function setup() {
       return { text: '{"answer":"Ana pregunta si se ven mañana a las 8.","quotes":[]}', toolCalls: [] };
     },
   };
+  const rq = recordingQueue(engine);
   const notices: Array<{ id: string; at: number; title: string }> = [];
   const sheets: ApprovalRequest[] = [];
   const clock = { now: at(2) };
@@ -36,7 +38,8 @@ function setup() {
       notifier: { schedule: async (x) => (notices.push(x), "n"), cancel: async () => {} },
       calendar: { list: async () => [{ title: "Dentista", start: at(10), end: at(11) }], add: async () => {}, calendars: async () => [] },
       replySender: { send: async () => "sent" },
-      engine,
+      engine: rq.engine,
+      queue: rq.queue,
       approvals: { request: async (r) => (sheets.push(r), { kind: "denied" }) },
       now: () => clock.now,
       timeZone: () => "America/Costa_Rica",
@@ -45,7 +48,7 @@ function setup() {
     },
     PROFILE,
   );
-  return { hermit, sql, requests, notices, sheets, clock };
+  return { hermit, sql, requests, notices, sheets, clock, queued: rq.queued, unqueuedCalls: rq.unqueuedCalls };
 }
 
 const on = { ...DEFAULT_NIGHT_SETTINGS, enabled: true };
@@ -73,6 +76,9 @@ describe("night shift in the runtime (SL-24)", () => {
     // The only model call is the quarantined reader: no tools, a JSON schema, the messages wrapped as untrusted.
     expect(w.requests).toHaveLength(1);
     expect(w.requests[0]!.tools).toBeUndefined();
+    // Multi-bot (Task 10): the night's reader waited its turn in the run queue, as a routine.
+    expect(w.unqueuedCalls()).toBe(0);
+    expect(w.queued).toEqual(["routine"]);
     expect(w.requests[0]!.jsonSchema).toBeTruthy();
     expect(b.sections.find((s) => s.job === "messages")).toMatchObject({ untrusted: true, summary: "Ana pregunta si se ven mañana a las 8." });
     expect(w.notices).toEqual([{ id: "briefing-2026-11-14", at: at(7), title: "Tu resumen de la mañana está listo" }]);

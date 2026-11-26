@@ -1,4 +1,6 @@
 import type { SqlPort } from "./ports.ts";
+import { HERMIT_BOT_ID, type ChatSummary } from "./bots.ts";
+import { quoteSafe } from "./quote.ts";
 import type { Msg, SessionState, TaintSource } from "./types.ts";
 
 /**
@@ -35,18 +37,21 @@ export interface LastReply {
 }
 
 export interface Sessions {
-  start(opts: { id: string; attended: boolean }): Promise<SessionState>;
+  /** `botId` is Hermit's when absent. */
+  start(opts: { id: string; attended: boolean; botId?: string }): Promise<SessionState>;
   load(id: string): Promise<SessionState | undefined>;
   addTurn(sessionId: string, turn: Omit<StoredTurn, "at"> & { at?: number }): Promise<void>;
   markTainted(sessionId: string, source: TaintSource): Promise<SessionState>;
   /** Oldest first, as model messages. Untrusted turns keep their flag. */
   history(sessionId: string, limit?: number): Promise<Msg[]>;
-  /** The newest attended session, which the chat resumes after a restart. */
-  latest(): Promise<string | undefined>;
+  /** The bot's attended session with the newest activity (a start counts), which its chat resumes after a restart. */
+  latest(botId?: string): Promise<string | undefined>;
+  /** The bot's attended chats, newest activity first. */
+  chats(botId: string): Promise<ChatSummary[]>;
   /** Oldest first, the newest `limit` entries (US-CHAT-07). */
   transcript(sessionId: string, limit?: number): Promise<TranscriptEntry[]>;
-  /** "Clear conversation": every session and turn goes; notes and the signed log are other tables. */
-  clear(): Promise<void>;
+  /** "Clear conversation": that bot's sessions and turns go (Hermit's when absent); notes and the signed log are other tables. */
+  clear(botId?: string): Promise<void>;
   /** Q155: the session's very last turn when it is a reply the chat showed; anything after it means there is none. */
   lastReply(sessionId: string): Promise<LastReply | undefined>;
   /**
@@ -56,7 +61,10 @@ export interface Sessions {
   extendReply(sessionId: string, id: number, text: string, outcome: "reply" | "cut" | "stopped"): Promise<void>;
 }
 
-interface SessionRow { id: string; attended: number; tainted: number; started_at: number }
+interface SessionRow { id: string; attended: number; tainted: number; started_at: number; bot_id: string }
+
+/** A session's newest activity: its latest turn, or its start when it has none. */
+const ACTIVITY = "MAX(COALESCE(MAX(t.at), 0), s.started_at)";
 
 /** Taint sources live in memory for the running session; after a restart a tainted session stays tainted. */
 const RESTORED: TaintSource = { kind: "inbound_message", ref: "restored", at: 0 };
@@ -64,9 +72,9 @@ const RESTORED: TaintSource = { kind: "inbound_message", ref: "restored", at: 0 
 export function createSessions(sql: SqlPort, now: () => number = Date.now): Sessions {
   const live = new Map<string, SessionState>();
   const api: Sessions = {
-    async start({ id, attended }) {
-      await sql.exec("INSERT INTO sessions (id, attended, tainted, started_at) VALUES (?, ?, 0, ?)", [id, attended ? 1 : 0, now()]);
-      const s: SessionState = { id, taint: [], unattended: !attended };
+    async start({ id, attended, botId = HERMIT_BOT_ID }) {
+      await sql.exec("INSERT INTO sessions (id, attended, tainted, started_at, bot_id) VALUES (?, ?, 0, ?, ?)", [id, attended ? 1 : 0, now(), botId]);
+      const s: SessionState = { id, taint: [], unattended: !attended, botId };
       live.set(id, s);
       return s;
     },
@@ -75,7 +83,7 @@ export function createSessions(sql: SqlPort, now: () => number = Date.now): Sess
       if (cached) return cached;
       const [row] = await sql.query<SessionRow>("SELECT * FROM sessions WHERE id = ?", [id]);
       if (!row) return undefined;
-      const s: SessionState = { id, taint: row.tainted ? [RESTORED] : [], unattended: row.attended === 0 };
+      const s: SessionState = { id, taint: row.tainted ? [RESTORED] : [], unattended: row.attended === 0, botId: row.bot_id };
       live.set(id, s);
       return s;
     },
@@ -83,6 +91,9 @@ export function createSessions(sql: SqlPort, now: () => number = Date.now): Sess
       await sql.exec("INSERT INTO chat_turns (session_id, role, text, untrusted, outcome, at) VALUES (?, ?, ?, ?, ?, ?)", [
         sessionId, t.role, t.text, t.untrusted ? 1 : 0, t.outcome ?? null, t.at ?? now(),
       ]);
+      // The first user words name the chat, once; a turn with no words leaves it untitled for the next one.
+      const title = t.role === "user" ? quoteSafe(t.text, 60) : "";
+      if (title) await sql.exec("UPDATE sessions SET title = ? WHERE id = ? AND title IS NULL", [title, sessionId]);
     },
     async markTainted(sessionId, source) {
       const s = await api.load(sessionId);
@@ -104,9 +115,21 @@ export function createSessions(sql: SqlPort, now: () => number = Date.now): Sess
       );
       return rows.map((r) => (r.untrusted ? { role: r.role, content: r.text, untrusted: true } : { role: r.role, content: r.text }));
     },
-    async latest() {
-      const [row] = await sql.query<{ id: string }>("SELECT id FROM sessions WHERE attended = 1 ORDER BY started_at DESC, rowid DESC LIMIT 1");
+    async latest(botId = HERMIT_BOT_ID) {
+      const [row] = await sql.query<{ id: string }>(
+        `SELECT s.id FROM sessions s LEFT JOIN chat_turns t ON t.session_id = s.id
+         WHERE s.bot_id = ? AND s.attended = 1 GROUP BY s.id ORDER BY ${ACTIVITY} DESC, s.rowid DESC LIMIT 1`,
+        [botId],
+      );
       return row?.id;
+    },
+    async chats(botId) {
+      const rows = await sql.query<{ id: string; title: string | null; started_at: number; last_at: number }>(
+        `SELECT s.id, s.title, s.started_at, ${ACTIVITY} AS last_at FROM sessions s LEFT JOIN chat_turns t ON t.session_id = s.id
+         WHERE s.bot_id = ? AND s.attended = 1 GROUP BY s.id ORDER BY last_at DESC, s.rowid DESC`,
+        [botId],
+      );
+      return rows.map((r) => ({ id: r.id, ...(r.title ? { title: r.title } : {}), startedAt: r.started_at, lastAt: r.last_at }));
     },
     async transcript(sessionId, limit = 60) {
       const rows = await sql.query<{ role: Msg["role"]; text: string; outcome: StoredTurn["outcome"] | null }>(
@@ -137,12 +160,12 @@ export function createSessions(sql: SqlPort, now: () => number = Date.now): Sess
         text, outcome, id, sessionId,
       ]);
     },
-    async clear() {
+    async clear(botId = HERMIT_BOT_ID) {
       await sql.transaction(async (tx) => {
-        await tx.exec("DELETE FROM chat_turns");
-        await tx.exec("DELETE FROM sessions");
+        await tx.exec("DELETE FROM chat_turns WHERE session_id IN (SELECT id FROM sessions WHERE bot_id = ?)", [botId]);
+        await tx.exec("DELETE FROM sessions WHERE bot_id = ?", [botId]);
       });
-      live.clear();
+      for (const [id, st] of live) if ((st.botId ?? HERMIT_BOT_ID) === botId) live.delete(id);
     },
   };
   return api;

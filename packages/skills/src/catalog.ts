@@ -26,7 +26,7 @@ const s = (v: unknown) => String(v ?? "");
  */
 export const firstWinSkills: readonly SkillDef<Args>[] = [
   {
-    id: skillId("remember"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("remember"), version: 1, risk: "local_write", producesUntrusted: false, tier: "low", group: "notes",
     menuLine: "Save a personal fact the user tells you so you can recall it later (\"remember that...\", \"note that...\", \"keep in mind...\", \"recuerda que...\", \"anota que...\"). Not for alerts at a time.",
     args: obj({ fact: str("The fact to save, in the user's own language and words", { maxLength: 500 }) }, ["fact"]),
     normalize: normalizeRemember,
@@ -35,19 +35,19 @@ export const firstWinSkills: readonly SkillDef<Args>[] = [
   {
     // Memories saved during a tainted session can carry injected text back in.
     // Wave 1 narrows this to per-call taint when a returned memory is tainted.
-    id: skillId("recall"), version: 1, risk: "read", producesUntrusted: true,
+    id: skillId("recall"), version: 1, risk: "read", producesUntrusted: true, tier: "low", group: "notes",
     menuLine: "Search the facts the user saved before. Use it for any question about the user's own life (their passwords, sizes, documents, where they parked, birthdays): never answer those from your own knowledge.",
     args: obj({ query: str("Keywords to search for, in the user's language", { maxLength: 200 }) }, ["query"]),
     describeAction: (a) => ({ title: "Look in memory", lines: [{ label: "Looking for", labelKey: "lookingFor", value: s(a.query) }] }),
   },
   {
-    id: skillId("forget"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("forget"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "notes",
     menuLine: "Delete a saved fact when the user asks to forget or delete it (\"forget...\", \"olvida...\", \"borra lo de...\").",
     args: obj({ query: str("Keywords of the fact to delete", { maxLength: 200 }) }, ["query"]),
     describeAction: (a) => ({ title: "Forget this", lines: [{ label: "Forget", labelKey: "forget", value: s(a.query) }] }),
   },
   {
-    id: skillId("remind"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("remind"), version: 1, risk: "local_write", producesUntrusted: false, tier: "low", group: "reminders",
     menuLine: "Set an alert that fires at a specific time (\"remind me\", \"ping me\", \"don't let me forget\", \"recuérdame\", \"avísame\", \"no me dejes olvidar\").",
     args: obj({ text: str("What to remind about, short, in the user's language", { maxLength: 200 }), at: str("When: local date and time as YYYY-MM-DDTHH:MM:SS (24-hour clock, no time zone)") }, ["text", "at"]),
     normalize: normalizeRemind,
@@ -55,14 +55,14 @@ export const firstWinSkills: readonly SkillDef<Args>[] = [
   },
   {
     // US-REM-03: the user's own reminders, read back in local time.
-    id: skillId("reminders_list"), version: 1, risk: "read", producesUntrusted: false,
+    id: skillId("reminders_list"), version: 1, risk: "read", producesUntrusted: false, tier: "low", group: "reminders",
     menuLine: "List the user's upcoming reminders (\"what reminders do I have?\", \"¿qué recordatorios tengo?\", \"mis recordatorios\").",
     args: obj({}, []),
     describeAction: () => ({ title: "Check reminders", lines: [] }),
   },
   {
     // US-REM-03: cancel by the user's own words; code resolves which reminder (the model never handles ids).
-    id: skillId("reminder_cancel"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("reminder_cancel"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "reminders",
     menuLine: "Cancel one of the user's reminders (\"cancel my 9 o'clock reminder\", \"cancela el recordatorio de mamá\", \"ya no me recuerdes lo del banco\").",
     args: obj({ which: str("Words that identify the reminder: its time or what it is about, in the user's words", { maxLength: 200 }) }, ["which"]),
     normalize: normalizeReminderCancel,
@@ -70,14 +70,14 @@ export const firstWinSkills: readonly SkillDef<Args>[] = [
   },
   {
     // Invitations are written by other people.
-    id: skillId("calendar_read"), version: 1, risk: "read", producesUntrusted: true,
+    id: skillId("calendar_read"), version: 1, risk: "read", producesUntrusted: true, tier: "low", group: "calendar",
     menuLine: "List the events in the user's calendar between two local date-times (\"what do I have tomorrow\", \"¿qué tengo el viernes?\").",
     args: obj({ from: str("Range start, local YYYY-MM-DDTHH:MM:SS"), to: str("Range end, local YYYY-MM-DDTHH:MM:SS") }, ["from", "to"]),
     normalize: normalizeCalendarRead,
     describeAction: (a) => ({ title: "Check calendar", lines: [{ label: "From", labelKey: "from", value: s(a.from) }, { label: "To", labelKey: "to", value: s(a.to) }] }),
   },
   {
-    id: skillId("calendar_add"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("calendar_add"), version: 1, risk: "local_write", producesUntrusted: false, tier: "low", group: "calendar",
     menuLine: "Create a calendar event with a title, start and end (\"put X in my calendar\", \"agenda...\", \"pon ... el viernes de 10 a 11\").",
     args: obj({
       title: str("Event title, in the user's language", { maxLength: 120 }),
@@ -91,14 +91,14 @@ export const firstWinSkills: readonly SkillDef<Args>[] = [
     }),
   },
   {
-    id: skillId("read_messages"), version: 1, risk: "read", producesUntrusted: true,
+    id: skillId("read_messages"), version: 1, risk: "read", producesUntrusted: true, tier: "low", group: "messages_read",
     menuLine: "Read the user's recent WhatsApp messages, optionally only those from one contact (\"did Ana write?\", \"¿qué me dijo Pedro?\"). Also the first step before replying to someone.",
     args: obj({ contact: str("The contact's name only (a person, never a date), or empty for everyone", { maxLength: 80 }) }, []),
     normalize: normalizeReadMessages,
     describeAction: (a) => ({ title: "Read messages", lines: [{ label: "From", labelKey: "from", ...valueOr(a.contact, "Everyone", "everyone") }] }),
   },
   {
-    id: skillId("reply_message"), version: 1, risk: "send", producesUntrusted: false,
+    id: skillId("reply_message"), version: 1, risk: "send", producesUntrusted: false, tier: "medium", group: "messages_reply",
     menuLine: "Send a WhatsApp reply in a conversation that read_messages already returned. Needs that conversationId; if you don't have it, call read_messages first.",
     // No free-text recipient: the model names a conversation, the app resolves who that is.
     args: obj({
@@ -140,7 +140,7 @@ const account = str("Which email account: an address or a word the user said (wo
  */
 export const mailSkillDefs: readonly SkillDef<Args>[] = [
   {
-    id: skillId("mail_list"), version: 1, risk: "network", producesUntrusted: true,
+    id: skillId("mail_list"), version: 1, risk: "network", producesUntrusted: true, tier: "low", group: "mail_read",
     menuLine: "Read the user's recent email (Gmail, Outlook or any connected account), unread by default: \"anything important in my email?\", \"check my inbox\", \"¿tengo correos nuevos?\", \"revisa mi correo\".",
     args: obj({
       account,
@@ -157,7 +157,7 @@ export const mailSkillDefs: readonly SkillDef<Args>[] = [
     }),
   },
   {
-    id: skillId("mail_search"), version: 1, risk: "network", producesUntrusted: true,
+    id: skillId("mail_search"), version: 1, risk: "network", producesUntrusted: true, tier: "low", group: "mail_read",
     menuLine: "Search the user's email for a message: \"find the flight confirmation from Avianca\", \"search my email for the invoice\", \"busca el correo del banco\", \"encuentra el correo de la renta\".",
     args: obj({
       query: str("Words to look for, from the user's request, without the sender", { maxLength: 200 }),
@@ -175,7 +175,7 @@ export const mailSkillDefs: readonly SkillDef<Args>[] = [
     }),
   },
   {
-    id: skillId("mail_read"), version: 1, risk: "network", producesUntrusted: true,
+    id: skillId("mail_read"), version: 1, risk: "network", producesUntrusted: true, tier: "low", group: "mail_read",
     menuLine: "Open one email that mail_list or mail_search returned, to answer a question about it (\"what does the Avianca email say?\", \"¿qué dice ese correo?\"). Needs its messageId.",
     args: obj({ messageId: str("The messageId exactly as mail_list or mail_search returned it, like m3", { pattern: "^m[0-9]{1,4}$" }) }, ["messageId"]),
     normalize: normalizeMailRead,
@@ -298,7 +298,7 @@ const MODIFY_CHANGES: Record<string, ReturnType<typeof fixedValue>> = {
  */
 export const mailWriteSkillDefs: readonly SkillDef<Args>[] = [
   {
-    id: skillId("mail_send"), version: 1, risk: "send", producesUntrusted: false,
+    id: skillId("mail_send"), version: 1, risk: "send", producesUntrusted: false, tier: "medium", group: "mail_send",
     menuLine: "Send a new email to an address the user gave or a person they named (\"email bob@x.com that I'm running late\", \"manda un correo a Ana diciendo...\"). Always asks the user first.",
     args: obj({
       to: recipients("Recipients"),
@@ -313,7 +313,7 @@ export const mailWriteSkillDefs: readonly SkillDef<Args>[] = [
     describeAction: (a, ctx) => composeSheet("Send this email?", "mail_send", a, ctx, true),
   },
   {
-    id: skillId("mail_reply"), version: 1, risk: "send", producesUntrusted: false,
+    id: skillId("mail_reply"), version: 1, risk: "send", producesUntrusted: false, tier: "medium", group: "mail_send",
     menuLine: "Reply to an email that mail_list or mail_search returned (\"reply to Luis that I'll be there\", \"responde el correo del banco\", \"contéstale ese correo\"). Needs its messageId. Always asks first.",
     // No recipient argument: a reply goes to the message's sender, read by code from the thread.
     args: obj({ messageId, body: str("The exact reply text, in the language of the email", { maxLength: 4000 }) }, ["messageId", "body"]),
@@ -321,7 +321,7 @@ export const mailWriteSkillDefs: readonly SkillDef<Args>[] = [
     describeAction: (a, ctx) => replySheet("Send this reply?", "mail_reply", a, ctx),
   },
   {
-    id: skillId("mail_forward"), version: 1, risk: "send", producesUntrusted: false,
+    id: skillId("mail_forward"), version: 1, risk: "send", producesUntrusted: false, tier: "medium", group: "mail_send",
     menuLine: "Forward an email that mail_list or mail_search returned to an address the user gave or a person they named (\"forward the Avianca email to bob@x.com\", \"reenvía ese correo a Ana\"). Always asks first.",
     args: obj({ messageId, to: recipients("New recipients"), person: personArg("email"), body: str("A short note above the forwarded email, only if the user gave one", { maxLength: 2000 }) }, ["messageId"]),
     recipient: { field: "to", kind: "email", required: true },
@@ -348,7 +348,7 @@ export const mailWriteSkillDefs: readonly SkillDef<Args>[] = [
     },
   },
   {
-    id: skillId("mail_draft"), version: 1, risk: "remote_write", producesUntrusted: false,
+    id: skillId("mail_draft"), version: 1, risk: "remote_write", producesUntrusted: false, tier: "medium", group: "mail_send",
     menuLine: "Write an email draft without sending it, saved in the account's Drafts (\"draft a reply to Luis\", \"haz un borrador para ana@x.com\", \"redacta un correo\"). With a messageId it is a reply draft.",
     args: obj({
       to: recipients("Recipients, if the user gave any"),
@@ -363,7 +363,7 @@ export const mailWriteSkillDefs: readonly SkillDef<Args>[] = [
     describeAction: (a, ctx) => (s(a.messageId) ? replySheet("Save this draft?", "mail_draft", a, ctx) : composeSheet("Save this draft?", "mail_draft", a, ctx, false)),
   },
   {
-    id: skillId("mail_modify"), version: 1, risk: "remote_write", producesUntrusted: false,
+    id: skillId("mail_modify"), version: 1, risk: "remote_write", producesUntrusted: false, tier: "medium", group: "mail_send",
     menuLine: "Archive, label or mark as read emails that mail_list or mail_search returned (\"archive the newsletters\", \"márcalos como leídos\", \"archiva esos correos\"). Up to 200 at a time.",
     args: obj({
       messageIds: str("The messageIds separated by spaces (m1 m4), or shown for every email just listed", { maxLength: 1200, pattern: "^(shown|m[0-9]{1,4}([ ,]+m[0-9]{1,4})*)$" }),

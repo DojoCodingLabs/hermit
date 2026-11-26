@@ -106,6 +106,8 @@ export function recipeSkill(recipe: Recipe): SkillDef {
     // It contacts nothing and changes nothing: it offers the plan; the user starts it, and commits ask on the sheet.
     risk: "read",
     producesUntrusted: false,
+    // No tier on purpose, so it is high (tierOf): the plan it opens acts on a site for the user.
+    group: "web_tasks",
     menuLine: `Do the user's saved web task "${recipe.name}" on ${site} (${KIND_WORDS[recipe.kind]}). Opens the plan in Hermit's browser to check and start; nothing is sent without approval.`.slice(0, 300),
     args: argsOf(recipe),
     describeAction: (a) => ({

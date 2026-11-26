@@ -1,4 +1,5 @@
 export * from "./policy.ts";
+export * from "./modes.ts";
 export * from "./audit.ts";
 export * from "./audit-log.ts";
 export * from "./approval-proof.ts";

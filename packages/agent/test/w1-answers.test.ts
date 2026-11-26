@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from "vitest";
 import { nodeSql } from "@hermit/sql-node";
-import { conversationId, createMemory, createMessageStore, createReminders, migrate, type CalendarEvent, type CapturedNotification, type SessionState } from "@hermit/core";
+import { conversationId, createMemory, HERMIT_BOT_ID, createMessageStore, createReminders, migrate, type CalendarEvent, type CapturedNotification, type SessionState } from "@hermit/core";
 import { calendarSkills, messageSkills, reminderSkills } from "../src/first-win-skills.ts";
 import { memorySkills } from "../src/memory-skills.ts";
 import { runTurn } from "../src/loop.ts";
@@ -266,7 +266,7 @@ describe("remember and forget", () => {
   async function world(language: "es-419" | "en" = "es-419") {
     const sql = nodeSql();
     await migrate(sql);
-    return memorySkills(createMemory(sql), { words: wordsIn(language) });
+    return memorySkills(createMemory(sql).forBot(HERMIT_BOT_ID), { words: wordsIn(language) });
   }
 
   test("a fact about the user's things comes back in the second person", async () => {

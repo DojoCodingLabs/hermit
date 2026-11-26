@@ -262,6 +262,18 @@ describe("the write skills act only on what the user approved", () => {
     expect(book.has("bob@example.com")).toBe(true);
   });
 
+  it("a send a bot's mode let run never teaches the address book: only the user's own approval does (multi-bot)", async () => {
+    const gmail = fakeProvider([]);
+    const { by, sheet, book } = await setup({ "acc-g": gmail });
+    const args = { to: "bob@example.com", subject: "Mañana", body: "Llego a las 8." };
+    const binding = (await sheet("mail_send", args)).binding!;
+    expect(await by("mail_send").execute(args, { session: session(), approvedBinding: binding, byMode: "dont_ask" })).toMatchObject({ ok: true });
+    expect(gmail.calls).toHaveLength(1);
+    expect(book.has("bob@example.com")).toBe(false);
+    await by("mail_send").execute(args, { session: session(), approvedBinding: binding });
+    expect(book.has("bob@example.com")).toBe(true);
+  });
+
   it("nothing is sent without the approved binding, or when the account changed after the sheet", async () => {
     const gmail = fakeProvider([]);
     const { by, sheet, deps } = await setup({ "acc-g": gmail });

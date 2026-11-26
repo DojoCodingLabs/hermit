@@ -4,11 +4,12 @@
  */
 import { describe, expect, test } from "vitest";
 import { nodeSql } from "@hermit/sql-node";
-import { erasePlan, type ApprovalOutcome, type ApprovalRequest } from "@hermit/core";
+import { createBotsStore, erasePlan, type ApprovalOutcome, type ApprovalRequest } from "@hermit/core";
 import { ed25519Signer } from "@hermit/cage";
 import { MCP_REDIRECT_URI, MemoryCredentialStore, type ConnectorRequest, type McpResponse, type McpTransport } from "@hermit/connectors";
 import { profileById, type CompletionEngine, type EngineRequest } from "@hermit/model";
 import { createHermit } from "../src/hermit.ts";
+import { recordingQueue } from "./bot-harness.ts";
 
 const PROFILE = profileById("botpsy-q4-two-stage-nothink")!;
 const NOW = Date.UTC(2026, 10, 15, 12);
@@ -70,18 +71,21 @@ function setup(script: string[], approve: (r: ApprovalRequest) => ApprovalOutcom
       return { text: (script[i++] ?? '{"choice":"respond"}').replace(/PICK_[A-Z]+/g, (k) => ids[k] ?? k), toolCalls: [] };
     },
   };
+  const rq = recordingQueue(engine);
+  const sql = nodeSql();
   const world = mcpWorld();
   const credentials = new MemoryCredentialStore();
   const sheets: ApprovalRequest[] = [];
   let n = 0;
   const hermit = createHermit(
     {
-      sql: nodeSql(),
+      sql,
       signer: ed25519Signer(new Uint8Array(32).fill(4)),
       notifier: { schedule: async () => "n", cancel: async () => {} },
       calendar: { list: async () => [], add: async () => {}, calendars: async () => [] },
       replySender: { send: async () => "sent" },
-      engine,
+      engine: rq.engine,
+      queue: rq.queue,
       approvals: { request: async (r) => (sheets.push(r), approve(r)) },
       now: () => NOW,
       timeZone: () => "America/Costa_Rica",
@@ -91,7 +95,7 @@ function setup(script: string[], approve: (r: ApprovalRequest) => ApprovalOutcom
     },
     PROFILE,
   );
-  return { hermit, requests, sheets, credentials, ids, ...world };
+  return { hermit, sql, requests, sheets, credentials, ids, ...world, queued: rq.queued, unqueuedCalls: rq.unqueuedCalls };
 }
 
 async function addServer(w: ReturnType<typeof setup>, confirmRead = ["search_notes"]) {
@@ -165,6 +169,36 @@ describe("MCP tools under the cage (SL-54)", () => {
 
     const { rows } = await w.hermit.activity();
     expect(rows.map((r) => [r.skill, r.mark])).toEqual([[send, "denied"], [search, "read_untrusted"]]);
+    // Multi-bot (Task 10): the reader of the tool's text waited its turn in the run queue, at the chat turn's priority.
+    expect(w.unqueuedCalls()).toBe(0);
+    expect(w.queued).toEqual(w.requests.map(() => "user"));
+  });
+
+  // Multi-bot (spec 6.4): a server's tools come from that server, so a bot holds them only when its sources list it.
+  test("a server's tools are offered to Hermit and to a bot whose sources list the server, and run for them; never for another bot", async () => {
+    const READ = JSON.stringify({ answer: "You have a note that says to buy milk.", quotes: [] });
+    const w = setup(["PICK_SEARCH", READ, '{"choice":"respond"}', "I can't.", "PICK_SEARCH", READ]);
+    await w.hermit.init();
+    const server = await addServer(w);
+    const search = `mcp_${server.id}_search_notes`;
+    Object.assign(w.ids, { PICK_SEARCH: `{"choice":"${search}","args":{"query":"milk"}}` });
+    const store = createBotsStore(w.sql, () => NOW);
+    await store.create({ id: "b1", name: "Notes", role: "You read my notes.", grants: [], sources: { sites: [], connectors: [server.id] }, mode: null });
+    await store.create({ id: "b2", name: "Other", role: "You do something else.", grants: [], sources: { sites: [], connectors: [] }, mode: null });
+    const picks = async (botId: string | undefined) => {
+      const before = w.requests.length;
+      await w.hermit.send(await w.hermit.resumeSession(botId), "look up milk in my notes");
+      return offered(w.requests.slice(before).find(isPick)!);
+    };
+    // Listed among the bot's sources: offered, and the cage lets it run, so the runtime said where the tool comes from.
+    expect(await picks("b1")).toContain(search);
+    expect(w.calls).toEqual(["search_notes"]);
+    // Another bot is never offered it, and nothing runs.
+    expect(await picks("b2")).not.toContain(search);
+    expect(w.calls).toEqual(["search_notes"]);
+    // Hermit holds every source.
+    expect(await picks(undefined)).toContain(search);
+    expect(w.calls).toEqual(["search_notes", "search_notes"]);
   });
 
   test("the cage gets the code-derived risk: an unconfirmed read claim asks as a remote write", async () => {

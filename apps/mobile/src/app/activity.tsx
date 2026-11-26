@@ -5,10 +5,14 @@
 // beside it, relative to now. An outcome is said only when it isn't the ordinary one ("Done" on every row told
 // nothing), in words and in color together: coral for blocked or failed, amber for outside content. The hashes live
 // in each entry (HM-ACT-02). Clear moved to the bar, as a trash button; it stays hidden while the chain is broken.
+// Multi-bot: the second line names the bot that ran a step or that the user changed (its name now, "bot borrado" once
+// it is gone), what a change to a bot or a mode was, and the mode that let a step run without asking (../activity-view).
 import { useCallback, useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { useRouter } from "expo-router";
-import type { ActivityMark, ActivityRow, ChainView } from "@hermit/cage";
+import type { ChainView } from "@hermit/cage";
+import type { ActivityRowView } from "@hermit/runtime";
+import { activityLine } from "../activity-view";
 import { confirmWithFingerprint } from "../adapters/fingerprint";
 import type { IconName } from "../components/Icon";
 import { Empty, Group, IconBtn, Notice, Page, Row, T, TitleLine } from "../components/kit";
@@ -20,17 +24,12 @@ import { s } from "../theme";
 
 type ClearNote = "done" | "not_confirmed" | "unavailable" | "broken" | "failed";
 
-/** How an outcome reads in a row: nothing for the ordinary "ran", coral for a refusal or a failure, amber for outside content. */
-const OUTCOME: Partial<Record<ActivityMark, "coral" | "amber" | "soft">> = {
-  approved: "soft", blocked: "coral", denied: "soft", failed: "coral", read_untrusted: "amber", proposed: "soft", skipped: "soft",
-};
-
 const SKILL_ICON: Record<string, IconName> = {
   pay: "wallet", pay_merchant: "wallet", search_web: "search", read_web: "book-open", reply_message: "send", remind: "bell",
   reminder_cancel: "bell", reminders_list: "bell", set_alarm: "bell", calendar_add: "calendar", calendar_read: "calendar",
   remember: "bookmark", recall: "bookmark", forget: "bookmark", read_messages: "message-circle", open_whatsapp_chat: "message-circle",
   fill_login: "key-round", vault: "key-round", fill_form: "user", profile: "user", add_contact: "contact", wallet: "wallet",
-  spending: "wallet", connector: "plug", connect_service: "plug",
+  spending: "wallet", connector: "plug", connect_service: "plug", bot: "sliders-horizontal", create_bot: "plus",
 };
 
 /** A row's icon: its skill's, else its family's (web tasks, mail, the night shift, MCP tools, connectors). */
@@ -41,7 +40,7 @@ const iconFor = (skill: string): IconName =>
 export default function Activity() {
   const router = useRouter();
   const { status } = useHermit();
-  const [data, setData] = useState<{ rows: ActivityRow[]; chain: ChainView }>({ rows: [], chain: { kind: "empty" } });
+  const [data, setData] = useState<{ rows: ActivityRowView[]; chain: ChainView }>({ rows: [], chain: { kind: "empty" } });
   const [clearing, setClearing] = useState(false);
   const [note, setNote] = useState<ClearNote>();
 
@@ -110,17 +109,23 @@ export default function Activity() {
           const mark = t(markKey(item.mark));
           const at = when(item.at, now, locale);
           const time = t(at.key, at.vars);
-          const outcome = OUTCOME[item.mark];
-          // The second line only when it says something: how many a clear removed, or an outcome that isn't "Done".
-          const detail = cleared ? tCount("HM-ACT-01.clearedCount", item.clearedCount ?? 0) : outcome ? mark : undefined;
+          // Which bot (its name is data, never copy), what changed or which mode ran it, and an outcome that isn't "Done".
+          const line = activityLine(item);
+          const who = line.who ? ("name" in line.who ? line.who.name : t(line.who.key)) : undefined;
+          const what = line.what ? t(line.what) : undefined;
+          const outcome = line.outcome ? line.tone : undefined;
+          // The second line only when it says something: how many a clear removed, or any of the above.
+          const said = [who, what, line.outcome ? mark : undefined].filter((x): x is string => !!x);
+          const detail = cleared ? tCount("HM-ACT-01.clearedCount", item.clearedCount ?? 0) : said.length ? said.join(" · ") : undefined;
+          const strong = outcome === "coral" || outcome === "amber";
           return (
             <Row
               icon={cleared ? "trash-2" : iconFor(item.skill)}
-              iconColor={outcome === "coral" || outcome === "amber" ? outcome : "soft"}
+              iconColor={strong ? outcome : "soft"}
               title={<TitleLine title={title} aside={time} />}
-              sub={detail ? <T v={outcome === "coral" || outcome === "amber" ? "smallStrong" : "small"} color={outcome ?? "soft"}>{detail}</T> : undefined}
+              sub={detail ? <T v={strong ? "smallStrong" : "small"} color={outcome ?? "soft"}>{detail}</T> : undefined}
               chevron
-              a11y={[title, cleared ? detail : mark, time].join(", ")}
+              a11y={[title, ...(cleared ? [detail] : [who, what, mark]), time].filter(Boolean).join(", ")}
               hint={t("HM-ACT-01.openHint")}
               onPress={() => router.push({ pathname: "/activity-entry", params: { seq: String(item.seq) } })}
             />

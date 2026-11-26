@@ -7,12 +7,15 @@
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
+import type { PermissionMode } from "@hermit/core";
 import type { LanguageChoice } from "@hermit/runtime";
 import { phoneSecurity } from "../adapters";
 import { mailService } from "../adapters/mail";
 import { useAppLock } from "../app-lock";
+import { modeName, Refusal } from "../components/BotFormParts";
 import { ChoiceList } from "../components/ChoiceList";
 import type { IconName } from "../components/Icon";
+import { ModeSheet } from "../components/ModeSheet";
 import { Btn, Group, Label, Note, Page, Row, T, Toggle } from "../components/kit";
 import { setLanguage, useDisplay } from "../display-settings";
 import { useHermit } from "../hermit-context";
@@ -42,6 +45,8 @@ export default function Settings() {
       </Group>
 
       <LanguageSection />
+
+      <BotModesSection />
 
       <Label>{t("HM-SET-01.group.use")}</Label>
       <Group>
@@ -84,6 +89,48 @@ export default function Settings() {
         <Btn label={t("HM-SET-03.title")} kind="coralOutline" icon="trash-2" full onPress={() => router.push("/delete")} />
       </View>
     </Page>
+  );
+}
+
+/** HM-BOT-04's global mode: how Hermit and every bot without its own mode act. Raising it opens the same warnings; the runtime asks the fingerprint. */
+function BotModesSection() {
+  const { status } = useHermit();
+  const hermit = status.kind === "ready" ? status.hermit : undefined;
+  const [mode, setMode] = useState<PermissionMode>("ask");
+  const [open, setOpen] = useState(false);
+  const [refused, setRefused] = useState<string>();
+  useFocusEffect(useCallback(() => {
+    void hermit?.modes.global().then(setMode, () => {});
+  }, [hermit]));
+
+  const change = async (next: PermissionMode | null, typed?: string) => {
+    if (!hermit || !next) return;
+    setRefused(undefined);
+    try {
+      const r = await hermit.modes.setGlobal(next, typed ? { typed } : undefined);
+      if (r === "set") setMode(next);
+      else setRefused(r);
+    } catch {
+      // A change that threw failed; it isn't passed off as a busy bot.
+      setRefused("failed");
+    }
+  };
+  return (
+    <View style={{ marginTop: s.xl, gap: s.sm }}>
+      <Group>
+        <Row
+          icon="shield"
+          title={t("HM-SET-01.botModes")}
+          sub={t("HM-SET-01.botModesSub", { mode: modeName(mode) })}
+          chevron
+          a11y={`${t("HM-SET-01.botModes")}: ${modeName(mode)}`}
+          disabled={!hermit}
+          onPress={() => { setRefused(undefined); setOpen(true); }}
+        />
+      </Group>
+      {refused ? <Refusal reason={refused} name="Hermit" /> : null}
+      <ModeSheet open={open} current={mode} global={mode} allowInherit={false} onConfirm={(m, typed) => void change(m, typed)} onClose={() => setOpen(false)} />
+    </View>
   );
 }
 

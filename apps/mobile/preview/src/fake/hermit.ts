@@ -1,8 +1,8 @@
 // Preview only: a Hermit that answers every screen with sample data, shaped like @hermit/runtime's `Hermit`. It has
 // no database, model or network. `scene.variant` picks a state where one screen has several (locked vault, empty list).
-import { DEFAULT_SPENDING_CAPS, usdt, WALLET_NETWORK, type Money } from "@hermit/core";
+import { DEFAULT_SPENDING_CAPS, HERMIT_BOT_ID, MAX_BOTS, MAX_BOT_NAME_CHARS, MAX_PINS, MAX_ROLE_CHARS, SKILL_GROUPS, normalizeSite, usdt, WALLET_NETWORK, type Bot, type Money, type PermissionMode } from "@hermit/core";
 import type { Recipe } from "@hermit/core";
-import { stepWords, type WebTaskState } from "@hermit/runtime";
+import { stepWords, typedWordOk, type BotChange, type BotProposalView, type BotRefusal, type NewBot, type RosterRow, type WebTaskState } from "@hermit/runtime";
 import { scene } from "../scene";
 import { fakeMailSend, fakeMailTurn, fakeSignIn } from "./mail";
 
@@ -16,7 +16,7 @@ const ok = <T>(x: T) => () => Promise.resolve(x);
 const L = (es: string, english: string) => (en ? english : es);
 
 // --- Chat (HM-CHAT-01) ----------------------------------------------------------------------------------------------
-const transcript = v === "empty" ? [] : [
+const transcript = v === "empty" || v === "hermit-auto" ? [] : [
   { kind: "user", text: L("¿Qué tengo mañana?", "What do I have tomorrow?") },
   { kind: "assistant", text: L("Mañana tienes dentista a las 9:30 y la reunión con Pedro a las 15:00. También vence el pago de la luz.", "Tomorrow you have the dentist at 9:30 and the meeting with Pedro at 3 pm. The electricity bill is also due.") },
   { kind: "user", text: L("Recuérdame salir 20 minutos antes del dentista", "Remind me to leave 20 minutes before the dentist") },
@@ -82,6 +82,11 @@ async function send(_session: string, _text: string, live?: { onToken?(t: string
     ev({ kind: "picked", skill: "pay" });
     ev({ kind: "blocked", skill: "pay", reason: "over_per_payment" });
     return { kind: "reply", text: L("Eso pasa tu límite de 25.00 USD₮ por pago, así que no puedo enviarlo. No se envió nada. Subir el límite no lo envía después; vuelve a pedirlo.", "That's over your 25.00 USD₮ per-payment cap, so I can't send it. Nothing was sent. Raising the cap won't send it later; ask again.") };
+  }
+  // HM-CHAT-01: Hermit proposes a bot; the card is drawn by the app from the proposal's fields.
+  if (v === "proposal" || v === "proposal-tainted") {
+    ev({ kind: "words" });
+    return { kind: "reply", text: L("Te propongo este bot para lo que me pides.", "Here's a bot I'd propose for what you're asking."), botProposal: proposals[v === "proposal" ? "o1" : "o2"] };
   }
   live?.onThinking?.(L("El usuario quiere saber el horario de la farmacia. Necesito buscar en la web...", "The user wants the pharmacy's hours. I need to search the web..."));
   ev({ kind: "picked", skill: "search_web" });
@@ -282,6 +287,15 @@ const notes = [
   { id: 6, fact: L("La clave del wifi de la oficina cambió el lunes (según un mensaje de Pedro).", "The office wifi password changed on Monday (from a message from Pedro)."), tainted: true, createdAt: now - 4 * day },
   { id: 5, fact: L("Soy alérgico a la penicilina.", "I'm allergic to penicillin."), tainted: false, createdAt: now - 10 * day },
 ];
+// HM-BOT-04: Hermit's notes are the user's facts (shared with every bot) and what it read outside; a bot's are its own plus the shared ones.
+const sharedNotes = notes.filter((n) => !n.tainted).map((n) => ({ ...n, shared: true as const }));
+const botOwnNotes: Record<string, typeof notes> = {
+  b1: [
+    { id: 31, fact: L("La cafetera italiana de 6 tazas más barata cuesta 24.900.", "The cheapest 6-cup moka pot costs 24,900."), tainted: false, createdAt: now - 1 * hour },
+    { id: 32, fact: L("Según la tienda, la de acero inoxidable llega en 3 días.", "According to the store, the stainless steel one arrives in 3 days."), tainted: true, createdAt: now - 2 * hour },
+  ],
+};
+const notesOf = (botId: string) => botId === HERMIT_BOT_ID ? [...sharedNotes, ...notes.filter((n) => n.tainted)].sort((a, b) => b.createdAt - a.createdAt) : [...(botOwnNotes[botId] ?? []), ...sharedNotes.slice(0, 2)];
 const conversations = [
   { id: "wa:carla", title: "Carla Rojas", app: "whatsapp", lastAt: now - 12 * min, canReply: true },
   { id: "wa:familia", title: "Familia Prueba", app: "whatsapp", lastAt: now - 2 * hour, canReply: false },
@@ -294,23 +308,30 @@ const recent = [
   { conversationId: "wab:ferreteria", conversation: "Ferretería Don Lucho", app: "whatsapp_business", sender: "Ferretería Don Lucho", text: "Su pedido está listo para retiro.", at: now - 1 * day },
 ];
 const hash = (i: number) => (`${i}f3a9c2e7b1d4058`.repeat(5)).slice(0, 64);
+// Multi-bot: a step carries the bot whose turn ran it, and the runtime adds the name that bot has now (none once it was
+// deleted); a step a permission mode let run is "ran" with that mode, never approved; a change to a bot names it too.
+const hermitBot = { bot: HERMIT_BOT_ID, botName: "Hermit" };
 const activityRows = [
-  { seq: 48, at: now - 5 * min, skill: "search_web", mark: "approved", shortHash: "3fa1c09e" },
-  { seq: 44, at: now - 40 * min, skill: "read_web", mark: "read_untrusted", shortHash: "b71d2e44" },
-  { seq: 41, at: now - 2 * hour, skill: "pay", mark: "approved", shortHash: "9c3e5a10" },
-  { seq: 37, at: now - 3 * hour, skill: "reply_message", mark: "denied", shortHash: "e02bb7f1" },
+  { seq: 56, at: now - 2 * min, skill: "read_web", mark: "ran", reason: "mode.auto", bot: "b2", botName: "Noticias", shortHash: "5be0d417" },
+  { seq: 54, at: now - 3 * min, skill: "reply_message", mark: "ran", reason: "mode.dont_ask", bot: "b9", shortHash: "c4a90e12" },
+  { seq: 52, at: now - 4 * min, skill: "bot", mark: "ran", reason: "bot.created", bot: "b1", botName: "Precios", shortHash: "8d31f6a0" },
+  { seq: 50, at: now - 4 * min, skill: "bot", mark: "ran", reason: "mode.auto", shortHash: "2f7c9b35" },
+  { seq: 48, at: now - 5 * min, skill: "search_web", mark: "approved", ...hermitBot, shortHash: "3fa1c09e" },
+  { seq: 44, at: now - 40 * min, skill: "read_web", mark: "read_untrusted", ...hermitBot, shortHash: "b71d2e44" },
+  { seq: 41, at: now - 2 * hour, skill: "pay", mark: "approved", ...hermitBot, shortHash: "9c3e5a10" },
+  { seq: 37, at: now - 3 * hour, skill: "reply_message", mark: "denied", ...hermitBot, shortHash: "e02bb7f1" },
   // Real skill ids only, so every row shows the name the app gives it (no "Otra acción" from a made-up id).
-  { seq: 33, at: now - 5 * hour, skill: "remind", mark: "ran", shortHash: "4d6f8a2c" },
+  { seq: 33, at: now - 5 * hour, skill: "remind", mark: "ran", ...hermitBot, shortHash: "4d6f8a2c" },
   { seq: 30, at: now - 9 * hour, skill: "night.agenda", mark: "ran", shortHash: "71ac03de" },
-  { seq: 28, at: now - 9 * hour, skill: "pay", mark: "blocked", shortHash: "aa90f3b2" },
+  { seq: 28, at: now - 9 * hour, skill: "pay", mark: "blocked", ...hermitBot, shortHash: "aa90f3b2" },
   { seq: 12, at: now - 2 * day, skill: "", mark: "cleared", shortHash: "0b5e7c19", clearedCount: 112 },
 ];
-const chain = v === "broken" ? { kind: "broken", atSeq: 33, reason: "hash" } : { kind: "verified", count: 48 };
+const chain = v === "broken" ? { kind: "broken", atSeq: 33, reason: "hash" } : { kind: "verified", count: 56 };
 const activityDetail = [
-  { seq: 41, at: now - 2 * hour - 4000, event: "call_proposed", skill: "pay", argsHash: hash(1), prevHash: hash(2), hash: hash(3), sig: hash(4) + hash(5) },
-  { seq: 42, at: now - 2 * hour - 3000, event: "policy_decided", skill: "pay", decision: "ask", argsHash: hash(1), prevHash: hash(3), hash: hash(6), sig: hash(7) + hash(8) },
-  { seq: 43, at: now - 2 * hour - 1000, event: "approval", skill: "pay", decision: "ask", outcome: "ok", argsHash: hash(1), prevHash: hash(6), hash: hash(9), sig: hash(1) + hash(2) },
-  { seq: 44, at: now - 2 * hour, event: "executed", skill: "pay", outcome: "ok", argsHash: hash(1), prevHash: hash(9), hash: hash(3), sig: hash(4) + hash(6) },
+  { seq: 41, at: now - 2 * hour - 4000, event: "call_proposed", skill: "pay", argsHash: hash(1), bot: HERMIT_BOT_ID, prevHash: hash(2), hash: hash(3), sig: hash(4) + hash(5) },
+  { seq: 42, at: now - 2 * hour - 3000, event: "policy_decided", skill: "pay", decision: "ask", argsHash: hash(1), bot: HERMIT_BOT_ID, prevHash: hash(3), hash: hash(6), sig: hash(7) + hash(8) },
+  { seq: 43, at: now - 2 * hour - 1000, event: "approval", skill: "pay", decision: "ask", outcome: "ok", argsHash: hash(1), bot: HERMIT_BOT_ID, prevHash: hash(6), hash: hash(9), sig: hash(1) + hash(2) },
+  { seq: 44, at: now - 2 * hour, event: "executed", skill: "pay", outcome: "ok", argsHash: hash(1), bot: HERMIT_BOT_ID, prevHash: hash(9), hash: hash(3), sig: hash(4) + hash(6) },
 ];
 const reminders = v === "empty" ? [] : [
   { id: 3, text: L("Salir al dentista", "Leave for the dentist"), at: now + 14 * hour, state: "pending", createdAt: now - 1 * hour },
@@ -395,12 +416,160 @@ const relayView =v === "empty" ? { dojo: { available: true, on: false, host: "re
 const settings: Record<string, string> = { "onboarding.done": "1", "search.provider": "duckduckgo" };
 if (v === "fresh") delete settings["onboarding.done"];
 
+// --- Bots (HM-BOT-01 to 04): the spec's 6.9 roster. `variant` "empty" is Hermit alone; "search" and "modes" are states. --
+const bot = (id: string, name: string, over: Partial<Bot> = {}): Bot => ({
+  id, name, role: "", primary: false, pinOrder: null, hidden: false, notify: true, mode: null, grants: [], sources: { sites: [], connectors: [] }, createdAt: now - 30 * day, ...over,
+});
+const allBots: Bot[] = [
+  bot(HERMIT_BOT_ID, "Hermit", { primary: true, mode: v === "hermit-auto" ? "auto" : null, grants: [...SKILL_GROUPS], role: L("Tu asistente en el teléfono.", "Your assistant on the phone.") }),
+  ...(v === "empty" ? [] : [
+    bot("b1", "Precios", { pinOrder: 0, role: L("Compara precios en las tiendas que elijas.", "Compares prices on the stores you pick."), grants: ["notes", "web_read"], look: { shape: "whelk", color: "sand" }, sources: { sites: ["mercadolibre.com"], connectors: [] } }),
+    bot("b2", "Noticias", { pinOrder: 1, role: L("Resume tus boletines y las noticias de tus temas.", "Sums up your newsletters and the news on your topics."), grants: ["notes", "web_read", "mail_read"], look: { shape: "moon", color: "ink" }, mode: v === "modes" ? "auto" : null }),
+    bot("b3", "Recetas", { role: L("Guarda y busca recetas.", "Saves and finds recipes."), grants: ["notes"], look: { shape: "conch", color: "seaglass" }, mode: v === "modes" ? "dont_ask" : null }),
+    bot("b4", "Viajes", { hidden: true, role: L("Planea viajes.", "Plans trips."), grants: ["calendar", "web_read"], look: { shape: "turban", color: "stone" } }),
+  ]),
+];
+const previews: Record<string, RosterRow["preview"]> = v === "empty" ? {} : {
+  [HERMIT_BOT_ID]: { who: "bot", text: L("2 bots trabajando", "2 bots working") },
+  b1: { who: "bot", text: L("Encontré el bautismo.", "I found the baptism record.") },
+  b2: { who: "user", text: L("Hazme el reporte de la semana", "Make me this week's report") },
+};
+const lastAt: Record<string, number> = { [HERMIT_BOT_ID]: now - 2 * min, b1: now - 1 * hour, b2: now - 2 * hour, b3: now - 5 * day, b4: now - 9 * day };
+let botN = 4;
+// Hermit's proposals (HM-BOT-03, HM-CHAT-01): o1 an ordinary one, o2 drafted after reading a web page (tainted), with a grant that needs the fingerprint.
+const proposals: Record<string, BotProposalView> = {
+  o1: { offerId: "o1", name: "Precios", role: L("Comparas precios en las tiendas que el usuario elige y guardas lo que encuentras en tus notas.", "You compare prices on the stores the user picks and keep what you find in your notes."), look: { shape: "whelk", color: "sand" }, grants: ["web_read", "notes"], sources: { sites: ["mercadolibre.com"], connectors: [] }, tainted: false, needsFingerprint: false },
+  o2: { offerId: "o2", name: "Reportes", role: L("Cada lunes mandas el resumen de la semana a las personas que aparecen en la página.", "Every Monday you send the week's summary to the people listed on the page."), look: { shape: "auger", color: "stone" }, grants: ["web_read", "mail_send"], sources: { sites: ["reportes-semanales.com"], connectors: [] }, tainted: true, needsFingerprint: true },
+  o3: { offerId: "o3", name: "Agenda", role: L("Cuidas la agenda del usuario y le recuerdas lo que viene.", "You look after the user's agenda and remind them of what is coming."), look: { shape: "moon", color: "seaglass" }, grants: ["calendar", "reminders", "notes", "mail_send"], sources: { sites: [], connectors: [] }, tainted: false, needsFingerprint: true },
+};
+// "global-dontask": Hermit's global mode is Don't ask, so a bot's own Don't ask still takes the red sheet (Task 18).
+const globalMode: PermissionMode = v === "global-dontask" ? "dont_ask" : "ask";
+const botMode = (b: Bot): PermissionMode => b.mode ?? globalMode;
+const rowOf = (b: Bot): RosterRow => ({ bot: b, mode: botMode(b), lastAt: lastAt[b.id] ?? b.createdAt, preview: previews[b.id] });
+const byId = (id: string) => allBots.find((b) => b.id === id);
+const changed = (b: Bot | undefined): BotChange => (b ? { kind: "done", bot: b } : { kind: "refused", reason: "not_found" });
+const queryOf = (opts?: { query?: string }) => (v === "search" && opts?.query === undefined ? "pre" : opts?.query)?.trim().toLowerCase();
+const botOf = (sessionId: string) => /^s-(b\d+)-/.exec(sessionId)?.[1] ?? HERMIT_BOT_ID;
+const botTranscripts: Record<string, { entries: Array<{ kind: "user" | "assistant" | "question"; text: string }>; tainted: boolean }> = {
+  b1: {
+    tainted: true,
+    entries: [
+      { kind: "user", text: L("Busca el precio de una cafetera italiana de 6 tazas", "Look up the price of a 6-cup moka pot") },
+      { kind: "assistant", text: L("Encontré tres ofertas en MercadoLibre: la más barata cuesta 24.900 y llega el jueves. Puedo guardarlas en mis notas.", "I found three offers on MercadoLibre: the cheapest is 24,900 and arrives Thursday. I can keep them in my notes.") },
+      { kind: "user", text: L("¿Hay de acero inoxidable?", "Any in stainless steel?") },
+      { kind: "assistant", text: L("Hay dos: una de 31.500 y otra de 38.900. Puedo guardar las dos en mis notas si quieres.", "Two: one at 31,500 and one at 38,900. I can save both in my notes if you like.") },
+    ],
+  },
+  b3: {
+    tainted: false,
+    entries: [
+      { kind: "user", text: L("Guárdame la receta del pastel de choclo", "Save me the corn pie recipe") },
+      { kind: "assistant", text: L("Guardada. Lleva 8 choclos, carne molida, cebolla, pasas y huevo duro. ¿La dejo con porciones para 6?", "Saved. It takes 8 ears of corn, ground beef, onion, raisins and hard-boiled egg. Should I scale it to 6 servings?") },
+    ],
+  },
+};
+let chatN = 0;
+const sessionOf = new Map<string, string>([[HERMIT_BOT_ID, "s1"]]);
+const freshSession = (botId?: string) => {
+  const id = `s-${botId ?? HERMIT_BOT_ID}-${++chatN}`;
+  sessionOf.set(botId ?? HERMIT_BOT_ID, id);
+  return Promise.resolve(id);
+};
+const botsApi = {
+  roster: (opts?: { query?: string }) => {
+    const q = queryOf(opts);
+    const match = (b: Bot) => !q || b.name.toLowerCase().includes(q) || b.role.toLowerCase().includes(q);
+    const sorted = (list: Bot[]) =>
+      [...list].sort((a, b) => (a.primary ? -1 : b.primary ? 1 : (a.pinOrder ?? 9) - (b.pinOrder ?? 9) || (lastAt[b.id] ?? 0) - (lastAt[a.id] ?? 0)));
+    return Promise.resolve({
+      rows: sorted(allBots.filter((b) => !b.hidden && match(b))).map(rowOf),
+      hidden: allBots.filter((b) => b.hidden && match(b)).map(rowOf),
+    });
+  },
+  get: (id: string) => Promise.resolve(byId(id)),
+  chats: (botId: string) => Promise.resolve(v === "empty" ? [] : [
+    { id: `s-${botId}-old2`, title: L("Reporte de la semana", "This week's report"), startedAt: now - 2 * day, lastAt: now - 2 * day + hour },
+    { id: `s-${botId}-old1`, startedAt: now - 9 * day, lastAt: now - 9 * day + hour },
+  ]),
+  proposal: (offerId: string) => proposals[offerId],
+  // The runtime's rules, kept short: the limits, a tainted proposal needs a review, Don't ask needs the typed word.
+  create: (input: NewBot, opts?: { offerId?: string; reviewed?: boolean; typed?: string }) => {
+    const refuse = (reason: BotRefusal) => Promise.resolve<BotChange>({ kind: "refused", reason });
+    const offer = opts?.offerId ? proposals[opts.offerId] : undefined;
+    if (opts?.offerId && !offer) return refuse("offer_gone");
+    if (offer?.tainted && !opts?.reviewed) return refuse("needs_review");
+    const name = input.name.trim();
+    if (!name) return refuse("name_empty");
+    if (name.length > MAX_BOT_NAME_CHARS) return refuse("name_too_long");
+    if (input.role.length > MAX_ROLE_CHARS) return refuse("role_too_long");
+    if (input.sources.sites.some((x) => normalizeSite(x) !== x)) return refuse("bad_site");
+    if (allBots.length >= MAX_BOTS) return refuse("too_many_bots");
+    if (input.mode === "dont_ask" && !typedWordOk(opts?.typed ?? "")) return refuse("word_mismatch");
+    const made = bot(`b${++botN}`, name, { role: input.role, look: input.look ?? { shape: "turban", color: "seaglass" }, grants: input.grants, sources: input.sources, mode: input.mode });
+    allBots.push(made);
+    lastAt[made.id] = now;
+    if (opts?.offerId) delete proposals[opts.offerId];
+    return Promise.resolve<BotChange>({ kind: "done", bot: made });
+  },
+  update: (id: string, patch: Partial<Bot>) => { const b = byId(id); if (b) Object.assign(b, patch); return Promise.resolve(changed(b)); },
+  duplicate: (id: string) => {
+    const b = byId(id);
+    if (!b) return Promise.resolve(changed(b));
+    if (b.primary) return Promise.resolve<BotChange>({ kind: "refused", reason: "primary" });
+    const copy = bot(`b${++botN}`, `${b.name} 2`, { role: b.role, look: b.look, grants: [...b.grants], sources: { sites: [...b.sources.sites], connectors: [...b.sources.connectors] }, mode: b.mode });
+    allBots.push(copy);
+    lastAt[copy.id] = now;
+    return Promise.resolve<BotChange>({ kind: "done", bot: copy });
+  },
+  pin: (id: string, pinned: boolean) => {
+    const b = byId(id);
+    if (b?.primary) return Promise.resolve<BotChange>({ kind: "refused", reason: "primary" });
+    if (b && pinned && allBots.filter((x) => x.pinOrder !== null).length >= MAX_PINS) return Promise.resolve<BotChange>({ kind: "refused", reason: "too_many_pins" });
+    if (b) b.pinOrder = pinned ? allBots.filter((x) => x.pinOrder !== null).length : null;
+    return Promise.resolve(changed(b));
+  },
+  hide: (id: string, hidden: boolean) => {
+    const b = byId(id);
+    if (b?.primary) return Promise.resolve<BotChange>({ kind: "refused", reason: "primary" });
+    if (b) b.hidden = hidden;
+    return Promise.resolve(changed(b));
+  },
+  // "busy": the bot's turn is still running, so its reset is refused and the page names it (Task 18).
+  reset: async (id: string) =>
+    v === "busy" ? { kind: "refused" as const, reason: "busy" as const }
+    : byId(id) ? { kind: "done" as const, sessionId: await freshSession(id) } : { kind: "refused" as const, reason: "not_found" as const },
+  remove: (id: string) => {
+    const b = byId(id);
+    if (b && !b.primary) allBots.splice(allBots.indexOf(b), 1);
+    return Promise.resolve<BotChange>(b?.primary ? { kind: "refused", reason: "primary" } : changed(b));
+  },
+  notes: (botId: string) => Promise.resolve({ notes: v === "empty" ? [] : notesOf(botId) }),
+  shareNote: ok(true),
+  deleteNote: ok(true),
+};
+const modesApi = {
+  global: ok<PermissionMode>(globalMode),
+  of: (botId: string) => Promise.resolve(byId(botId) ? botMode(byId(botId)!) : globalMode),
+  setGlobal: ok("set"),
+  setBot: (botId: string, mode: PermissionMode | null) => { const b = byId(botId); if (b) b.mode = mode; return Promise.resolve(b ? "set" : "not_found"); },
+};
+
 export const fakeHermit = {
   init: ok(undefined),
+  bots: botsApi,
+  modes: modesApi,
   startSession: ok("s1"),
-  resumeSession: ok("s1"),
-  transcript: ok({ entries: transcript, tainted: v !== "empty" }),
-  clearConversation: ok("s2"),
+  resumeSession: (botId?: string) => Promise.resolve(sessionOf.get(botId ?? HERMIT_BOT_ID) ?? `s-${botId}-0`),
+  newChat: (botId: string) => freshSession(botId),
+  // Each bot's own chat (HM-BOT-02): its sessions are named s-<bot>-..., Hermit's is s1.
+  transcript: (sessionId: string) => {
+    const bot = botOf(sessionId);
+    if (bot === HERMIT_BOT_ID) return Promise.resolve({ entries: transcript, tainted: v !== "empty" && v !== "hermit-auto" });
+    // A bot's kept and older chats have words; a chat just started has none.
+    const kept = v !== "bot-empty" && /-(0|old\d)$/.test(sessionId) ? botTranscripts[bot] : undefined;
+    return Promise.resolve({ entries: kept?.entries ?? [], tainted: kept?.tainted ?? false });
+  },
+  clearConversation: (botId?: string) => freshSession(botId),
   memories: {
     list: ok({ notes: v === "empty" ? [] : notes }),
     get: (id: number) => Promise.resolve(notes.find((n) => n.id === id) ?? notes[0]),

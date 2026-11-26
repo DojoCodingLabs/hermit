@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./bots": "./src/bots.ts",
     "./web-login": "./src/web-login.ts",
     "./one-time-code": "./src/one-time-code.ts",
     "./site-domain": "./src/site-domain.ts"

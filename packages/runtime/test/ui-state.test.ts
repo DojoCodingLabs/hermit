@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { ApprovalRequest } from "@hermit/core";
 import { chatReducer, initialChat, type ChatAction, type ChatState } from "../src/chat-state.ts";
 import { createApprovalBridge } from "../src/approval-bridge.ts";
+import type { BotProposalView } from "../src/bot-api.ts";
 
 const run = (actions: ChatAction[], from: ChatState = initialChat) => actions.reduce(chatReducer, from);
 
@@ -325,5 +326,15 @@ describe("people by name in the chat (PDR-028)", () => {
       { kind: "assistant", id: "a", text: "Abrí el marcador.", streaming: false },
       { kind: "offer", id: "a-offer", offer: "contacts" },
     ]);
+  });
+});
+
+describe("a bot proposal (multi-bot contracts)", () => {
+  const PROPOSAL: BotProposalView = { offerId: "o1", name: "Viajes", role: "Planeas los viajes de la familia Prueba.", look: { shape: "whelk", color: "sand" }, grants: ["web_read", "notes"], sources: { sites: ["wikivoyage.org"], connectors: [] }, tainted: false, needsFingerprint: false, mode: "ask" };
+  const sent = chatReducer(initialChat, { type: "send", id: "u1", text: "créame un bot" });
+  test("a reply's bot proposal reaches its chat item", () => {
+    const view = { kind: "reply" as const, text: "Te propongo este bot.", botProposal: PROPOSAL };
+    const s = chatReducer(sent, { type: "finished", id: "m2", view });
+    expect(s.items.at(-1)).toMatchObject({ kind: "assistant", botProposal: PROPOSAL });
   });
 });

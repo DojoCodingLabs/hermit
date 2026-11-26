@@ -2,8 +2,21 @@
 // state (src/fake); `params` are the route params; `act` taps through to a state before the picture.
 const both = ["light", "dark"];
 
-/** Core screens: light and dark, es-419 and English. Every other screen: light and dark, es-419. */
-const shot = (langs) => (s) => ({ themes: both, langs, ...s, file: s.file ?? s.route.replace(/\//g, "-") + (s.variant ? `-${s.variant}` : "") });
+/**
+ * Core screens: light and dark, es-419 and English. Every other screen: light and dark, es-419.
+ * The chat was the app's "index" until the roster took the home (HM-BOT-01): a shot of any other id still written with
+ * route "index" is Hermit's chat, so it moves to route "chat" with `bot: "hermit"` and keeps its file name.
+ */
+const hermitChat = (s) => {
+  if (s.route !== "index" || s.id.startsWith("HM-BOT-01")) return s;
+  const file = s.file ?? "index" + (s.variant ? `-${s.variant}` : "");
+  const params = s.params;
+  return { ...s, route: "chat", file, params: (lang) => ({ bot: "hermit", ...(typeof params === "function" ? params(lang) : params ?? {}) }) };
+};
+const shot = (langs) => (s) => {
+  const c = hermitChat(s);
+  return { themes: both, langs, ...c, file: c.file ?? c.route.replace(/\//g, "-") + (c.variant ? `-${c.variant}` : "") };
+};
 const core = shot(["es-419", "en"]);
 const other = shot(["es-419"]);
 
@@ -11,12 +24,105 @@ const tap = (label) => async (page) => {
   await page.getByText(label, { exact: true }).first().click({ timeout: 5000 });
   await page.waitForTimeout(500);
 };
+const openModePicker = async (page) => {
+  await page.getByLabel(/^(Cómo actúa|How it acts):/).first().click({ timeout: 5000 });
+  await page.waitForTimeout(700);
+};
+const pickMode = async (page, name) => {
+  await page.getByRole("radio", { name }).first().click({ timeout: 5000 });
+  await page.waitForTimeout(700);
+};
 const startTask = tap(/^(Empezar|Start)$/);
 /** Q155: the request, in the language of the shot (params may be a function of the language). */
 const recipeAsk = (lang) => ({ say: lang === "en" ? "Give me a recipe for rice pudding" : "Dame una receta de arroz con leche" });
 
 export const shots = [
   // Core
+  // HM-BOT-01 and HM-BOT-02: the roster is home; the chat is one bot's.
+  core({ id: "HM-BOT-01", name: "HM-BOT-01 Roster", route: "index", file: "bot-roster" }),
+  core({ id: "HM-BOT-01", name: "HM-BOT-01 Roster, searching", route: "index", file: "bot-roster-search", act: async (page) => {
+    await page.getByLabel(/^(Buscar|Search)$/).first().click({ timeout: 5000 });
+    await page.getByLabel(/^(Buscar bots|Search bots)$/).first().fill("gen");
+    await page.waitForTimeout(600);
+  } }),
+  core({ id: "HM-BOT-01", name: "HM-BOT-01 Roster, hidden open", route: "index", variant: "modes", file: "bot-roster-hidden", act: tap(/^(Ocultos|Hidden)$/) }),
+  other({ id: "HM-BOT-01", name: "HM-BOT-01 Roster, Hermit alone", route: "index", variant: "empty", file: "bot-roster-empty" }),
+  other({ id: "HM-BOT-01", name: "HM-BOT-01 Roster, press and hold (pin or hide)", route: "index", file: "bot-roster-actions", act: async (page) => {
+    const box = await page.getByLabel(/^Noticias/).first().boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(700);
+    await page.mouse.up();
+    await page.waitForTimeout(600);
+  } }),
+  other({ id: "HM-BOT-02", name: "HM-BOT-02 Hermit's first run in Auto (the chip stays in the bar)", route: "chat", variant: "hermit-auto", params: { bot: "hermit" }, file: "bot-chat-hermit-auto-empty" }),
+  core({ id: "HM-BOT-02", name: "HM-BOT-02 Bot chat (Precios)", route: "chat", params: { bot: "b1" }, file: "bot-chat-precios" }),
+  core({ id: "HM-BOT-02", name: "HM-BOT-02 Bot chat in Don't ask (red chip)", route: "chat", variant: "modes", params: { bot: "b3" }, file: "bot-chat-dontask" }),
+  other({ id: "HM-BOT-02", name: "HM-BOT-02 Bot chat in Auto (amber chip)", route: "chat", variant: "modes", params: { bot: "b2" }, file: "bot-chat-auto" }),
+  other({ id: "HM-BOT-02", name: "HM-BOT-02 Bot chat, nothing said yet", route: "chat", variant: "bot-empty", params: { bot: "b1" }, file: "bot-chat-empty" }),
+  other({ id: "HM-BOT-02", name: "HM-BOT-02 Bot chat, the menu", route: "chat", params: { bot: "b1" }, file: "bot-chat-menu", act: async (page) => { await page.getByLabel(/^(Abrir el menú|Open the menu)$/).first().click({ timeout: 5000 }); await page.waitForTimeout(600); } }),
+  other({ id: "HM-BOT-02", name: "HM-BOT-02 Bot chat, older chats", route: "chat", params: { bot: "b1" }, file: "bot-chat-older", act: async (page) => {
+    await page.getByLabel(/^(Abrir el menú|Open the menu)$/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(500);
+    await page.getByText(/^(Chats anteriores|Older chats)$/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(600);
+  } }),
+  // HM-BOT-03, HM-BOT-04, HM-CHAT-01: a new bot, a bot's settings, and Hermit's proposal card in the chat.
+  core({ id: "HM-BOT-03", name: "HM-BOT-03 New bot, templates", route: "bot-new", file: "bot-new-templates" }),
+  other({ id: "HM-BOT-03", name: "HM-BOT-03 New bot, a template filled in", route: "bot-new", file: "bot-new-template-form", act: tap(/^(Viajes|Travel)$/) }),
+  core({ id: "HM-BOT-03", name: "HM-BOT-03 From Hermit's proposal", route: "bot-new", params: { offer: "o1" }, file: "bot-new-proposal" }),
+  core({ id: "HM-BOT-03", name: "HM-BOT-03 A tainted proposal", route: "bot-new", params: { offer: "o2" }, file: "bot-new-tainted" }),
+  other({ id: "HM-BOT-03", name: "HM-BOT-03 A proposal that needs the fingerprint", route: "bot-new", params: { offer: "o3" }, file: "bot-new-fingerprint" }),
+  other({ id: "HM-BOT-03", name: "HM-BOT-03 The mode choice", route: "bot-new", params: { offer: "o1" }, file: "bot-new-mode", act: async (page) => {
+    await page.getByLabel(/^(Cómo actúa|How it acts):/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(700);
+  } }),
+  // HM-BOT-04's mode picker and its two warnings, from a bot's settings (the global mode in Settings opens the same sheet).
+  core({ id: "HM-BOT-04", name: "HM-BOT-04 Mode picker", route: "bot-settings", params: { bot: "b1" }, file: "bot-mode-picker", act: openModePicker }),
+  core({ id: "HM-BOT-04", name: "HM-BOT-04 Auto sheet", route: "bot-settings", params: { bot: "b1" }, file: "bot-mode-auto", act: async (page) => { await openModePicker(page); await pickMode(page, /^Auto/); } }),
+  core({ id: "HM-BOT-04", name: "HM-BOT-04 Don't ask sheet (red)", route: "bot-settings", params: { bot: "b1" }, file: "bot-mode-dontask", act: async (page) => { await openModePicker(page); await pickMode(page, /^(Sin preguntar|Don't ask)/); } }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 Don't ask sheet for a bot's own mode, also under a global Don't ask (own-mode rule)", route: "bot-settings", variant: "global-dontask", params: { bot: "b1" }, file: "bot-mode-dontask-own", act: async (page) => { await openModePicker(page); await pickMode(page, /^(Sin preguntar|Don't ask)/); } }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 A busy bot is named (its reset refused while its turn runs)", route: "bot-settings", variant: "busy", params: { bot: "b1" }, file: "bot-settings-busy", act: async (page) => {
+    await page.getByText(/^(Reiniciar conversación|Reset conversation)$/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(500);
+    await page.getByRole("button", { name: /^(Reiniciar conversación|Reset conversation)$/ }).last().click({ timeout: 5000 });
+    await page.waitForTimeout(800);
+  } }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 Don't ask sheet, the word typed", route: "bot-settings", params: { bot: "b1" }, file: "bot-mode-dontask-typed", act: async (page) => {
+    await openModePicker(page);
+    await pickMode(page, /^(Sin preguntar|Don't ask)/);
+    await page.getByLabel(/^(Escribe entiendo para seguir|Type I understand to continue)/).first().fill("entiendo");
+    await page.waitForTimeout(400);
+  } }),
+  core({ id: "HM-SET-01", name: "HM-SET-01 Settings with the bots' mode", route: "settings", file: "settings-bot-mode", act: async (page) => {
+    await page.getByText(/^(Permisos de los bots|Bot permissions)$/).first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+  } }),
+  core({ id: "HM-BOT-01", name: "HM-BOT-01 Roster with mode chips", route: "index", variant: "modes", file: "bot-roster-modes" }),
+  other({ id: "HM-BOT-03", name: "HM-BOT-03 The proposal is gone", route: "bot-new", params: { offer: "zz" }, file: "bot-new-gone" }),
+  core({ id: "HM-BOT-04", name: "HM-BOT-04 Bot settings", route: "bot-settings", params: { bot: "b1" }, file: "bot-settings" }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 Bot settings in Auto", route: "bot-settings", variant: "modes", params: { bot: "b2" }, file: "bot-settings-auto" }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 Hermit's settings", route: "bot-settings", params: { bot: "hermit" }, file: "bot-settings-hermit" }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 Delete confirmation", route: "bot-settings", params: { bot: "b1" }, file: "bot-settings-delete", act: async (page) => {
+    await page.getByText(/^(Eliminar bot|Delete bot)$/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(700);
+  } }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 Reset confirmation", route: "bot-settings", params: { bot: "b1" }, file: "bot-settings-reset", act: async (page) => {
+    await page.getByText(/^(Reiniciar conversación|Reset conversation)$/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(700);
+  } }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 A flash after a change (conversation reset)", route: "bot-settings", params: { bot: "b1" }, file: "bot-settings-flash", act: async (page) => {
+    await page.getByText(/^(Reiniciar conversación|Reset conversation)$/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(500);
+    await page.getByRole("button", { name: /^(Reiniciar conversación|Reset conversation)$/ }).last().click({ timeout: 5000 });
+    await page.waitForTimeout(800);
+  } }),
+  other({ id: "HM-BOT-04", name: "HM-BOT-04 A refusal in code's words (too many pins)", route: "bot-settings", params: { bot: "b3" }, file: "bot-settings-refused", act: async (page) => {
+    await page.getByText(/^(Fijar arriba|Pin to the top)$/).first().click({ timeout: 5000 });
+    await page.waitForTimeout(700);
+  } }),
+  core({ id: "HM-CHAT-01", name: "HM-CHAT-01 A bot proposal card", route: "chat", variant: "proposal", params: (lang) => ({ bot: "hermit", say: lang === "en" ? "Make me a bot that compares prices" : "Créame un bot que compare precios" }), wait: 1800, file: "bot-proposal-card" }),
+  other({ id: "HM-CHAT-01", name: "HM-CHAT-01 A bot proposal card, drafted after reading outside text (only Review)", route: "chat", variant: "proposal-tainted", params: (lang) => ({ bot: "hermit", say: lang === "en" ? "Set up a bot for that page" : "Arma un bot para esa página" }), wait: 1800, file: "bot-proposal-card-tainted" }),
   core({ id: "HM-CHAT-01", name: "Chat, a kept conversation", route: "index", mockup: "chat-conversation" }),
   core({ id: "HM-CHAT-01", name: "Chat, first run (empty)", route: "index", variant: "empty", mockup: "chat-empty" }),
   core({ id: "HM-CHAT-01", name: "Chat, Hermit working (live status and reasoning)", route: "index", variant: "working", params: { say: "¿Hasta qué hora abre la farmacia de Irarrázaval?" }, wait: 4200, mockup: "chat-working" }),

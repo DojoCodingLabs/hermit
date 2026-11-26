@@ -10,6 +10,7 @@ import type { ApprovalOutcome, ApprovalRequest, WebFetchPort, WebHop } from "@he
 import { profileById, type CompletionEngine, type EngineRequest } from "@hermit/model";
 import { createHermit } from "../src/hermit.ts";
 import { chatReducer, initialChat } from "../src/chat-state.ts";
+import { recordingQueue } from "./bot-harness.ts";
 
 const PROFILE = profileById("botpsy-q4-two-stage-nothink")!;
 const NOW = Date.UTC(2026, 10, 14, 15, 0);
@@ -38,6 +39,7 @@ function setup(script: string[], pages: Record<string, WebHop>, opts: { approve?
       return { text: script[i++] ?? '{"choice":"respond"}', toolCalls: [] };
     },
   };
+  const rq = recordingQueue(engine);
   const fetched: string[] = [];
   const web: WebFetchPort = { async get(url) { fetched.push(url); return pages[url] ?? { kind: "error", reason: "failed" }; } };
   const sheets: ApprovalRequest[] = [];
@@ -49,7 +51,8 @@ function setup(script: string[], pages: Record<string, WebHop>, opts: { approve?
     notifier: { schedule: async () => "n", cancel: async () => {} },
     calendar: { list: async () => [], add: async () => {}, calendars: async () => [] },
     replySender: { send: async (_h, text) => (sent.push(text), "sent") },
-    engine,
+    engine: rq.engine,
+    queue: rq.queue,
     approvals: { request: async (r) => (sheets.push(r), (opts.approve ?? ((x) => ({ kind: "approved", biometric: true, argsHash: x.call.argsHash })))(r)) },
     web: { fetch: web, copy },
     now: () => NOW,
@@ -57,7 +60,7 @@ function setup(script: string[], pages: Record<string, WebHop>, opts: { approve?
     language: () => "es-419",
     newId: () => `id${++n}`,
   }, PROFILE);
-  return { hermit, requests, fetched, sheets, sent };
+  return { hermit, requests, fetched, sheets, sent, queued: rq.queued, unqueuedCalls: rq.unqueuedCalls };
 }
 
 const page = (body: string, url: string): WebHop => ({ kind: "page", url, status: 200, contentType: "text/html", body, truncated: false });
@@ -89,6 +92,9 @@ describe("read_web in the app (SL-22)", () => {
 
     const { rows } = await w.hermit.activity();
     expect(rows.map((r) => r.skill)).toEqual(["read_web"]);
+    // Multi-bot (Task 10): the reader waited its turn in the run queue, like the pick, at the chat turn's priority.
+    expect(w.unqueuedCalls()).toBe(0);
+    expect(w.queued).toEqual(w.requests.map(() => "user"));
   });
 
   test("the same site later in the session doesn't ask again; the injected orders never ran on the next turn either", async () => {

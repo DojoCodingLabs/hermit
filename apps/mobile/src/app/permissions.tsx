@@ -1,5 +1,6 @@
 // HM-ONB-04: notification, calendar and contacts access, each optional (US-ONB-04, US-ONB-05, US-ONB-08, PDR-028).
 // Design pass (O2): step 3 of 3, one optional list with a reason and Allow per row, and a "Not now" that holds.
+import { openHermitChat } from "../open-chat";
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
@@ -30,7 +31,7 @@ export default function Permissions() {
   };
   const finish = async () => {
     if (status.kind === "ready") await status.hermit.settings.set("onboarding.done", "1");
-    router.replace("/");
+    openHermitChat(router, "onboarding");
   };
 
   const row = (icon: IconName, title: string, body: string, grant: Grant, onAllow: () => void, help?: string) => (

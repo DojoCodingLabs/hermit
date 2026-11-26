@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { connectSkill, firstWinSkills, intentSkills, payDef, payMerchantDef, webSkills } from "@hermit/skills";
-import { narrowMenu, routeIntent } from "../src/intent-hints.ts";
+import { connectSkill, createBotDef, firstWinSkills, intentSkills, mailSkillDefs, payDef, payMerchantDef, webSkills } from "@hermit/skills";
+import { EXAMPLE_BANK } from "../src/example-bank.ts";
+import { narrowMenu, planIntents, routeIntent } from "../src/intent-hints.ts";
 
 const ids = (text: string) => narrowMenu(text, firstWinSkills).map((s) => s.id);
 
@@ -34,6 +35,8 @@ describe("intent hints narrow the menu, never widen it", () => {
     ["schedule a call with the bank on Friday at 9am", ["calendar_add"], true],
     ["agenda una reunión", ["calendar_add"], false],
     ["respóndele a Carla que sí voy", ["read_messages", "reply_message"], true],
+    ["resume mis mensajes", ["read_messages"], true],
+    ["resumí los chats", ["read_messages"], true],
     ["¿qué código tenía la puerta?", ["recall"], true],
     ["what was the gate code again?", ["recall"], true],
     ["what am I allergic to?", ["recall"], true],
@@ -302,5 +305,150 @@ describe("SL-41: paying a site that asks for x402", () => {
   );
   test("without pay_merchant on the menu, a link with a paying verb is read, never paid", () => {
     expect(routeIntent("pay for https://api.example.com/report", [...firstWinSkills, ...webSkills, payDef]).skills.map((s) => s.id)).toEqual(["read_web"]);
+  });
+});
+
+describe("create_bot (multi-bot, Task 12): asking Hermit for a bot routes to it, over what the bot is for", () => {
+  const withBot = [...firstWinSkills, ...webSkills, ...mailSkillDefs, connectSkill, createBotDef];
+  /** Every bot but Hermit: create_bot is never on their menu. */
+  const withoutBot = withBot.filter((s) => s.id !== "create_bot");
+  /** The route as the rest of the menu sees it: create_bot itself left out, so a turn routed to it alone shows as changed. */
+  const route = (text: string, offered = withBot) => {
+    const r = routeIntent(text, offered);
+    return { skills: r.skills.map((s) => s.id as string).filter((id) => id !== "create_bot"), force: r.force, outOfScope: !!r.outOfScope };
+  };
+  const toCreateBot = (text: string) => expect(routeIntent(text, withBot)).toMatchObject({ skills: [{ id: "create_bot" }], force: true });
+
+  // Review of fix round 1: a creation or request verb with "a bot" as its object, anywhere in the sentence.
+  test.each([
+    "Quiero crear un bot que lea mis mensajes",
+    "¿Me haces un bot que lea mis mensajes?",
+    "Necesito un bot que me avise cuando llegue un correo de mi jefe",
+    "Ármame un bot que revise el clima cada mañana",
+    "Ponme un bot que me resuma mis mensajes de WhatsApp",
+    "Agrega un bot para mis recordatorios",
+    "Hola, quiero que me hagas un bot que revise mi agenda",
+    "Me gustaría tener un bot que me diga qué tengo mañana",
+    "créame por favor un bot que lea mis correos",
+    "Añade otro bot como el de recetas",
+    "créame un bot que lea mis mensajes",
+    "Hermit, créame un bot de viajes",
+    "crea un bot que me avise si va a llover",
+    "hazme un bot para mis recetas",
+    "quiero un bot que revise mi correo cada mañana",
+    "nuevo bot: recetas de la abuela",
+    "¿me puedes crear un bot que busque vuelos baratos?",
+  ])("es: %s", toCreateBot);
+
+  test.each([
+    "Help me make a bot that reads my messages",
+    "I want to make a bot that checks the weather",
+    "Can you make me a bot that reads my email every morning?",
+    "Please create a new bot that checks the news",
+    "I need a bot to track my packages",
+    "Add a bot that summarizes my WhatsApp messages",
+    "Set up a bot for my grocery lists",
+    "I’d like a bot that reminds me to drink water",
+    "Build me a travel bot",
+    "make me a bot that checks the weather",
+    "create a bot that reads my email every morning",
+    "new bot for my grocery lists",
+    "can you make me a travel bot?",
+  ])("en: %s", toCreateBot);
+
+  test.each([
+    // The coordinator's guards: bots that exist or are only named, and "bot" inside another word.
+    "¿qué bots tengo?",
+    "el bot de Telegram me escribió",
+    "show me my bots",
+    "what are my bots doing?",
+    "hazme un robot de papel",
+    "make me a robot costume",
+    "el chatbot de mi banco me escribió",
+    "créame un botón en la pantalla de inicio",
+    "compra una botella de vino",
+    "el nuevo bot no me responde",
+    "the new bot isn't answering",
+    "New bot isn't answering",
+    "make a list of bot names",
+    "make me a summary of what the bot said",
+    "quiero hablar con el bot de Telegram",
+    "¿Crees que un bot podría leer mis correos?",
+    "¿Qué hace un bot?",
+    // A bot named in the content of another request, in the same sentence: that request routes as before.
+    "recuérdame mañana a las 9 crear un bot de recetas",
+    "recuérdame mañana a las 9, crear un bot de recetas",
+    "mañana a las 9 recuérdame crear un bot de recetas",
+    "anota que quiero un bot de recetas",
+    "anota: quiero un bot de recetas",
+    "dile a Ana que quiero crear un bot",
+    "pon en mi calendario crear un bot el viernes de 10 a 11",
+    "Remind me to make a bot tomorrow at 9",
+    "remember that I want a bot for recipes",
+    "text Ana that I'll make a bot tonight",
+  ])("%s asks for no new bot: it routes as before", (text) => {
+    expect(route(text)).toEqual(route(text, withoutBot));
+  });
+
+  test("a request with its own route, then a bot, in one message: the planner runs them in order", () => {
+    expect(planIntents("Lee lo que me escribió Ana y ponme un bot que investigue a su familia", withBot).map((p) => p.skills.map((s) => s.id))).toEqual([["read_messages"], ["create_bot"]]);
+  });
+
+  test("without create_bot on the menu, what the bot is for routes as before", () => {
+    expect(routeIntent("créame un bot que lea mis mensajes", withoutBot).skills.map((s) => s.id)).toEqual(["read_messages"]);
+    expect(routeIntent("Quiero crear un bot que lea mis mensajes", withoutBot).skills.map((s) => s.id)).toEqual(["read_messages"]);
+    expect(routeIntent("make me a bot that checks the weather", withoutBot).skills.map((s) => s.id)).toEqual(["search_web"]);
+    expect(routeIntent("I want to make a bot that checks the weather", withoutBot).skills.map((s) => s.id)).toEqual(["search_web"]);
+  });
+
+  test("Hermit's other routes stay as they were", () => {
+    const others = [
+      ...EXAMPLE_BANK.map(([text]) => text),
+      "recuérdame comprar pan mañana a las 7", "dile a Ana que voy tarde", "¿qué tengo mañana?", "busca en internet vuelos baratos a Lima",
+      "read https://example.com and tell me what my options are", "Connect me to Todoist", "¿qué me perdí?", "hola",
+    ];
+    for (const text of others) {
+      expect(route(text), text).toEqual(route(text, withoutBot));
+      expect(planIntents(text, withBot).map((p) => p.skills.map((s) => s.id)), text).toEqual(planIntents(text, withoutBot).map((p) => p.skills.map((s) => s.id)));
+    }
+  });
+});
+
+describe("a question never becomes an action (Task 19 review C1, I1)", () => {
+  const all = [...firstWinSkills, ...intentSkills];
+  const route = (text: string) => routeIntent(text, all).skills.map((s) => s.id as string);
+  test.each([
+    "¿está libre mi agenda el jueves a las 5?",
+    "¿qué tengo en mi agenda el lunes?",
+    "revisa mi agenda el viernes a las 4",
+    "is my calendar free Thursday at 5?",
+  ])("%s never routes to calendar_add", (text) => {
+    expect(route(text)).not.toContain("calendar_add");
+  });
+  test.each([
+    ["abre mis mensajes de WhatsApp", ["read_messages"]],
+    ["open my WhatsApp messages from Ana Prueba", ["read_messages"]],
+    ["read my WhatsApp messages", ["read_messages"]],
+  ])("%s reads, as on master", (text, expected) => {
+    expect(route(text)).toEqual(expected);
+    expect(route(text)).not.toContain("open_whatsapp_chat");
+  });
+});
+
+describe("a reply sent to someone is asked for, in Hermit's chat too (Task 19 re-review 3)", () => {
+  const all = [...firstWinSkills, ...intentSkills];
+  const route = (text: string) => routeIntent(text, all);
+  test.each([
+    "send a reply to Ana Prueba that I'm late",
+    "write a reply to Ana Prueba saying I'm late",
+    "please send an answer to Ana Prueba: I'm late",
+    "post the reply to Ana Prueba now",
+  ])("%s routes to the reply, forced", (text) => {
+    const r = route(text);
+    expect(r.skills.map((s) => s.id as string).sort()).toEqual(["read_messages", "reply_message"]);
+    expect(r.force).toBe(true);
+  });
+  test.each(["is there a reply to my message from Ana Prueba", "do I have an answer from Carlos Demo", "did Ana Prueba send a reply?"])("%s is not routed to the reply", (text) => {
+    expect(route(text).skills.map((s) => s.id as string).sort()).not.toEqual(["read_messages", "reply_message"]);
   });
 });

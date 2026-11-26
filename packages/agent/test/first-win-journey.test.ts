@@ -5,7 +5,7 @@
 import { describe, expect, test } from "vitest";
 import { nodeSql } from "@hermit/sql-node";
 import {
-  conversationId, createMemory, createMessageStore, createReminders, createSessions, migrate,
+  conversationId, createMemory, createMessageStore, HERMIT_BOT_ID, createReminders, createSessions, migrate,
   type ApprovalOutcome, type ApprovalRequest, type CalendarEvent, type Msg,
 } from "@hermit/core";
 import { createAuditLog, defaultRules, ed25519Signer } from "@hermit/cage";
@@ -28,7 +28,7 @@ async function world(opts: { approve?: (r: ApprovalRequest) => ApprovalOutcome; 
   const messages = createMessageStore(sql);
   const sessions = createSessions(sql, () => NOW);
   const skills = [
-    ...memorySkills(createMemory(sql)),
+    ...memorySkills(createMemory(sql).forBot(HERMIT_BOT_ID)),
     ...reminderSkills(createReminders(sql, { schedule: async (n) => (alarms.push(n.at), `n${n.id}`), cancel: async () => {} }, { timeZone: TZ, now: () => NOW }), { locale: "en", timeZone: TZ }),
     ...calendarSkills({ list: async (f, t) => events.filter((e) => e.start >= f && e.start < t), add: async (e) => void events.push(e), calendars: async () => [] }, { timeZone: TZ }),
     ...messageSkills(messages, { send: async (handle, text) => (opts.replyResult === "stale" ? "stale" : (sent.push({ handle, text }), "sent")) }),

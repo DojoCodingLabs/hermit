@@ -24,7 +24,7 @@ test("a second start while a turn runs is refused, and Stop reaches the turn tha
 });
 
 test("the chat's send and Seguir both take the slot before they change the screen, and free it when done", () => {
-  const screen = readFileSync(new URL("./app/index.tsx", import.meta.url), "utf8");
+  const screen = readFileSync(new URL("./app/chat.tsx", import.meta.url), "utf8");
   for (const name of ["send", "goOn"]) {
     const at = screen.indexOf(`const ${name} = useCallback(async`);
     assert.ok(at > 0, `${name} is on the chat screen`);

@@ -1,6 +1,7 @@
 import { outcomeCopyKey, type Outcome, type TranscriptEntry } from "@hermit/core";
 import type { Choice, PaymentReceipt, StepEvent } from "@hermit/agent";
 import type { MailScreen, TurnView, WebPageRef } from "./hermit.ts";
+import type { BotProposalView } from "./bot-api.ts";
 import type { WebOffer } from "./web-tasks.ts";
 import type { LockState } from "./app-lock.ts";
 import { spokenReply } from "./reply-blocks.ts";
@@ -30,7 +31,7 @@ export type ChatItem =
    * so the reply is whole and a quiet line says so (never a silent end); like a failed Seguir's, the note goes once the
    * user writes again.
    */
-  | { kind: "assistant"; id: string; text: string; streaming: boolean; thinking?: string; page?: WebPageRef; connect?: { request: string; offerId: string }; webTask?: WebOffer; work?: TurnWork; receipt?: PaymentReceipt; receiptOnly?: true; card?: "refused"; mail?: MailScreen; cut?: true; stopped?: true; continuing?: true; continueFailed?: true; nothingMore?: true }
+  | { kind: "assistant"; id: string; text: string; streaming: boolean; thinking?: string; page?: WebPageRef; connect?: { request: string; offerId: string }; webTask?: WebOffer; work?: TurnWork; receipt?: PaymentReceipt; receiptOnly?: true; card?: "refused"; mail?: MailScreen; cut?: true; stopped?: true; continuing?: true; continueFailed?: true; nothingMore?: true; botProposal?: BotProposalView }
   /** `choices`: tappable answers for the latest question only (PDR-028); a tap sends its text as the user's words. */
   | { kind: "question"; id: string; text: string; thinking?: string; choices?: Choice[]; work?: TurnWork }
   /** The one-time offer to allow the contacts permission (PDR-028), with its Allow button. */
@@ -175,7 +176,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const thinking = state.live?.thinking.trim() ? { thinking: state.live.thinking.trim() } : {};
       const stopped = (v.kind === "outcome" && v.outcome === "stopped") || (v.kind === "reply" && v.stopped === true);
       const item: ChatItem =
-        v.kind === "reply" ? { kind: "assistant", id: action.id, text: v.text, streaming: false, ...thinking, ...(v.page ? { page: v.page } : {}), ...(v.connect ? { connect: v.connect } : {}), ...(v.webTask ? { webTask: v.webTask } : {}), ...(v.mail ? { mail: v.mail } : {}), ...(v.cut ? { cut: true as const } : {}), ...(v.stopped ? { stopped: true as const } : {}) }
+        v.kind === "reply" ? { kind: "assistant", id: action.id, text: v.text, streaming: false, ...thinking, ...(v.page ? { page: v.page } : {}), ...(v.connect ? { connect: v.connect } : {}), ...(v.webTask ? { webTask: v.webTask } : {}), ...(v.mail ? { mail: v.mail } : {}), ...(v.botProposal ? { botProposal: v.botProposal } : {}), ...(v.cut ? { cut: true as const } : {}), ...(v.stopped ? { stopped: true as const } : {}) }
         : v.kind === "question" ? { kind: "question", id: action.id, text: v.text, ...thinking, ...(v.choices?.length ? { choices: v.choices } : {}) }
         // "Stopped. Nothing was done." would be false once an action had finished: say what happened instead.
         : stopped && v.afterAction ? { kind: "system", id: action.id, copyKey: "HM-CHAT-01.stoppedAfterAction" }

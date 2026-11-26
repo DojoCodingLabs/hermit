@@ -5,9 +5,12 @@ import S_activity_entry from "../../src/app/activity-entry";
 import S_appearance from "../../src/app/appearance";
 import S_approval_key from "../../src/app/approval-key";
 import S_autofill_debug from "../../src/app/autofill-debug";
+import S_bot_new from "../../src/app/bot-new";
+import S_bot_settings from "../../src/app/bot-settings";
 import S_briefing from "../../src/app/briefing";
 import S_browser from "../../src/app/browser";
 import S_calendar from "../../src/app/calendar";
+import S_chat from "../../src/app/chat";
 import S_connect from "../../src/app/connect";
 import S_delete from "../../src/app/delete";
 import S_download from "../../src/app/download";
@@ -56,9 +59,12 @@ export const routes = {
   "appearance": S_appearance,
   "approval-key": S_approval_key,
   "autofill-debug": S_autofill_debug,
+  "bot-new": S_bot_new,
+  "bot-settings": S_bot_settings,
   "briefing": S_briefing,
   "browser": S_browser,
   "calendar": S_calendar,
+  "chat": S_chat,
   "connect": S_connect,
   "delete": S_delete,
   "download": S_download,

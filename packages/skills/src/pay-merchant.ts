@@ -25,6 +25,8 @@ export const payMerchantDef: SkillDef<Args> = {
   version: 1,
   risk: "spend",
   producesUntrusted: false,
+  tier: "high",
+  group: "wallet_pay",
   menuLine:
     "Pay for a web page or API the user gives a link to that asks for a payment (x402), in USD₮ (\"pay for https://...\", \"buy access to this link\", \"págale a esta página\", \"sí, paga para verla\"). Always shows the price and needs the user's fingerprint.",
   args: {

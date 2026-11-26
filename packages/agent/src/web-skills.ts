@@ -180,8 +180,9 @@ export function readWebSkills(deps: WebSkillDeps): SkillRuntime[] {
         const userText = ctx.userText ?? "";
         const lang = deps.language(userText);
         const url = typeof args.url === "string" ? parseWebUrl(args.url) : undefined;
-        // The user approved this domain on the sheet (FR-WEB-02): later fetches from it this session don't ask.
-        if (url?.scheme === "https" && ctx.approvedArgsHash) {
+        // The user approved this domain on the sheet (FR-WEB-02): later fetches from it this session don't ask. A run a
+        // bot's mode let through is no one's approval, so it is never remembered.
+        if (url?.scheme === "https" && ctx.approvedArgsHash && !ctx.byMode) {
           const known = ctx.session.approvedDomains ?? [];
           if (!known.includes(url.domain)) ctx.session.approvedDomains = [...known, url.domain];
         }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { ApprovalRequest, ModelPort, SessionState, SkillId } from "@hermit/core";
+import { SKILL_GROUPS, type ApprovalRequest, type ModelPort, type SessionState, type SkillId } from "@hermit/core";
 import { defaultRules } from "@hermit/cage";
 import { runTurn } from "@hermit/agent";
+import { skillById } from "@hermit/skills";
 import { createMailSkills, MailCache, type MailHeader, type MailMessage, type MailProvider, type MailResult } from "../src/index.ts";
 import { gmailAccount, GMAIL_TOKEN, imapAccount, NOW, outlookAccount, stores } from "./fixtures.ts";
 
@@ -175,5 +176,49 @@ describe("through the loop and the cage", () => {
     const tool = r.messages.find((m) => m.role === "tool")!;
     expect(tool.content).toMatch(/^<untrusted source="mail_list"/);
     expect(seen.join("\n")).not.toContain(GMAIL_TOKEN);
+  });
+
+  it("what others wrote, for a bot's Auto links: never a listing's head (the query said back) or the user's own mail (multi-bot)", async () => {
+    const link = "https://a.example/receta";
+    const gmail = fakeProvider([
+      h("acc-g", "g1", { at: NOW - 60_000, from: "Ana <ana@gmail.com>", subject: "Receta", preview: `Te mando ${link}` }),
+      h("acc-g", "g2", { at: NOW - 120_000, from: "Luis Pérez <luis@perez.com>", subject: "Receta", preview: `La receta: ${link}` }),
+    ]);
+    const { by } = await setup({ "acc-g": gmail }, [gmailAccount]);
+    const search = await by("mail_search").execute({ query: "https://evil.example/?q=x" }, { session });
+    expect(search.modelText.split("\n")[0]).toContain("https://evil.example/?q=x");
+    expect(search.othersText).toBe(search.modelText.split("\n")[2]);
+    expect(search.othersText).toContain("From: Luis Pérez <luis@perez.com>");
+    expect((await by("mail_read").execute({ messageId: "m1" }, { session })).othersText).toBe("");
+    expect((await by("mail_read").execute({ messageId: "m2" }, { session })).othersText).toMatch(/^From: Luis Pérez <luis@perez.com>\n[\s\S]*> Hola Ana,/);
+  });
+
+  it("Auto never opens a link from the user's own sent mail without asking; the same link from someone else runs (multi-bot)", async () => {
+    const link = "https://a.example/receta";
+    const opens = async (from: string) => {
+      const gmail = fakeProvider([h("acc-g", "g1", { from, subject: "Receta", preview: `La receta: ${link}` })], { text: `La receta: ${link}` });
+      const { skills } = await setup({ "acc-g": gmail }, [gmailAccount]);
+      const opened: string[] = [];
+      const readWeb = { def: skillById("read_web")!, execute: async (args: Record<string, unknown>) => (opened.push(String(args.url)), { ok: true, modelText: "Página leída." }) };
+      const script: Array<[string, Record<string, unknown>]> = [["mail_search", { query: "receta" }], ["mail_read", { messageId: "m1" }], ["read_web", { url: link }]];
+      let i = 0;
+      const model: ModelPort = {
+        async pick() { const s = script[i++]; return s ? { choice: s[0] as SkillId } : { choice: "respond", text: "Listo." }; },
+        async fill() { const args = script[i - 1]![1]; return { rawText: JSON.stringify(args), args }; },
+        async respond(_i, onToken) { onToken("Listo."); return "Listo."; },
+      };
+      const requests: ApprovalRequest[] = [];
+      let n = 0;
+      await runTurn({ session: { id: "s1", taint: [], unattended: false }, messages: [] }, "busca la receta y abre el enlace", {
+        model, skills: [...skills, readWeb], rules: defaultRules(),
+        approvals: { request: async (req) => (requests.push(req), { kind: "approved", biometric: true, argsHash: req.call.argsHash }) },
+        audit: { append: async () => {} }, render: { conversation: () => undefined }, now: () => NOW, newId: () => `n${++n}`,
+        bot: { botId: "b1", primary: false, mode: "auto", grants: SKILL_GROUPS, sources: { sites: [], connectors: [] } },
+      });
+      expect(opened, from).toEqual([link]);
+      return requests.map((r) => r.call.skill);
+    };
+    expect(await opens("Ana <ana@gmail.com>")).toEqual(["read_web"]);
+    expect(await opens("Luis Pérez <luis@perez.com>")).toEqual([]);
   });
 });

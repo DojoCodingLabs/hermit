@@ -128,7 +128,7 @@ describe("a long answer when asked", () => {
     expect(sent.map((m) => m.content)).toContain("respuesta 9");
   });
 
-  test("its prompt holds still through the hour under its own cache key, so Seguir reuses what the phone already read", async () => {
+  test("its prompt holds still through the hour under the turn's long key, so Seguir reuses what the phone already read", async () => {
     let minute = 20;
     const clock = () => ({ ...ctx(), now: `Wednesday, November 11, 2026, 18:${minute} local time (today is 2026-11-11; tomorrow is Thursday 2026-11-12)` });
     const { e, requests } = engine([{ text: RECIPE, stop: "length" }, { text: "3. Sirve frío.", stop: "end" }]);
@@ -139,8 +139,37 @@ describe("a long answer when asked", () => {
     await port.continueReply!({ prefixCacheKey: "k", messages: [...ask, { role: "assistant", content: RECIPE }] }, () => {});
     expect(requests[0]!.messages[0]!.content).toBe(requests[1]!.messages[0]!.content);
     expect(requests[0]!.messages[0]!.content).toContain("between 18:00 and 19:00 local time");
-    expect(requests[0]!.cacheKey).toBe(`hermit-long:${native.id}`);
+    expect(requests[0]!.cacheKey).toBe(`k:long:${native.id}`);
     expect(requests[1]!.cacheKey).toBe(requests[0]!.cacheKey);
+  });
+
+  // Multi-bot (spec 6.6): one prompt-cache key per bot. A long answer and its Seguir carry a long key derived from the
+  // turn's, so two bots never share one, and the turn's own key keeps the bot's normal prompt.
+  test("a long answer, its Seguir and a long reply after a result carry the turn's long key, one per bot", async () => {
+    const { e, requests } = engine([{ text: RECIPE, stop: "length" }, { text: "3. Sirve frío.", stop: "end" }, { text: RECIPE, stop: "end" }]);
+    const ask = asked("dame una receta de arroz con leche");
+    const b1 = createModelPort(e, native, firstWinSkills, ctx);
+    await b1.pick({ prefixCacheKey: "hermit-v1:b1", messages: ask, menu });
+    await b1.continueReply!({ prefixCacheKey: "hermit-v1:b1", messages: [...ask, { role: "assistant", content: RECIPE }] }, () => {});
+    const after: Msg[] = [{ role: "user", content: "explícame en detalle cómo se hace el arroz con leche" }, { role: "assistant", content: '{"skill":"recall","args":{"query":"arroz"}}' }, { role: "tool", content: "Nothing saved about that." }];
+    await createModelPort(e, twoStage, firstWinSkills, ctx).respond({ prefixCacheKey: "hermit-v1:b2", messages: after }, () => {});
+    expect(requests.map((r) => [r.longForm, r.cacheKey])).toEqual([
+      [true, `hermit-v1:b1:long:${native.id}`],
+      [true, `hermit-v1:b1:long:${native.id}`],
+      [true, `hermit-v1:b2:long:${twoStage.id}`],
+    ]);
+  });
+
+  // On the S26 a prompt read costs 8 to 20 s: a long answer must never take the key the bot's normal turns read under.
+  test("a normal turn after a long answer and its Seguir reads under the turn's key, untouched", async () => {
+    const { e, requests } = engine([{ text: "Hola.", stop: "end" }, { text: RECIPE, stop: "length" }, { text: "3. Sirve frío.", stop: "end" }, { text: "De nada.", stop: "end" }]);
+    const port = createModelPort(e, native, firstWinSkills, ctx);
+    await port.pick({ prefixCacheKey: "hermit-v1:b1", messages: asked("hola"), menu });
+    const ask = asked("dame una receta de arroz con leche");
+    await port.pick({ prefixCacheKey: "hermit-v1:b1", messages: ask, menu });
+    await port.continueReply!({ prefixCacheKey: "hermit-v1:b1", messages: [...ask, { role: "assistant", content: RECIPE }] }, () => {});
+    await port.pick({ prefixCacheKey: "hermit-v1:b1", messages: [...ask, { role: "assistant", content: RECIPE }, { role: "user", content: "gracias" }], menu });
+    expect(requests.map((r) => r.cacheKey)).toEqual([`hermit-v1:b1:${native.id}`, `hermit-v1:b1:long:${native.id}`, `hermit-v1:b1:long:${native.id}`, `hermit-v1:b1:${native.id}`]);
   });
 
   test("the reply prompt after a result answers long when the user's words asked for it", async () => {

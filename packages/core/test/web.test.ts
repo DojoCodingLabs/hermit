@@ -77,4 +77,23 @@ describe("findUrls", () => {
     expect(findUrls("read www.example.com/a, and http://b.org/x).")).toEqual(["www.example.com/a", "http://b.org/x"]);
     expect(findUrls("no links here")).toEqual([]);
   });
+
+  test("strips every trailing mark, and only the ones at the end", () => {
+    expect(findUrls("mira https://a.example/x?¡¿!:;,.)]} y")).toEqual(["https://a.example/x"]);
+    expect(findUrls("(https://a.example/a.b,c;d:e!f?g¿h¡i)j]k}l).")).toEqual(["https://a.example/a.b,c;d:e!f?g¿h¡i)j]k}l"]);
+    expect(findUrls("www.a.example/x... y http://b.example/?q=1&r=2!")).toEqual(["www.a.example/x", "http://b.example/?q=1&r=2"]);
+    expect(findUrls(`https://a.example/x${".".repeat(65_536)}`)).toEqual(["https://a.example/x"]);
+  });
+
+  test("takes linear time on text others wrote: a 64 KB run of marks before the end finishes in milliseconds", () => {
+    // The cage reads pages and messages with this (Auto's links). A backtracking strip took seconds on these inputs.
+    for (const marks of [".", ".,;:!?¿¡)]}"]) {
+      const text = `https://a.example/${marks.repeat(Math.ceil(65_536 / marks.length))}x`;
+      const start = performance.now();
+      const found = findUrls(text);
+      const ms = performance.now() - start;
+      expect(found).toEqual([text]);
+      expect(ms, `${JSON.stringify(marks)}: ${ms.toFixed(1)} ms`).toBeLessThan(100);
+    }
+  });
 });

@@ -20,6 +20,7 @@ type Row = {
   reason?: string | null;
   payload_hash?: string | null;
   approval_sig?: string | null;
+  bot_id?: string | null;
   prev_hash: string; hash: string; sig: string;
 };
 
@@ -33,14 +34,15 @@ const fromRow = (r: Row): AuditEntry => {
   if (r.reason !== null && r.reason !== undefined) e.reason = r.reason;
   if (r.payload_hash !== null && r.payload_hash !== undefined) e.payloadHash = r.payload_hash;
   if (r.approval_sig !== null && r.approval_sig !== undefined) e.approvalSig = r.approval_sig;
+  if (r.bot_id !== null && r.bot_id !== undefined) e.bot = r.bot_id;
   return e;
 };
 
 const INSERT =
-  "INSERT INTO audit (seq, ts, session_id, event, skill, args_hash, decision, outcome, cleared_count, reason, payload_hash, approval_sig, prev_hash, hash, sig) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+  "INSERT INTO audit (seq, ts, session_id, event, skill, args_hash, decision, outcome, cleared_count, reason, payload_hash, approval_sig, bot_id, prev_hash, hash, sig) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 const values = (e: AuditEntry) => [
   e.seq, e.ts, e.sessionId, e.event, e.skill ?? null, e.argsHash ?? null, e.decision ?? null, e.outcome ?? null, e.clearedCount ?? null, e.reason ?? null,
-  e.payloadHash ?? null, e.approvalSig ?? null, e.prevHash, e.hash, e.sig,
+  e.payloadHash ?? null, e.approvalSig ?? null, e.bot ?? null, e.prevHash, e.hash, e.sig,
 ];
 
 /** The signed audit chain, persisted in SQLite (op-sqlite on the phone, node:sqlite in tests). */
@@ -57,6 +59,7 @@ export function createAuditLog(sql: SqlPort, signer: SignerPort): AuditLog {
       if (!cols.some((c) => c.name === "reason")) await sql.exec("ALTER TABLE audit ADD COLUMN reason TEXT");
       if (!cols.some((c) => c.name === "payload_hash")) await sql.exec("ALTER TABLE audit ADD COLUMN payload_hash TEXT");
       if (!cols.some((c) => c.name === "approval_sig")) await sql.exec("ALTER TABLE audit ADD COLUMN approval_sig TEXT");
+      if (!cols.some((c) => c.name === "bot_id")) await sql.exec("ALTER TABLE audit ADD COLUMN bot_id TEXT");
     },
     async append(input) {
       return sql.transaction(async (tx) => {

@@ -9,6 +9,8 @@ export * from "./erase-screen.ts";
 export * from "./app-lock.ts";
 export * from "./settings-view.ts";
 export * from "./vault.ts";
+export * from "./bot-api.ts";
+export * from "./run-queue.ts";
 export * from "./wallet.ts";
 // SL-54: what the app needs from the MCP client, so it depends on the runtime only.
 export { MCP_REDIRECT_URI, MAX_MCP_TOOLS_PER_TURN } from "@hermit/connectors";

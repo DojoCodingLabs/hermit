@@ -1,30 +1,9 @@
 import { describe, expect, test } from "vitest";
 import type { Recipe } from "@hermit/core";
 import { recipeFromSkill, recipeSkill, recipeSkillId, recipesForTurn, recipeValuesFromUser } from "../src/web-task.ts";
+import { SAMPLE_RECIPE } from "./fixtures.ts";
 
-const recipe = (over: Partial<Recipe> = {}): Recipe => ({
-  format: 1,
-  id: "k3j9",
-  version: 2,
-  name: "Table at Casa Luna",
-  kind: "book",
-  origin: "https://casaluna.example.com",
-  params: [
-    { name: "people", label: "People", kind: "number", required: true, default: "2" },
-    { name: "time", label: "Time", kind: "choice", options: ["19:00", "20:00", "21:00"], required: true },
-    { name: "note", label: "Note", kind: "text", required: false },
-  ],
-  steps: [
-    { op: "open", path: "/book" },
-    { op: "fill", target: { role: "textbox", name: "People" }, value: { param: "people" } },
-    { op: "select", target: { role: "combobox", name: "Time" }, value: { param: "time" } },
-    { op: "fill", target: { role: "textbox", name: "Note" }, value: { param: "note" } },
-    { op: "click", target: { role: "button", name: "Book" }, commit: "remote_write" },
-  ],
-  createdAt: 1,
-  updatedAt: 1,
-  ...over,
-});
+const recipe = (over: Partial<Recipe> = {}): Recipe => ({ ...SAMPLE_RECIPE, ...over });
 
 const ctx = (userText: string) => ({ userText, now: 0, timeZone: "UTC" });
 

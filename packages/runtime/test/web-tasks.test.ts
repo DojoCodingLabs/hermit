@@ -11,6 +11,8 @@ import { createHermit } from "../src/hermit.ts";
 import { chatReducer, initialChat } from "../src/chat-state.ts";
 import { repairWebStep } from "../src/web-repair.ts";
 import { cipher, fakeKeystore, random } from "./vault-fixtures.ts";
+import { el, FakeBrowser, O, recipe, shop } from "./fake-browser.ts";
+import { recordingQueue } from "./bot-harness.ts";
 
 const PROFILE = profileById("botpsy-q4-two-stage-nothink")!;
 const NOW = Date.UTC(2026, 10, 17, 12);
@@ -24,6 +26,7 @@ function setup(script: string[], opts: { browser?: boolean; onScreen?: boolean; 
       return { text: script[i++] ?? '{"choice":"respond"}', toolCalls: [] };
     },
   };
+  const rq = recordingQueue(engine);
   const sheets: ApprovalRequest[] = [];
   let n = 0;
   const sql = nodeSql();
@@ -34,7 +37,8 @@ function setup(script: string[], opts: { browser?: boolean; onScreen?: boolean; 
       notifier: { schedule: async () => "n", cancel: async () => {} },
       calendar: { list: async () => [], add: async () => {}, calendars: async () => [] },
       replySender: { send: async () => "sent" },
-      engine,
+      engine: rq.engine,
+      queue: rq.queue,
       approvals: { request: async (r) => (sheets.push(r), { kind: "approved", biometric: true, argsHash: r.call.argsHash }) },
       now: () => NOW,
       timeZone: () => "America/Costa_Rica",
@@ -47,7 +51,7 @@ function setup(script: string[], opts: { browser?: boolean; onScreen?: boolean; 
     },
     PROFILE,
   );
-  return { hermit, requests, sheets, sql };
+  return { hermit, requests, sheets, sql, queued: rq.queued, unqueuedCalls: rq.unqueuedCalls };
 }
 
 const offered = (req: EngineRequest) => ((req.jsonSchema as { anyOf?: Array<{ properties: { choice: { const: string } } }> } | undefined)?.anyOf ?? []).map((b) => b.properties.choice.const);
@@ -227,6 +231,21 @@ describe("the login a site signs in with is the user's choice (SL-56, HM-WEB-02)
     await bare.hermit.init();
     expect(await bare.hermit.web!.loginsFor(SHOP)).toEqual({ logins: [] });
     expect(await bare.hermit.web!.chooseLogin(SHOP, ana.hash)).toBe(false);
+  });
+});
+
+describe("a task's own model calls wait their turn (multi-bot, Task 10)", () => {
+  test("the one-step repair and the task's reader run through the run queue, as the user's", async () => {
+    const w = setup(['{"pick":1}', JSON.stringify({ answer: "Order #4417", quotes: ["Order #4417 is confirmed."] })]);
+    await w.hermit.init();
+    // The recipe's "Buy again" link is now "Order again": the step is repaired once, then the result is read.
+    const pages = shop();
+    pages[`${O}/orders`]!.els = [el("link", "Home"), el("link", "Order again", { to: `${O}/cart` })];
+    const end = await w.hermit.web!.task(recipe(), new FakeBrowser(pages)).start({ quantity: "2" });
+    expect(end).toMatchObject({ kind: "done", repaired: 1, answer: { text: "Order #4417" } });
+    expect(w.requests).toHaveLength(2);
+    expect(w.unqueuedCalls()).toBe(0);
+    expect(w.queued).toEqual(["user", "user"]);
   });
 });
 

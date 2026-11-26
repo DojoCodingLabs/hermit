@@ -2,18 +2,20 @@
 // ../fake/hermit.ts and the approval bridge is the real one, fed a sample request when the shot calls for a sheet.
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { createApprovalBridge, type ApprovalBridge, type Hermit } from "@hermit/runtime";
+import { HERMIT_BOT_ID } from "@hermit/core";
+import { createBotSessions, type BotSessions } from "../../../src/bot-sessions";
 import { fakeHermit } from "../fake/hermit";
 import { sampleApproval } from "../fake/approvals";
 import { scene } from "../scene";
 
 type Status =
   | { kind: "starting" }
-  | { kind: "ready"; hermit: Hermit; sessionId: string }
+  | { kind: "ready"; hermit: Hermit; sessions: BotSessions }
   | { kind: "not_wired"; slices: string[] }
   | { kind: "failed" }
   | { kind: "erase_pending"; done: number; total: number };
 
-const Ctx = createContext<{ status: Status; approvals: ApprovalBridge; clearConversation(): Promise<void> } | null>(null);
+const Ctx = createContext<{ status: Status; approvals: ApprovalBridge } | null>(null);
 
 export function HermitProvider({ children }: { children: ReactNode }) {
   const approvals = useMemo(() => {
@@ -22,8 +24,14 @@ export function HermitProvider({ children }: { children: ReactNode }) {
     if (req) void bridge.port.request(req);
     return bridge;
   }, []);
-  const status = useMemo<Status>(() => ({ kind: "ready", hermit: fakeHermit as unknown as Hermit, sessionId: "s1" }), []);
-  return <Ctx.Provider value={{ status, approvals, clearConversation: async () => {} }}>{children}</Ctx.Provider>;
+  const status = useMemo<Status>(() => {
+    // The sample covers what the screens call, not the whole runtime.
+    const hermit = fakeHermit as unknown as Hermit;
+    const sessions = createBotSessions(hermit);
+    sessions.use(HERMIT_BOT_ID, "s1");
+    return { kind: "ready", hermit, sessions };
+  }, []);
+  return <Ctx.Provider value={{ status, approvals }}>{children}</Ctx.Provider>;
 }
 
 export function useHermit() {

@@ -6,7 +6,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, View } from "react-native";
-import type { Note as Fact } from "@hermit/core";
+import { HERMIT_BOT_ID, type Note as Fact } from "@hermit/core";
 import { Btn, Card, Empty, Failed, Group, Loading, Note, Page, Row, T } from "../components/kit";
 import { quoted } from "../format";
 import { useHermit } from "../hermit-context";
@@ -42,7 +42,8 @@ export default function Memory() {
     if (status.kind !== "ready") return;
     setScreen({ kind: "note", note, deleting: true });
     try {
-      await status.hermit.memories.delete(status.sessionId, note.id);
+      // The delete is logged in the chat Hermit is on now (after a new chat or a reset, not the one the app started with).
+      await status.hermit.memories.delete(await status.sessions.open(HERMIT_BOT_ID), note.id);
       router.back();
     } catch {
       setScreen({ kind: "note", note, deleteFailed: true });

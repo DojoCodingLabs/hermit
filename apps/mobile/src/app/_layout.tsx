@@ -28,6 +28,10 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          {/* HM-BOT-02, HM-BOT-03, HM-BOT-04: one bot's chat, a new bot, a bot's settings. */}
+          <Stack.Screen name="chat" options={{ headerShown: false }} />
+          <Stack.Screen name="bot-new" options={{ headerShown: false }} />
+          <Stack.Screen name="bot-settings" options={{ headerShown: false }} />
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen name="language" options={{ headerShown: false }} />
           <Stack.Screen name="download" options={{ headerShown: false }} />

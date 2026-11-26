@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { nodeSql } from "@hermit/sql-node";
-import { chainView, activityRows } from "../src/activity.ts";
+import { activityDetail, chainView, activityRows } from "../src/activity.ts";
 import { createAuditLog } from "../src/audit-log.ts";
 import { ed25519Signer } from "../src/audit.ts";
 
@@ -163,5 +163,92 @@ describe("web task rows (SL-53, FR-WEB-08)", () => {
       ["web_task", "ran", "web.taken_over"],
     ]);
     expect(await log.verify(await signer.publicKey())).toEqual({ ok: true });
+  });
+});
+
+// Multi-bot (F-M28): a step the bot's permission mode let run was never approved by anyone, so it never reads "approved".
+describe("steps a permission mode ran (multi-bot)", () => {
+  test("a step a mode let run shows as ran, with the mode, never as approved", async () => {
+    const log = await logWith([
+      { ...base, event: "call_proposed", skill: "reply_message", argsHash: "b" },
+      { ...base, event: "policy_decided", skill: "reply_message", decision: "allow" },
+      { ...base, event: "approval", skill: "reply_message", outcome: "ok", reason: "mode.dont_ask" },
+      { ...base, event: "executed", skill: "reply_message", outcome: "ok" },
+    ]);
+    expect(activityRows(await log.entries())[0]).toMatchObject({ skill: "reply_message", mark: "ran", reason: "mode.dont_ask" });
+  });
+
+  test("every mode's run reads the same way: Ask's alone source reads, Auto's and Don't ask's steps", async () => {
+    for (const mode of ["ask", "auto", "dont_ask"]) {
+      const log = await logWith([
+        { ...base, event: "call_proposed", skill: "read_web", argsHash: "a", bot: "b1" },
+        { ...base, event: "policy_decided", skill: "read_web", decision: "allow", bot: "b1" },
+        { ...base, event: "approval", skill: "read_web", outcome: "ok", reason: `mode.${mode}`, bot: "b1" },
+        { ...base, event: "executed", skill: "read_web", outcome: "ok", bot: "b1" },
+      ]);
+      expect(activityRows(await log.entries()), mode).toEqual([expect.objectContaining({ skill: "read_web", mark: "ran", reason: `mode.${mode}`, bot: "b1" })]);
+    }
+  });
+
+  test("the user's own approval still reads approved; a mode's run that failed or read others' text says so and keeps the mode", async () => {
+    const log = await logWith([
+      { ...base, event: "call_proposed", skill: "reply_message", argsHash: "a" },
+      { ...base, event: "approval", skill: "reply_message", outcome: "ok" },
+      { ...base, event: "executed", skill: "reply_message", outcome: "ok" },
+      { ...base, event: "call_proposed", skill: "mail_send", argsHash: "b" },
+      { ...base, event: "approval", skill: "mail_send", outcome: "ok", reason: "mode.dont_ask" },
+      { ...base, event: "executed", skill: "mail_send", outcome: "error" },
+      { ...base, event: "call_proposed", skill: "read_web", argsHash: "c" },
+      { ...base, event: "approval", skill: "read_web", outcome: "ok", reason: "mode.auto" },
+      { ...base, event: "executed", skill: "read_web", outcome: "ok" },
+      { ...base, event: "taint_added", skill: "read_web" },
+    ]);
+    expect(activityRows(await log.entries()).map((r) => [r.skill, r.mark, r.reason ?? null])).toEqual([
+      ["read_web", "read_untrusted", "mode.auto"],
+      ["mail_send", "failed", "mode.dont_ask"],
+      ["reply_message", "approved", null],
+    ]);
+  });
+});
+
+describe("bot changes (multi-bot)", () => {
+  test("each change to a bot or a mode is the user's own row, its code only, signed into the chain", async () => {
+    const log = await logWith([
+      { ...base, event: "call_proposed", skill: "remember", argsHash: "x" },
+      { ...base, sessionId: "b7", event: "bot", skill: "bot", outcome: "ok", reason: "bot.created" },
+      { ...base, event: "executed", skill: "remember", outcome: "ok" },
+      { ...base, sessionId: "b7", event: "bot", skill: "bot", outcome: "ok", reason: "mode.auto" },
+    ]);
+    const entries = await log.entries();
+    expect(activityRows(entries).map((r) => [r.skill, r.mark, r.reason ?? null])).toEqual([
+      ["bot", "ran", "mode.auto"],
+      ["bot", "ran", "bot.created"],
+      ["remember", "ran", null],
+    ]);
+    expect(activityDetail(entries, 2)).toEqual([expect.objectContaining({ event: "bot", reason: "bot.created" })]);
+    // A bot change ends the call before it: the call's later entries no longer fold into it.
+    expect(activityDetail(entries, 1)).toHaveLength(1);
+    expect(await log.verify(await signer.publicKey())).toEqual({ ok: true });
+  });
+});
+
+// Multi-bot: the signed log records which bot ran each step, and Activity can say it; steps no bot ran say nothing.
+describe("the bot behind a row (multi-bot)", () => {
+  test("a bot's call row and every entry behind it carry the bot; a row of no bot carries none", async () => {
+    const log = await logWith([
+      { ...base, event: "call_proposed", skill: "read_web", argsHash: "a", bot: "b1" },
+      { ...base, event: "policy_decided", skill: "read_web", decision: "ask", bot: "b1" },
+      { ...base, event: "approval", skill: "read_web", outcome: "ok", bot: "b1" },
+      { ...base, event: "executed", skill: "read_web", outcome: "ok", bot: "b1" },
+      { ...base, event: "call_proposed", skill: "remember", argsHash: "b" },
+      { ...base, event: "executed", skill: "remember", outcome: "ok" },
+      { ...base, event: "spending", skill: "pay", outcome: "ok", reason: "payment.sent", bot: "hermit" },
+    ]);
+    const entries = await log.entries();
+    const rows = activityRows(entries);
+    expect(rows.map((r) => [r.skill, r.bot])).toEqual([["spending", "hermit"], ["remember", undefined], ["read_web", "b1"]]);
+    expect(rows.find((r) => r.skill === "remember")).not.toHaveProperty("bot");
+    expect(activityDetail(entries, rows.find((r) => r.skill === "read_web")!.seq)!.map((d) => d.bot)).toEqual(["b1", "b1", "b1", "b1"]);
+    expect(activityDetail(entries, rows.find((r) => r.skill === "remember")!.seq)!.every((d) => !("bot" in d))).toBe(true);
   });
 });

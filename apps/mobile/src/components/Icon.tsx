@@ -15,12 +15,12 @@ export function useIconSize(base = 24): number {
   return Math.round(base * Math.min(Math.max(fontScale, 1), 1.5));
 }
 
-export function Icon({ name, size = 24, color, strokeWidth = 1.75, fixed }: { name: IconName; size?: number; color: string; strokeWidth?: number; fixed?: boolean }) {
+export function Icon({ name, size = 24, color, strokeWidth = 1.75, fixed, filled }: { name: IconName; size?: number; color: string; strokeWidth?: number; fixed?: boolean; filled?: boolean }) {
   const scaled = useIconSize(size);
   const px = fixed ? size : scaled;
   const nodes = lucide[name] as unknown as [keyof typeof parts, Record<string, string>][];
   return (
-    <Svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" accessible={false} importantForAccessibility="no-hide-descendants">
+    <Svg width={px} height={px} viewBox="0 0 24 24" fill={filled ? color : "none"} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" accessible={false} importantForAccessibility="no-hide-descendants">
       {nodes.map(([tag, attrs], i) => {
         const Part = parts[tag];
         return <Part key={i} {...attrs} />;

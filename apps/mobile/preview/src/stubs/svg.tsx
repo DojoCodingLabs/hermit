@@ -5,9 +5,11 @@ import type { ReactNode } from "react";
 type P = Record<string, unknown> & { children?: ReactNode };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function Svg({ children, accessible, importantForAccessibility, ...rest }: P) {
+export default function Svg({ children, accessible, importantForAccessibility, accessibilityLabel, ...rest }: P) {
+  // A drawing with a spoken label (a bot's shell, which carries the bot's name) is an image; the rest is decoration.
+  const label = typeof accessibilityLabel === "string" ? accessibilityLabel : undefined;
   return (
-    <svg {...rest} style={{ display: "block", flexShrink: 0, ...(rest.style as object | undefined) }} aria-hidden="true">
+    <svg {...rest} style={{ display: "block", flexShrink: 0, ...(rest.style as object | undefined) }} {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": "true" })}>
       {children}
     </svg>
   );

@@ -1,5 +1,5 @@
-import { zoneOffsetMinutes, type SessionState, type SkillDef, type TaintSource } from "@hermit/core";
-import { skillById } from "@hermit/skills";
+import { zoneOffsetMinutes, type PermissionMode, type SessionState, type SkillDef, type TaintSource } from "@hermit/core";
+import { emailOf, skillById } from "@hermit/skills";
 import { resolveAccounts, type MailAccount, type MailAccountStore } from "./accounts.ts";
 import type { MailCache, ShownItem } from "./cache.ts";
 import type { MailHeader, MailMessage, MailProblem, MailProvider, MailResult } from "./provider.ts";
@@ -14,12 +14,17 @@ export interface MailSkillResult {
   modelText: string;
   untrusted?: boolean;
   taintKind?: TaintSource["kind"];
+  /** The part of modelText others wrote, for a bot's Auto links: never the user's own mail, never code's own lines. */
+  othersText?: string;
 }
 
-/** Shaped like the agent's SkillRuntime, so the loop puts it through the cage like any other skill. */
+/**
+ * Shaped like the agent's SkillRuntime, so the loop puts it through the cage like any other skill. `byMode`: a bot's
+ * permission mode let the call run without a sheet, so the user approved nothing and the address book learns nothing.
+ */
 export interface MailSkill {
   def: SkillDef;
-  execute(args: Record<string, unknown>, ctx: { session: SessionState; approvedArgsHash?: string; approvedBinding?: string }): Promise<MailSkillResult>;
+  execute(args: Record<string, unknown>, ctx: { session: SessionState; approvedArgsHash?: string; approvedBinding?: string; byMode?: PermissionMode }): Promise<MailSkillResult>;
 }
 
 export interface MailSkillDeps {
@@ -52,7 +57,7 @@ export const PROBLEM_TEXT: Record<MailProblem, string> = {
 };
 
 const trusted = (ok: boolean, modelText: string): MailSkillResult => ({ ok, modelText, untrusted: false });
-const fromMail = (modelText: string): MailSkillResult => ({ ok: true, modelText, untrusted: true, taintKind: "email" });
+const fromMail = (modelText: string, othersText: string): MailSkillResult => ({ ok: true, modelText, untrusted: true, taintKind: "email", othersText });
 
 export function localTime(at: number, timeZone: string): string {
   return new Date(at + zoneOffsetMinutes(at, timeZone) * 60_000).toISOString().slice(0, 16).replace("T", " ");
@@ -77,11 +82,17 @@ async function gather(accounts: MailAccount[], run: (a: MailAccount) => Promise<
 export function createMailSkills(deps: MailSkillDeps): MailSkill[] {
   const { cache } = deps;
 
-  /** One line per message, its short id first; every field other people wrote is flattened (oneLine). */
-  const listing = (skill: "mail_list" | "mail_search", head: string, failed: string[], headers: MailHeader[], several: boolean, accounts: MailAccount[]): string => {
+  /**
+   * One line per message, its short id first; every field other people wrote is flattened (oneLine). `others`: the
+   * lines of mail others sent, without the head, which says back what was asked.
+   */
+  const listing = (
+    skill: "mail_list" | "mail_search", head: string, failed: string[], headers: MailHeader[], several: boolean, accounts: MailAccount[], mine: (from: string) => boolean,
+  ): { text: string; others: string } => {
     const tz = deps.timeZone();
     const shown: ShownItem[] = [];
     const lines = [head, ...failed];
+    const others: string[] = [];
     let size = lines.join("\n").length;
     for (const h of headers) {
       const ref = cache.put(h);
@@ -100,13 +111,19 @@ export function createMailSkills(deps: MailSkillDeps): MailSkill[] {
       }
       size += line.length + 1;
       lines.push(line);
+      if (!mine(h.from)) others.push(line);
       shown.push({ ...h, ref });
     }
     cache.remember(skill, shown);
-    return lines.join("\n");
+    return { text: lines.join("\n"), others: others.join("\n") };
   };
 
   const pick = async (wanted: unknown) => resolveAccounts(await deps.accounts.list(), wanted);
+  /** Mail sent from any of the user's connected accounts is the user's own, never others' words. */
+  const mineFrom = async () => {
+    const own = new Set((await deps.accounts.list()).map((a) => a.address.toLowerCase()));
+    return (from: string) => own.has(emailOf(from) ?? "");
+  };
 
   return [
     ...readSkills(),
@@ -127,7 +144,8 @@ export function createMailSkills(deps: MailSkillDeps): MailSkill[] {
           const kind = unreadOnly ? "unread" : "recent";
           if (!headers.length) return trusted(true, [`No ${kind} email in ${where(chosen.accounts)}.`, ...failed].join(" "));
           const head = `${unreadOnly ? "Unread" : "Latest"} email in ${where(chosen.accounts)}, newest first:`;
-          return fromMail(listing("mail_list", head, failed, headers, chosen.accounts.length > 1, chosen.accounts));
+          const shown = listing("mail_list", head, failed, headers, chosen.accounts.length > 1, chosen.accounts, await mineFrom());
+          return fromMail(shown.text, shown.others);
         },
       },
       {
@@ -144,7 +162,8 @@ export function createMailSkills(deps: MailSkillDeps): MailSkill[] {
           const sender = from ? ` from ${from}` : "";
           if (!headers.length) return trusted(true, [`No email ${words ? `matches "${words}"` : ""}${sender} in ${where(chosen.accounts)}.`.replace("email  from", "email from"), ...failed].join(" "));
           const head = `Email${words ? ` matching "${words}"` : ""}${sender} in ${where(chosen.accounts)}:`;
-          return fromMail(listing("mail_search", head, failed, headers, chosen.accounts.length > 1, chosen.accounts));
+          const shown = listing("mail_search", head, failed, headers, chosen.accounts.length > 1, chosen.accounts, await mineFrom());
+          return fromMail(shown.text, shown.others);
         },
       },
       {
@@ -165,14 +184,15 @@ export function createMailSkills(deps: MailSkillDeps): MailSkill[] {
           // The headers of a message someone else sent never teach the address book (SL-49 review).
           const m = r.value;
           const body = clip(m.text, BODY_CHARS).split("\n").map((l) => `> ${l}`);
-          return fromMail([
-            `messageId: ${ref} | ${localTime(m.at, deps.timeZone())} | ${account.address}`,
+          const message = [
             `From: ${oneLine(m.from)}`,
             ...(m.to.length ? [`To: ${oneLine(m.to.join(", "))}`] : []),
             ...(m.cc.length ? [`Cc: ${oneLine(m.cc.join(", "))}`] : []),
             `Subject: ${oneLine(m.subject)}`,
             ...body,
-          ].join("\n"));
+          ].join("\n");
+          const mine = await mineFrom();
+          return fromMail(`messageId: ${ref} | ${localTime(m.at, deps.timeZone())} | ${account.address}\n${message}`, mine(m.from) ? "" : message);
         },
       },
     ];

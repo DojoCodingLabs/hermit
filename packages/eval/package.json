@@ -16,7 +16,9 @@
     "eval:x402-merchant": "node --experimental-transform-types --no-warnings src/x402-merchant-eval.ts",
     "eval:trajectory": "node --experimental-transform-types --no-warnings src/trajectory-eval.ts",
     "spike:mcp": "node --experimental-transform-types --no-warnings src/mcp-spike.ts",
-    "spike:connector-draft": "node --experimental-transform-types --no-warnings src/connector-draft-eval.ts"
+    "spike:connector-draft": "node --experimental-transform-types --no-warnings src/connector-draft-eval.ts",
+    "eval:modes": "node --experimental-transform-types --no-warnings src/mode-table.ts",
+    "eval:bots": "node --experimental-transform-types --no-warnings src/bot-eval.ts"
   },
   "dependencies": {
     "@hermit/core": "workspace:*",

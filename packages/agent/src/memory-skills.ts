@@ -1,4 +1,4 @@
-import { MemoryError, type Memory } from "@hermit/core";
+import { MemoryError, type BotMemory, type Note, type ReadKind, type SessionState } from "@hermit/core";
 import { skillById } from "@hermit/skills";
 import { factBack, quotable, speaker, type AnswerWords } from "./answers.ts";
 import type { SkillRuntime } from "./types.ts";
@@ -9,12 +9,25 @@ const def = (id: string) => {
   return d;
 };
 
+/** The session has read these too (`SessionState.reads`, each kind once): what the cage's alone split goes by. */
+export function addReads(session: SessionState, kinds: readonly ReadKind[]): void {
+  for (const kind of kinds) if (!session.reads?.includes(kind)) session.reads = [...(session.reads ?? []), kind];
+}
+
+/**
+ * Security review 00:40: notes read back bring what they were read from into the session (private data, the web), so the
+ * alone split between them holds across runs, whichever run saved the note.
+ */
+function readBack(session: SessionState, notes: readonly Note[]): void {
+  addReads(session, notes.flatMap((n) => n.kinds ?? []));
+}
+
 /**
  * remember, recall and forget, backed by on-device memory. With `words` (W1), remember and forget say what they did in
  * code's words ("Listo, lo recuerdo: tu pasaporte vence en marzo."); recall's answer stays the model's, which reads the
  * notes against the question.
  */
-export function memorySkills(memory: Memory, opts: { words?: AnswerWords } = {}): SkillRuntime[] {
+export function memorySkills(memory: BotMemory, opts: { words?: AnswerWords } = {}): SkillRuntime[] {
   const { words } = opts;
   return [
     {
@@ -22,8 +35,9 @@ export function memorySkills(memory: Memory, opts: { words?: AnswerWords } = {})
       async execute(args, { session, userText }) {
         try {
           const fact = String(args.fact);
-          // A fact saved after reading other people's text keeps that provenance.
-          await memory.remember(fact, { tainted: session.taint.length > 0 });
+          // A fact saved after reading other people's text keeps that provenance, and so does one saved after reading
+          // private data or the web (the session's reads).
+          await memory.remember(fact, { tainted: session.taint.length > 0, kinds: session.reads ?? [] });
           const s = words && speaker(words, userText);
           if (!s) return { ok: true, modelText: "Saved." };
           const back = factBack(fact, s.language);
@@ -36,13 +50,15 @@ export function memorySkills(memory: Memory, opts: { words?: AnswerWords } = {})
     },
     {
       def: def("recall"),
-      async execute(args) {
+      async execute(args, { session }) {
         const notes = await memory.recall(String(args.query));
+        readBack(session, notes);
         // Per-call taint: only facts saved from untrusted content taint the session.
         if (notes.length) return { ok: true, modelText: notes.map((n) => `- ${n.fact}`).join("\n"), untrusted: notes.some((n) => n.tainted) };
         // The keyword search can't cross languages ("tipo de sangre" never matches "blood type"): show the
         // newest notes and let the model judge whether one answers. The user's own notes, same taint rule.
         const recent = await memory.recent(5);
+        readBack(session, recent);
         if (!recent.length) return { ok: true, modelText: "Nothing saved about that.", untrusted: false };
         return {
           ok: true,

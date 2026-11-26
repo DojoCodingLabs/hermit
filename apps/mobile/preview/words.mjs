@@ -41,7 +41,9 @@ const out = {};
 for (const h of HERO) {
   const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1, locale: "es-419" });
   const page = await ctx.newPage();
-  await page.goto(`${base}?${new URLSearchParams({ screen: h.screen, theme: "light", lang: "es-419", variant: h.variant, params: JSON.stringify(h.params ?? {}) })}`);
+  // "index" here is Hermit's chat; the chat is its own route since the roster became home (HM-BOT-01).
+  const chat = h.screen === "index";
+  await page.goto(`${base}?${new URLSearchParams({ screen: chat ? "chat" : h.screen, theme: "light", lang: "es-419", variant: h.variant, params: JSON.stringify(chat ? { bot: "hermit", ...(h.params ?? {}) } : h.params ?? {}) })}`);
   await page.waitForTimeout(h.wait ?? 1200);
   // With a sheet open, only the sheet's words count (the chat behind it is the same chat as on its own state).
   const all = await page.evaluate(() => !!document.querySelector('[aria-modal="true"]'));

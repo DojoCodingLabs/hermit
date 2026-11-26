@@ -1,5 +1,10 @@
 import { cancel, completion, deleteCache, loadModel, subscribeServerLogs, unloadModel } from "@qvac/sdk";
+import { Directory, File, Paths } from "expo-file-system";
 import { budgetFor, engineStats, generationBudget, stopOf, type CompletionEngine, type ModelProfile, type RuntimeConditions, type RuntimePlan } from "@hermit/model";
+import {
+  afterWrite, botOfKey, cacheFailureLine, cacheSizeLine, engineCacheKey, evictKeys, forgetBotCachesOn, hermitTurnKey, loadCaches, MAX_NAMED_CACHES,
+  touchCacheKey, type CacheDisk, type CacheFile, type CacheOwners,
+} from "../cache-keys";
 
 type QvacTool = Extract<NonNullable<Parameters<typeof completion>[0]["tools"]>[number], { type: "function" }>;
 
@@ -26,7 +31,70 @@ export function observedTokensPerSecond(): number | undefined {
   return lastTokensPerSecond;
 }
 
-export async function qvacEngine(modelPath: string, profile: ModelProfile, tuning?: DeviceTuning): Promise<CompletionEngine & { close(): Promise<void> }> {
+/** QVAC's cache folder, `<HOME_DIR>/.qvac/kv-cache`: the SDK's Expo client sets HOME_DIR to the app's document directory. */
+const cacheFolder = () => new Directory(Paths.document, ".qvac", "kv-cache");
+
+/** A key's cache files: QVAC writes `<key>/<model id>/<prompt hash>.bin`; anything else in there isn't a cache. */
+function filesOf(key: Directory): CacheFile[] {
+  const out: CacheFile[] = [];
+  for (const model of key.list()) {
+    if (!(model instanceof Directory)) continue;
+    for (const f of model.list()) if (f instanceof File && f.name.endsWith(".bin")) out.push({ key: key.name, model: model.name, path: f.uri, modifiedAt: f.lastModified ?? 0 });
+  }
+  return out;
+}
+
+/** QVAC resolves `{ success: false }` for a delete it couldn't do. */
+async function qvacDelete(params: { kvCacheKey: string; modelId?: string } | { auto: true }): Promise<void> {
+  if (!(await deleteCache(params)).success) throw Object.assign(new Error("QVAC kept the cache."), { name: "CacheKept" });
+}
+
+/**
+ * QVAC's cache folder for the cache functions (../cache-keys): its listing, QVAC's own deletes for a key or a model
+ * folder (QVAC then forgets its record of them), a file delete for an older prompt's file, and every failure on the log.
+ */
+const qvacDisk: CacheDisk = {
+  list() {
+    const folder = cacheFolder();
+    if (!folder.exists) return { keys: [], files: [] };
+    const keys = folder.list().filter((entry): entry is Directory => entry instanceof Directory);
+    return { keys: keys.map((k) => k.name), files: keys.flatMap(filesOf) };
+  },
+  removeKey: (key, model) => qvacDelete(model === undefined ? { kvCacheKey: key } : { kvCacheKey: key, modelId: model }),
+  removeFile: async (path) => new File(path).delete(),
+  failed: (action, err) => console.log(cacheFailureLine(action, err)),
+};
+
+/** The loaded engines' key orders, so a reset's or a delete's keys leave them too (the eval screen may load a second). */
+const liveEngines = new Set<{ drop(keys: readonly string[]): void }>();
+
+/**
+ * A bot's prompt caches go with its conversation (they hold its state on disk, Q35): on a reset, on the chat's clear and
+ * on HM-BOT-04's Delete; its turns' and its long answers' keys, for any profile, and for Hermit the keys from before bots.
+ * Only keys found on disk are deleted, so a bot with none never starts QVAC's worklet. A failure is logged, never thrown,
+ * and the next load sweeps what is left (loadCaches).
+ */
+export async function forgetBotCaches(botId: string, why: "reset" | "delete"): Promise<void> {
+  const gone = await forgetBotCachesOn(qvacDisk, botId, why);
+  for (const engine of liveEngines) engine.drop(gone);
+}
+
+/** The runbook's line after a request with a key: the engine's keys, their files and the whole folder's size. */
+function logCacheSize(keys: number): void {
+  try {
+    const folder = cacheFolder();
+    const files = qvacDisk.list().files.filter((f) => botOfKey(f.key) !== undefined).length;
+    console.log(cacheSizeLine(keys, files, folder.exists ? (folder.size ?? 0) : 0));
+  } catch (err) {
+    qvacDisk.failed("list", err);
+  }
+}
+
+/**
+ * `caches.owners`: the runtime's bots and their oldest chats, for the load's sweep (the app's engine only; the dev eval
+ * screen's and a model update's self-test sweep nothing).
+ */
+export async function qvacEngine(modelPath: string, profile: ModelProfile, tuning?: DeviceTuning, caches?: { owners(): Promise<CacheOwners | undefined> }): Promise<CompletionEngine & { close(): Promise<void> }> {
   // Dev diagnostics: only QVAC warnings and errors, and never a line that echoes a prompt or output.
   // (Its info logs include "Starting inference with prompt: ...", i.e. the conversation; FR-ACT-02, ADR-009.)
   subscribeServerLogs((entry) => {
@@ -64,22 +132,31 @@ export async function qvacEngine(modelPath: string, profile: ModelProfile, tunin
 
   console.log(`[hermit:S1] model loaded in ${Date.now() - t0} ms`);
   // Reclaim automatic caches from earlier runs that no request is using (keeps disk use bounded).
-  await deleteCache({ auto: true }).catch(() => {});
-  // Named caches (one per cache key) hold conversation content (Q35). Their file path includes a hash of the
-  // system prompt, so each new prompt (hourly with the stable prefix) would add a file: keep one per key by
-  // deleting the key's cache whenever its system prompt changes, and all of them at load and close.
+  await qvacDelete({ auto: true }).catch((err) => qvacDisk.failed("load", err));
+  // Named caches hold conversation content (Q35): one key per bot for its turns and one for its long answers (spec 6.6,
+  // `hermit-v1:<bot>:<profile>` and `hermit-v1:<bot>:long:<profile>`). Each key keeps one file: QVAC names a file by the
+  // load (its threads) and the system prompt, so the engine deletes a key when its prompt changes within a load, and
+  // keeps only a key's newest file after each write and at each load (../cache-keys). The six most recently used keys
+  // stay, and Hermit's turn key with them. They outlive a close: the engine reloads when Android moves the app's cores
+  // (on screen and off), after a model update and at every start, and a load keeps the ones on disk within the cap, so
+  // the next turn reads none of them again. A load also drops the keys this app no longer writes and sweeps what a
+  // reset or a delete left.
   const named = new Map<string, string>();
-  const dropNamed = async () => {
-    for (const key of named.keys()) await deleteCache({ kvCacheKey: key }).catch(() => {});
-    named.clear();
+  const keep = [hermitTurnKey(profile.id)];
+  const owners = await caches?.owners().catch((err: unknown) => void qvacDisk.failed("load", err));
+  let order = await loadCaches(qvacDisk, { keep, ...(owners ? { owners } : {}) });
+  const ledger = {
+    drop(keys: readonly string[]) {
+      order = order.filter((k) => !keys.includes(k));
+      for (const k of keys) named.delete(k);
+    },
   };
-  // A cache left by an earlier run of the app (the loop's key is "hermit-v1:<profile id>"): reclaim it at load.
-  await deleteCache({ kvCacheKey: `hermit-v1:${profile.id}`.replace(/[^A-Za-z0-9_-]/g, "-") }).catch(() => {});
+  liveEngines.add(ledger);
   return {
     async close() {
+      liveEngines.delete(ledger);
       await unloadModel({ modelId });
-      await deleteCache({ auto: true }).catch(() => {});
-      await dropNamed();
+      await qvacDelete({ auto: true }).catch((err) => qvacDisk.failed("load", err));
     },
     async complete(req) {
       // A stopped turn starts nothing (FR-LOOP-06).
@@ -89,12 +166,17 @@ export async function qvacEngine(modelPath: string, profile: ModelProfile, tunin
       // reply's thinking comes on top of its cap (predict counts both), as on the Mac lab (generationBudget, Q155).
       const budget = tuning ? budgetFor(tuning.plan, tuning.conditions()) : undefined;
       const { predict, thinkTokens } = generationBudget(req, budget);
-      const cacheKey = req.cacheKey ? req.cacheKey.replace(/[^A-Za-z0-9_-]/g, "-") : undefined;
+      const cacheKey = req.cacheKey ? engineCacheKey(req.cacheKey) : undefined;
       if (cacheKey) {
         const system = req.messages[0]?.role === "system" ? req.messages[0].content : "";
         const before = named.get(cacheKey);
-        if (before !== undefined && before !== system) await deleteCache({ kvCacheKey: cacheKey }).catch(() => {});
+        if (before !== undefined && before !== system) await qvacDisk.removeKey(cacheKey).catch((err) => qvacDisk.failed("write", err));
         named.set(cacheKey, system);
+        // One model call at a time (the runtime's run queue), so no request is using a key evicted here.
+        const touched = touchCacheKey(order, cacheKey, MAX_NAMED_CACHES, keep);
+        order = touched.order;
+        for (const key of touched.evict) named.delete(key);
+        await evictKeys(qvacDisk, touched.evict);
       }
       let firstToken: number | undefined;
       const run = completion({
@@ -169,6 +251,11 @@ export async function qvacEngine(modelPath: string, profile: ModelProfile, tunin
       const kind = req.jsonSchema ? "schema" : req.tools ? "tools" : "text";
       // The log line carries the parameters this call ran with, so a stale bundle from an old Metro watcher shows.
       console.log(`[hermit:S1] ${kind} completion: predict ${predict}, think ${thinkTokens === Infinity ? -1 : thinkTokens}, stop ${stop}, first token ${firstToken ? firstToken - started : -1} ms, total ${Date.now() - started} ms, stats ${JSON.stringify(final.stats ?? {})}`);
+      if (cacheKey) {
+        // One file per key: what an earlier load or prompt left beside this call's file goes. Then the runbook's line.
+        await afterWrite(qvacDisk, cacheKey);
+        logCacheSize(order.length);
+      }
       // The runtime's own speeds for this call, for the Device lab's speed probe.
       const stats = engineStats(final.stats);
       return { text: final.contentText, toolCalls: final.toolCalls.map((c) => ({ name: c.name, arguments: c.arguments })), stop, ...(stats ? { stats } : {}) };

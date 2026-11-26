@@ -1,7 +1,7 @@
 import { extractWhen, splitClauses, type JsonSchema, type ModelPort, type Msg, type PickLive, type ReplyText, type SkillDef, type SkillId, type StopSignal } from "@hermit/core";
 import type { CompletionEngine, EngineMessage, EngineRequest } from "./engine.ts";
 import type { ModelProfile } from "./profile.ts";
-import { planIntents, routeIntent, type Route } from "./intent-hints.ts";
+import { planIntents, REPLY_COMMAND_WORDS, routeIntent, type Route } from "./intent-hints.ts";
 import { askFor } from "./ask-questions.ts";
 import { asksWhatHermitCanDo } from "./capabilities.ts";
 import { quarantinedRead } from "./reader.ts";
@@ -37,7 +37,31 @@ export interface ModelPortOptions {
    * on the S26 it invented capabilities. Without it the model answers as before.
    */
   capabilities?: (language: "es-419" | "en") => string | undefined | Promise<string | undefined>;
+  /**
+   * A bot's answer for what it can't do (multi-bot): the skills it lacks, and code's words for each, in the given language.
+   * A turn whose request only withheld skills can do gets that answer and the model never runs.
+   */
+  withheld?: { skills: readonly SkillDef[]; answer(skill: SkillId, language: "es-419" | "en"): string | undefined };
 }
+
+/** The groups of the reads a hint adds so the model can find the chat or the email a request is about (not the request). */
+const FINDING_GROUPS: ReadonlySet<string> = new Set(["messages_read", "mail_read"]);
+
+/** Questions about whether someone replied or wrote, which the reply hint also catches and a read skill serves. */
+const WORD = String.raw`(?!(?:to|que|a|de|the|and|y|you|i|me|my|it)(?![\p{L}]))\p{L}[\p{L}\p{N}'’.-]*`;
+const NAME = String.raw`${WORD}(?:\s+${WORD})?`;
+const REPLY_STATUS = new RegExp(
+  String.raw`(?<![\p{L}])(?:(?:did|has|have|does)\s+${NAME}\s+(?:answer|reply|replied|respond|responded|write|wrote|written|text|texted)(?:\s+back)?|do\s+i\s+have\s+(?:an?\s+)?(?:answer|reply|response)|is\s+there\s+(?:an?\s+)?(?:answer|reply|response)|any\s+(?:answer|reply|response|msg|message)s?\s+from|read\s+me\s+the\s+last\s+(?:msg|message)\s+from|what\s+did\s+${NAME}\s+(?:tell|say|write|wrote|text)|(?:ya\s+)?(?:contest[oó]|respondi[oó]|escribi[oó])\s+${NAME}|(?:ya\s+)?contesta\s+${NAME}\s+mis\s+mensajes|(?:tengo|hay)\s+(?:una\s+)?respuesta\s+de|l[eé]eme\s+el\s+[uú]ltimo\s+mensaje\s+de)(?![\p{L}])`,
+  "iu",
+);
+
+/** A command to reply or send: the reply hint's own words. */
+const REPLY_COMMAND = new RegExp(`(?<![\\p{L}\\p{N}])(?:${REPLY_COMMAND_WORDS})(?![\\p{L}\\p{N}])`, "iu");
+/** A reply-status question, and no command in what is left of the message: command verbs win. */
+const isStatusRead = (text: string): boolean => {
+  const m = REPLY_STATUS.exec(text);
+  return m !== null && !REPLY_COMMAND.test(text.slice(0, m.index) + " " + text.slice(m.index + m[0].length));
+};
 
 /** The mail skills that change something (SL-49). */
 const MAIL_WRITES = new Set(["mail_send", "mail_reply", "mail_forward", "mail_draft", "mail_modify"]);
@@ -143,6 +167,25 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
       }
       // W1: once the turn's actions wrote their own answers and nothing more is owed, they are the answer; the model,
       // which restated them wrong on the S26, writes nothing.
+      // Multi-bot: a request only skills this bot lacks can do gets code's answer, on the turn's first step.
+      if (options.withheld && messages[messages.length - 1]?.role === "user") {
+        const have = new Set<string>(menu);
+        const union = [...menu.map((id) => ({ id })), ...options.withheld.skills.filter((s) => !have.has(s.id as string)).map((s) => ({ id: s.id }))];
+        const wide = routeIntent(earlier ? `${earlier}\n${lastUser}` : lastUser, union, clock);
+        // A command to reply or send names an action: the reads in its hint only find the chat or the email, so a bot
+        // that holds just those still refuses the action it lacks, however politely it is asked. Only a question about
+        // whether someone replied or wrote is a read (REPLY_STATUS), and the bot's read skill serves it.
+        const status = isStatusRead(lastUser);
+        const groupOf = new Map<string, SkillDef["group"]>([...skills, ...options.withheld.skills].map((d) => [d.id as string, d.group]));
+        const requested = status ? [] : wide.skills.filter((s) => !FINDING_GROUPS.has(groupOf.get(s.id as string) ?? ("" as never)));
+        const sought = requested.length ? requested : wide.skills;
+        if (wide.skills.length < union.length && sought.every((s) => !have.has(s.id as string))) {
+          for (const s of sought) {
+            const text = options.withheld.answer(s.id, lang());
+            if (text) return { choice: "respond", text };
+          }
+        }
+      }
       const coded = codedAnswer(messages, userIdx, lastUser, route, plan, menu);
       if (coded) return { choice: "respond", text: coded.text, ...(coded.untrusted ? { untrusted: true } : {}) };
       if (plan.length > 1) {
@@ -183,7 +226,7 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
       const long = messages[messages.length - 1]?.role === "user" && plan.length <= 1 && route.skills.length === menu.length && !route.outOfScope && !extras().length ? longFormAsked(lastUser) : undefined;
       if (long) {
         live?.onWords?.();
-        return longAnswer(messages, lastUser, long, live);
+        return longAnswer(messages, lastUser, long, live, prefixCacheKey);
       }
       const narrowed = route.skills.map((s) => s.id);
       // The router knows the skill before the model runs: say so at once (Q36).
@@ -306,7 +349,7 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
             if (fixed) return { choice: "ask_user", text: fixed };
           }
           // Its question must be in the user's language; otherwise the reply prompt (which pins it) rewrites it.
-          if (want && userLanguage(text) && userLanguage(text) !== want) return { choice: "ask_user", text: (await words(messages, "question", choices, () => {})).text };
+          if (want && userLanguage(text) && userLanguage(text) !== want) return { choice: "ask_user", text: (await words(messages, "question", choices, () => {}, prefixCacheKey)).text };
           return { choice: "ask_user", text };
         }
         // A plain answer in the user's language is the reply: on the trajectory eval the separate reply
@@ -331,7 +374,7 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
       // ask_user must come with an actual question; write one with the reply prompt if the pick had none.
       const given = parsed?.text?.trim();
       if (given && !isBareActionName(given, choices)) return { choice, text: given };
-      return { choice, text: (await words(messages, "question", choices, () => {})).text };
+      return { choice, text: (await words(messages, "question", choices, () => {}, prefixCacheKey)).text };
     },
 
     async warm({ prefixCacheKey }) {
@@ -363,19 +406,19 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
       return { rawText, args: safeJson(rawText) };
     },
 
-    async respond({ messages, signal: stop }, onToken) {
+    async respond({ prefixCacheKey, messages, signal: stop }, onToken) {
       signal = stop;
       const names = [...every().map((s) => s.id as string), "respond", "ask_user"];
-      return words(messages, "answer", names, onToken);
+      return words(messages, "answer", names, onToken, prefixCacheKey);
     },
 
-    async continueReply({ messages, signal: stop }, onToken) {
+    async continueReply({ prefixCacheKey, messages, signal: stop }, onToken) {
       signal = stop;
       const last = messages[messages.length - 1];
       if (!last || last.role !== "assistant" || !last.content.trim() || last.content.startsWith('{"skill":')) {
         throw new Error("Nothing to continue: the conversation doesn't end with a reply.");
       }
-      return more(messages, last.content, onToken);
+      return more(messages, last.content, onToken, prefixCacheKey);
     },
   };
 
@@ -467,19 +510,22 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
   /**
    * Q155: a long request for the engine: the long prompt over the history, the long cap the context leaves room for,
    * and `longForm`, so a device-tuned engine allows it only while the phone is cool. Words only: no tools, no schema.
+   * Its cache key is the turn's (one per bot, spec 6.6) with `:long` after it: two bots' long answers never share a cache,
+   * and the turn's own key keeps the bot's normal prompt, so the next normal turn doesn't read it all again (8 to 20 s on
+   * the S26).
    */
-  function longRequest(messages: Msg[], userText: string, kind: LongFormKind, extra: EngineMessage[] = []): Omit<EngineRequest, "onToken"> {
+  function longRequest(messages: Msg[], userText: string, kind: LongFormKind, prefixCacheKey: string, extra: EngineMessage[] = []): Omit<EngineRequest, "onToken"> {
     // The phone reads every prompt token before the first word (the S26: 8 to 20 s for 4,400 tokens), so a long answer
-    // reads only the latest turns, and keeps its own cache key so Seguir reuses the prompt it already read.
+    // reads only the latest turns, and keeps its own key so Seguir reuses the prompt it already read.
     const engineMessages = [...toEngineMessages(longReplyPrompt(context(), kind, userText), maskMail(scrubForgotten(latestTurns(messages))), profile.format), ...extra];
     const chars = engineMessages.reduce((n, m) => n + m.content.length, 0);
-    return { messages: engineMessages, thinking: longThinking(), sampling: profile.sampling, maxTokens: longReplyCap(profile, chars), longForm: true, cacheKey: `hermit-long:${profile.id}` };
+    return { messages: engineMessages, thinking: longThinking(), sampling: profile.sampling, maxTokens: longReplyCap(profile, chars), longForm: true, cacheKey: `${prefixCacheKey}:long:${profile.id}` };
   }
 
   /** Q155: the long answer itself, streamed once its opening can't be visible reasoning. */
-  async function longAnswer(messages: Msg[], userText: string, kind: LongFormKind, live: PickLive | undefined) {
+  async function longAnswer(messages: Msg[], userText: string, kind: LongFormKind, live: PickLive | undefined, prefixCacheKey: string) {
     const shown = heldStream(live?.onToken);
-    const out = await complete({ ...longRequest(messages, userText, kind), ...(live?.onThinking ? { onThinking: live.onThinking } : {}), onToken: shown.push });
+    const out = await complete({ ...longRequest(messages, userText, kind, prefixCacheKey), ...(live?.onThinking ? { onThinking: live.onThinking } : {}), onToken: shown.push });
     const text = stripVisibleReasoning(out.text);
     // Nothing usable: the loop asks the reply prompt, which answers long again for these words.
     if (!text || isBareActionName(text, [...every().map((s) => s.id as string), "respond", "ask_user"])) return { choice: "respond" as const };
@@ -487,7 +533,7 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
   }
 
   /** Words for the user, from the reply prompt (no menu). One retry, then a fixed fallback; never a bare action name. */
-  async function words(messages: Parameters<ModelPort["respond"]>[0]["messages"], task: "answer" | "question", names: readonly string[], onToken: (t: string) => void): Promise<ReplyText> {
+  async function words(messages: Parameters<ModelPort["respond"]>[0]["messages"], task: "answer" | "question", names: readonly string[], onToken: (t: string) => void, prefixCacheKey: string): Promise<ReplyText> {
     const thinking = profile.thinking.mode === "on" ? { enabled: true, budgetTokens: profile.thinking.budgetTokens } : { enabled: false };
     const userText = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
     // Q155: an answer to words that asked for a long one is long too (after a result, say), with the same rules.
@@ -498,7 +544,7 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
       let flushed = 0;
       const out = await complete({
         ...(long
-          ? longRequest(messages, userText, long)
+          ? longRequest(messages, userText, long, prefixCacheKey)
           : { messages: toEngineMessages(replyPrompt(context(), task, userText), maskMail(messages), profile.format), thinking, sampling: profile.sampling, maxTokens: profile.maxReplyTokens }),
         // Stream only the first attempt; a retry replaces the bubble when the turn finishes.
         onToken: (t) => {
@@ -531,7 +577,7 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
    * ContinuationFilter, line by line: nothing the reply already says (a restart, a renumbered repeat, a loop, a
    * preface) reaches the screen, and what does is exactly the part appended.
    */
-  async function more(messages: Msg[], partial: string, onToken: (t: string) => void): Promise<ReplyText> {
+  async function more(messages: Msg[], partial: string, onToken: (t: string) => void, prefixCacheKey: string): Promise<ReplyText> {
     const userText = [...messages].reverse().find((m) => m.role === "user" && !m.content.startsWith("Result:"))?.content ?? "";
     const spoken = userLanguage(userText);
     const language = spoken === "English" ? "en" : spoken === "Spanish (Latin America)" ? "es-419" : context().language;
@@ -539,7 +585,7 @@ export function createModelPort(engine: CompletionEngine, profile: ModelProfile,
     const long = longFormAsked(userText);
     const ask = { role: "user" as const, content: continueNote(language) };
     const base = long
-      ? longRequest(messages, userText, long, [ask])
+      ? longRequest(messages, userText, long, prefixCacheKey, [ask])
       : { messages: [...toEngineMessages(replyPrompt(context(), "answer", userText), maskMail(scrubForgotten(messages)), profile.format), ask], sampling: profile.sampling, maxTokens: profile.maxReplyTokens };
     const thinkFirst = profile.thinking.mode === "on" ? { enabled: true, budgetTokens: profile.thinking.budgetTokens } : { enabled: false };
     for (let attempt = 0; attempt < 2; attempt++) {

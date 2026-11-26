@@ -1,4 +1,5 @@
-import { findUrls, parseWebUrl, type Risk, type SessionState, type SkillId, type ToolCall } from "@hermit/core";
+import { parseWebUrl, type PermissionMode, type Risk, type SessionState, type SkillId, type ToolCall } from "@hermit/core";
+import { decideForBot, urlInText, type BotCage, type SkillFacts } from "./modes.ts";
 
 export type Effect = "allow" | "deny" | "ask";
 
@@ -31,6 +32,13 @@ export interface PolicyDecision {
    * canonical payload (`signed-approval.ts`); the JS proof doesn't count.
    */
   signedApproval?: true;
+  /**
+   * Multi-bot (spec 6.4.1): the permission mode that let a bot's step run without a sheet. The loop binds the step
+   * like an approval (its summary built, an unresolved one blocked, logged as `mode.<mode>`).
+   */
+  byMode?: PermissionMode;
+  /** Multi-bot: what a bot's denied step becomes: a suggestion card, or the code-written note for money and logins (Q206). */
+  followUp?: "suggestion" | "money_note";
 }
 
 /** SL-40 (US-PAY-05): paying a person in USD₮. */
@@ -166,9 +174,7 @@ export function domainApproved(call: ToolCall, session: SessionState): boolean {
 
 /** The call's `url` is, exactly, an address the user wrote in their own words this turn (http or bare read as https). */
 export function urlInUserWords(call: ToolCall, userText: string | undefined): boolean {
-  const url = typeof call.args.url === "string" ? parseWebUrl(call.args.url)?.url : undefined;
-  if (!url || !userText) return false;
-  return findUrls(userText).some((u) => parseWebUrl(u, { upgrade: true })?.url === url);
+  return urlInText(call, userText);
 }
 
 const words = (text: string) => text.normalize("NFC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -204,8 +210,37 @@ const REASONS: Record<Effect, string> = {
  * and an unattended session can never ask, so its asks become denies.
  * `context.userText` is the user's own words this turn, never tool output. `context.foundByName` is set by the loop,
  * never by the model, when a number or address in the call came from the contacts or past recipients.
+ *
+ * Multi-bot (spec 6.4.1): with `context.bot`, that decision is settled by the bot's grants, sources and permission
+ * mode (`decideForBot`, modes.ts), and an unattended session's asks are left for the mode. `context.skill` is what code
+ * knows about the skill (its tier, group and source). `context.readText` is what this turn's skills brought in from
+ * others (pages, messages, mail), set by the loop: never the user's words, and never text the model can write itself
+ * (its notes, reminders or events), which would let it launder an address. Auto opens a link without asking only when
+ * its exact address is there or in `context.userText`. Without a bot, the decision is exactly today's.
  */
-export function decide(call: ToolCall, risk: Risk, session: SessionState, rules: PolicyRule[], context: { userText?: string; foundByName?: boolean } = {}): PolicyDecision {
+export function decide(
+  call: ToolCall,
+  risk: Risk,
+  session: SessionState,
+  rules: PolicyRule[],
+  context: { userText?: string; readText?: string; foundByName?: boolean; bot?: BotCage; skill?: SkillFacts } = {},
+): PolicyDecision {
+  if (!context.bot) return decideBase(call, risk, session, rules, context);
+  const base = decideBase(call, risk, session, rules, context, { keepAsks: true });
+  return decideForBot(base, {
+    call, risk, session, bot: context.bot, skill: context.skill ?? {}, userText: context.userText, readText: context.readText,
+  });
+}
+
+/** Today's decision. `keepAsks` leaves an unattended session's asks as asks, for a bot's mode to settle. */
+function decideBase(
+  call: ToolCall,
+  risk: Risk,
+  session: SessionState,
+  rules: PolicyRule[],
+  context: { userText?: string; foundByName?: boolean },
+  opts: { keepAsks?: boolean } = {},
+): PolicyDecision {
   const matches = rules.filter(
     (r) => (r.skill === "*" || r.skill === call.skill) && (r.risk === undefined || r.risk === risk) && (r.when?.(call, session) ?? true),
   );
@@ -280,7 +315,7 @@ export function decide(call: ToolCall, risk: Risk, session: SessionState, rules:
   if (context.foundByName && decision.effect === "allow") {
     decision = { ...decision, effect: "ask", reason: "Hermit found this person by name. Check it's the right one." };
   }
-  if (session.unattended && decision.effect === "ask") {
+  if (session.unattended && decision.effect === "ask" && !opts.keepAsks) {
     decision = { ...decision, effect: "deny", reason: "No one is here to approve." };
   }
   return decision;

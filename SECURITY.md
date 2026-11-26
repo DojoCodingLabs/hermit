@@ -26,7 +26,7 @@ Hermit is pre-alpha. Security fixes land on the default branch and ship in the n
 Hermit assumes the model can be wrong and can be tricked. What protects people is the code around the model, not the model's judgment.
 
 - **Prompt injection.** Anyone who can put text in front of Hermit (a message, a web page, an email, a calendar invitation, a connector or MCP result, another bot) may try to give it orders. The defenses: the model only picks from typed skills and never gets a shell or a browser; untrusted text is wrapped, marked and taints the session; and the cage decides every call, with deny winning and stricter rules once a session is tainted.
-- **Approval bypass.** An attacker, or the model itself, may try to send, pay or log in without the user's real consent, or get consent for one thing and do another. The defenses: hard limits in code; approval sheets that code writes from the exact arguments; approvals bound to the hash of those arguments and to one request; the fingerprint and a Keystore signature for every payment and login, in every mode, and no payments or logins at all when a session is tainted or nobody is there; and sends that ask first. Permission modes that ask less are planned, and only ever on the user's choice, behind explicit warnings.
+- **Approval bypass.** An attacker, or the model itself, may try to send, pay or log in without the user's real consent, or get consent for one thing and do another. The defenses: hard limits in code; approval sheets that code writes from the exact arguments; approvals bound to the hash of those arguments and to one request; the fingerprint and a Keystore signature for every payment and login, in every mode, and no payments or logins at all when a session is tainted or nobody is there; and sends that ask by default (Ask mode), unless the user picked another mode on purpose, behind explicit warnings.
 - **Data exfiltration.** An attacker may try to get data off the phone: through a send, a link the model builds, a connector call, a search query, a log or a dependency. The defenses: no server and no telemetry; no network code in the core packages; every outbound host counted for the privacy screen; links and searches the user didn't type need approval in a tainted session; and CI checks that deny tracking SDKs.
 - **A rewritten record.** The audit log is hash-chained and signed with a key on the phone, so edits, reordering and deletions show up as a broken chain.
 
@@ -53,7 +53,7 @@ We assume the phone's operating system and hardware keystore work as designed, a
 - Bugs in third-party services and libraries (WhatsApp, mail providers, QVAC, Android). Report them upstream, and tell us if the way Hermit uses them makes things worse.
 - Denial of service against your own phone, social engineering, and spam.
 - The value of testnet funds, which is none. Logic bugs in the wallet are in scope.
-- Once permission modes ship: what a mode the user chose on purpose allows, like a send without asking in a mode that skips approvals. A mode that does more than its warnings say is in scope.
+- What a permission mode the user chose on purpose allows, like a send without asking in a mode that skips approvals. A mode that does more than its warnings say is in scope.
 - Missing hardening with no impact you can show.
 
 ## Research in good faith

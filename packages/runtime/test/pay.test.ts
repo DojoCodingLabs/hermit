@@ -2,15 +2,16 @@ import { describe, expect, test } from "vitest";
 import { nodeSql } from "@hermit/sql-node";
 import {
   migrate, serializeWalletRecord, transferRef, usdt, WALLET_NETWORK,
-  type ApprovalOutcome, type ApprovalRequest, type ModelPort, type SessionState, type SkillId, type VaultUnwrap, type WalletRecord,
+  type ApprovalOutcome, type ApprovalRequest, type ModelPort, type ReadMethod, type SessionState, type SkillId, type VaultUnwrap, type WalletRecord, type WebFetchPort, type WebHop,
 } from "@hermit/core";
 import { createAuditLog, createSignedApprovals, defaultRules, ed25519Signer, memoryNonceStore, withPay } from "@hermit/cage";
 import { softwareApprovalKey } from "@hermit/cage/testing";
 import { claimsSuccess, runTurn, type LoopDeps } from "@hermit/agent";
-import { localKeySigner, type TransferReceipt, type TransferWithAuthorizationTypedData } from "@hermit/payments";
-import { profileById, type CompletionEngine } from "@hermit/model";
+import { decodeBase64Json, encodeBase64Json, localKeySigner, type TransferReceipt, type TransferWithAuthorizationTypedData } from "@hermit/payments";
+import { profileById, type CompletionEngine, type EngineRequest } from "@hermit/model";
 import { createHermit } from "../src/hermit.ts";
 import { createPayments, type PayWorkletPort } from "../src/pay.ts";
+import { recordingQueue } from "./bot-harness.ts";
 
 // SL-40 (US-PAY-05, US-PAY-06, FR-PAY-03, FR-PAY-05, PDR-011): paying a person by asking, within caps, through the real
 // loop, cage, signed approvals, SQLite ledger and signed log. Only the worklet, the wallet key and the model are fakes.
@@ -451,6 +452,77 @@ describe("through the composition root", () => {
     expect(h.hermit.payments).toBeDefined();
     await h.hermit.send(await h.hermit.startSession(), "send Ana 5 dollars");
     expect(h.requests.some((r) => r.includes("Send money in USD₮"))).toBe(true);
+  });
+
+  // Multi-bot (Task 10): the page a purchase paid for is read by the quarantined reader, a model call that waits its turn
+  // in the run queue at the chat turn's priority, like the pick.
+  test("a page paid for with x402 is read by its own model call, through the run queue, as the user's", async () => {
+    const page_ = "https://merchant.example/report";
+    const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+    const offer = {
+      x402Version: 2, resource: { url: page_, description: "", mimeType: "" },
+      accepts: [{ scheme: "exact", network: WALLET_NETWORK.network, amount: "10000", asset: "0x78Cf24370174180738C5B8E352B6D14c83a6c9A9", payTo: merchant, maxTimeoutSeconds: 300, extra: { name: "USD₮0", version: "1" } }],
+    };
+    const used = new Set<string>();
+    const hop = (status: number, body: string, x402: Record<string, string>, contentType: string): WebHop => ({ kind: "page", url: page_, status, contentType, body, truncated: false, x402 });
+    const fetch: WebFetchPort = {
+      async get(_url, limits) {
+        if (!limits.payment) return hop(402, "", { "payment-required": encodeBase64Json(offer) }, "application/json");
+        const sent = decodeBase64Json(limits.payment.value) as { payload: { authorization: { nonce: string } } };
+        used.add(sent.payload.authorization.nonce.toLowerCase());
+        return hop(200, "<html><head><title>Report</title></head><body><p>The report says 42.</p></body></html>", {
+          "payment-response": encodeBase64Json({ success: true, transaction: "0x" + "ef".repeat(32), network: WALLET_NETWORK.network, payer: wallet.address }),
+        }, "text/html");
+      },
+    };
+    const chain = {
+      async call(method: ReadMethod, params: readonly unknown[]) {
+        if (method === "eth_getBlockByNumber") return { number: "0x10", timestamp: "0x" + Math.floor(NOW / 1000).toString(16) };
+        if (method === "eth_call") return "0x" + (used.has("0x" + (params[0] as { data: string }).data.slice(-64)) ? "1" : "0").padStart(64, "0");
+        throw new Error("not a read");
+      },
+    };
+    const payWorklet: PayWorkletPort = {
+      balance: async () => ({ usdt0: 100_000_000n, native: 10n ** 18n }), quoteFee: async () => 0n, open: async () => ({ address: wallet.address }),
+      sign: async (_address, td) => wallet.signTypedData(td), submit: async () => "0x", receipt: async () => "success" as const, close: async () => {},
+    };
+    const script = [`{"choice":"pay_merchant","args":{"url":"${page_}"}}`, JSON.stringify({ answer: "The report says 42.", quotes: [] })];
+    const requests: EngineRequest[] = [];
+    const rq = recordingQueue({ complete: async (req) => (requests.push(req), { text: script[requests.length - 1] ?? '{"choice":"respond"}', toolCalls: [] }) });
+    let n = 0;
+    const sql = nodeSql();
+    const hermit = createHermit({
+      sql, signer: ed25519Signer(new Uint8Array(32).fill(4)),
+      notifier: { schedule: async () => "n", cancel: async () => {} },
+      calendar: { list: async () => [], add: async () => {}, calendars: async () => [] },
+      replySender: { send: async () => "sent" as const }, engine: rq.engine, queue: rq.queue,
+      approvals: { request: async (r) => ({ kind: "approved" as const, biometric: true, argsHash: r.call.argsHash, signature: key.sign(r.signed!.message) }) },
+      now: () => NOW, timeZone: () => "UTC", language: () => "en" as const, newId: () => `m${++n}`,
+      approvalKey: {
+        port: { state: async () => ({ state: "ready", publicKey: key.spki, level: "strongbox" }), enroll: async (message) => ({ publicKey: key.spki, signature: key.sign(message), level: "strongbox" }), destroy: async () => {} },
+        randomBytes: (k) => new Uint8Array(k).fill(++n % 251),
+      },
+      wallet: {
+        key: { exists: async () => true, store: async () => "stored", unwrap: async () => ({ kind: "key", key: WALLET_KEY_BYTES }), destroy: async () => {} },
+        record: { read: async () => serializeWalletRecord(record), write: async () => {}, remove: async () => {} },
+        worklet: { create: async () => { throw new Error("no"); }, restore: async () => { throw new Error("no"); }, reveal: async () => { throw new Error("no"); }, balance: async () => ({ usdt0: 0n }), close: async () => {} },
+        random: (k) => new Uint8Array(k), onScreen: () => true, chain,
+      },
+      pay: { worklet: payWorklet, confirm: async () => true, copy: (_l: string, k: string) => k },
+      web: { fetch, copy: (_l, k) => k },
+    }, profileById("botpsy-q4-two-stage-nothink")!);
+    await hermit.init();
+    expect(await hermit.approvalKey!.enroll("en")).toMatchObject({ ok: true });
+    const view = await hermit.send(await hermit.startSession(), `pay for ${page_}`);
+    expect(view).toMatchObject({ kind: "reply", receipt: { kind: "paid", to: "merchant.example" } });
+    expect(requests).toHaveLength(2);
+    expect(JSON.stringify(requests[1]!.messages)).toContain("The report says 42.");
+    expect(rq.unqueuedCalls()).toBe(0);
+    expect(rq.queued).toEqual(["user", "user"]);
+    // Multi-bot: every entry of the turn, the payment's own "spending" entry included, names the bot the turn ran as.
+    const turn = await sql.query<{ event: string; bot_id: string | null }>("SELECT event, bot_id FROM audit WHERE event != 'approval_key' ORDER BY seq");
+    expect(turn.map((e) => e.event)).toContain("spending");
+    expect(turn.map((e) => e.bot_id)).toEqual(turn.map(() => "hermit"));
   });
 
   test("without the pay port there is no pay skill and no HM-PAY-05 service", async () => {

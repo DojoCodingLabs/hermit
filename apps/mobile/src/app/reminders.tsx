@@ -3,6 +3,7 @@
 // spec: ST-LOAD, ST-EMPTY-FIRST (how to make one in the chat), ST-IDEAL, ST-ERROR with retry.
 // Design pass: one grouped list, each reminder's words then its time said the way people say one ("Mañana, 9:00
 // a.m."), and Cancel in words; the calendar choice as a row under it; the empty state is the crab with Go to chat.
+import { openHermitChat } from "../open-chat";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, AppState } from "react-native";
@@ -92,7 +93,7 @@ export default function Reminders() {
       <Page title={t("HM-REM-01.title")}>
         {noteView}
         <Empty pose="idle" title={t("HM-REM-01.emptyTitle")} body={t("HM-REM-01.emptyBody")}>
-          <Btn label={t("HM-REM-01.emptyAction")} icon="message-circle" full onPress={() => router.navigate("/")} />
+          <Btn label={t("HM-REM-01.emptyAction")} icon="message-circle" full onPress={() => openHermitChat(router, "stack")} />
         </Empty>
         {calendarLink}
       </Page>

@@ -149,8 +149,9 @@ export function searchWebSkills(deps: SearchSkillDeps): SkillRuntime[] {
           return { ok: false, untrusted: false, modelText: "The search provider changed after the approval, so nothing was searched.", reply: deps.t(lang, "HM-CHAT-01.searchChanged") };
         }
         // The user approved this provider on the sheet (FR-WEB-02): later searches to it this session don't ask. Its
-        // own list, by exact address: it never approves reading pages on the provider's site.
-        if (ctx.approvedArgsHash) {
+        // own list, by exact address: it never approves reading pages on the provider's site. A run a bot's mode let
+        // through is no one's approval, so it is never remembered.
+        if (ctx.approvedArgsHash && !ctx.byMode) {
           const known = ctx.session.approvedSearchProviders ?? [];
           if (!known.includes(provider.base)) ctx.session.approvedSearchProviders = [...known, provider.base];
         }

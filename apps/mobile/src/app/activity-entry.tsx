@@ -3,6 +3,8 @@
 // list per entry under its number: each field's name in words over its raw value (mono, selectable, wrapping, never
 // cut). The time reads as a date and time; the raw epoch that followed it is gone (the hash already covers it). Hashes
 // and the signature read in groups of eight with a copy button that copies the value itself.
+// Multi-bot: the reason shows on a bot change and on a step a permission mode let run ("mode.auto", so an approval entry
+// never reads as the user's), and the bot's id on every entry a bot wrote or a change was about.
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -15,6 +17,9 @@ import { currentLocale, t } from "../i18n";
 import { s } from "../theme";
 
 type Loaded = { kind: "loading" } | { kind: "missing" } | { kind: "ready"; entries: ActivityDetail[] };
+
+/** Entries whose reason is part of what they are: it shows even when absent ("none"). Any other entry shows one it has. */
+const REASON_EVENTS: ReadonlySet<ActivityDetail["event"]> = new Set(["night_job", "vault", "connector", "wallet", "bot"]);
 
 export default function ActivityEntry() {
   const { status } = useHermit();
@@ -48,7 +53,8 @@ export default function ActivityEntry() {
                 <Field label={t("HM-ACT-02.outcome")} value={e.outcome} />
                 <Field label={t("HM-ACT-02.time")} value={fmt.format(new Date(e.at))} words />
                 {e.event === "log_cleared" ? <Field label={t("HM-ACT-02.clearedCount")} value={String(e.clearedCount ?? 0)} /> : null}
-                {e.event === "night_job" || e.event === "vault" || e.event === "connector" || e.event === "wallet" ? <Field label={t("HM-ACT-02.reason")} value={e.reason} /> : null}
+                {e.reason !== undefined || REASON_EVENTS.has(e.event) ? <Field label={t("HM-ACT-02.reason")} value={e.reason} /> : null}
+                {e.bot !== undefined ? <Field label={t("HM-ACT-02.bot")} value={e.bot} /> : null}
                 <Field label={t("HM-ACT-02.argsHash")} value={e.argsHash} hash />
                 <Field label={t("HM-ACT-02.hash")} value={e.hash} hash />
                 <Field label={t(e.event === "log_cleared" ? "HM-ACT-02.prevHashCleared" : "HM-ACT-02.prevHash")} value={e.prevHash} hash />

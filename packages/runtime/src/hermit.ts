@@ -1,13 +1,14 @@
+import { cacheKeyFor, type BotPorts, type BotProposalView, type HermitBotsApi, type RunPriority } from "./bot-api.ts";
 import {
-  argsHash, calendarChoice, createEventLog, createHostCounter, createMemory, createMessageStore, createReminders, createSessions, createVaultStore, describeNowForModel, loginIndex, migrate,
-  ReminderError, searchProvider, skillId,
+  argsHash, calendarChoice, createBotsStore, createEventLog, createHostCounter, createMemory, createMessageStore, createReminders, createSessions, createVaultStore, describeNowForModel, loginIndex, migrate,
+  ReminderError, searchProvider, skillId, type SkillId,
   type ApprovalKeyPort, type OneTimeCodePort, type ApprovalOutcome, type ApprovalPort, type CalendarChoice, type CalendarPort, type ContactsPort, type HostCount, type MailRenderContext, type Memory, type MessageStore,
   type IntentLauncherPort, type NotifierPort, type Outcome, type Reminder, type ReplySenderPort, type SearchProvider, type SignerPort, type SqlPort, type StopSignal,
   type FormKind, type LoginIndexEntry, type TranscriptEntry, type WebFetchPort, type ApprovalRequest, type SessionState, type TaintSource,
 } from "@hermit/core";
-import { activityDetail, activityRows, chainView, createAuditLog, decide, defaultRules, withPay, type ActivityDetail, type ActivityRow, type ChainView } from "@hermit/cage";
-import { calendarSkills, extractReadable, intentSkillRuntimes, memorySkills, messageSkills, readWebSkills, reminderSkills, runTurn, searchWebSkills, STOPPED_NOTE, type AnswerWords, type Choice, type PaymentReceipt, type PeopleDeps, type SkillRuntime, type StepEvent, type WebLanguage, type WebPageRecord } from "@hermit/agent";
-import { connectSkill, firstWinSkills, intentSkills, payDef, payMerchantDef, serviceFromUser, webSkills } from "@hermit/skills";
+import { activityDetail, activityRows, chainView, createAuditLog, decide, defaultRules, holds, withPay, type ActivityDetail, type ActivityRow, type ChainView } from "@hermit/cage";
+import { addReads, calendarSkills, extractReadable, intentSkillRuntimes, memorySkills, messageSkills, readWebSkills, reminderSkills, runTurn, searchWebSkills, STOPPED_NOTE, type AnswerWords, type Choice, type PaymentReceipt, type PeopleDeps, type SkillRuntime, type StepEvent, type WebLanguage, type WebPageRecord } from "@hermit/agent";
+import { connectSkill, createBotDef, firstWinSkills, intentSkills, payDef, payMerchantDef, serviceFromUser, webSkills } from "@hermit/skills";
 import { createModelPort, endAtBoundary, quarantinedRead, userLanguage, type CompletionEngine, type ModelProfile } from "@hermit/model";
 import {
   actOnSuggestion, createBriefings, createNightLock, NightAborted, parseNightSettings, runNightShift, scheduleBriefingNotice, validateNightSettings,
@@ -21,13 +22,17 @@ import {
   type ConnectorSkill, type ConnectorTransport, type InstalledRecord, type McpServerRecord, type McpSkill, type McpTransport,
 } from "@hermit/connectors";
 import { createRelaySettings, type RelaySettings } from "./relay.ts";
-import type { CredentialStorePort, SkillDef } from "@hermit/core";
+import { HERMIT_BOT_ID, type BotMemory, type CredentialStorePort, type SkillDef } from "@hermit/core";
 import { createApprovalKey, type ApprovalKeyService } from "./approval-key.ts";
 import { createProfile, type Profile } from "./profile.ts";
 import { createFormFill, type FormFill } from "./form-fill.ts";
 import { createWebTasks, type WebOffer, type WebTasks } from "./web-tasks.ts";
 import { repairWebStep } from "./web-repair.ts";
 import { capabilityAnswer, type CapabilityAccess } from "./capabilities.ts";
+import { createRunQueue, queuedEngine, type RunQueue } from "./run-queue.ts";
+import { botMenu, cageFor, roleFor, type BotTurn } from "./bot-turns.ts";
+import { createBotsApi, isModeSetting } from "./bots.ts";
+import { createBotProposals, createBotRuntime } from "./bot-proposals.ts";
 
 /**
  * The phone's composition root for the first win. The app supplies adapters for each port;
@@ -174,6 +179,13 @@ export interface HermitPorts {
     codes?: OneTimeCodePort[];
     copy(language: "es-419" | "en", key: string, vars?: Record<string, string>): string;
   };
+  /** Multi-bot: the fingerprint prompt for granting mail send, logins or pay, or Don't ask. */
+  bots?: BotPorts;
+  /**
+   * Multi-bot (spec 6.6): the one line every model call of every bot waits in, by priority (the user's turn, a reply the
+   * user waits for, handoffs, routines). Tests pass their own; without it Hermit makes one.
+   */
+  queue?: RunQueue;
 }
 
 /** What the chat renders for a finished turn (US-CHAT-01, US-CHAT-04, US-CHAT-05). */
@@ -189,8 +201,10 @@ export type TurnView = (
    * it while it was written. The chat says so under the bubble and offers Seguir (`Hermit.continueReply`).
    * `nothingMore` (Q155 review): Seguir found nothing new to add; the reply is whole as it is, the chat says so in code's
    * words, and Seguir is not offered again.
+   * `botProposal` (multi-bot, Task 12): Hermit proposed a bot. The chat draws its card from these typed fields; Create
+   * goes through `bots.create` with its offer id, and a tainted one offers only Review (HM-BOT-03).
    */
-  | { kind: "reply"; text: string; page?: WebPageRef; offer?: "contacts"; connect?: { request: string; offerId: string }; webTask?: WebOffer; receipt?: PaymentReceipt; mail?: MailScreen; cut?: true; stopped?: true; nothingMore?: true }
+  | { kind: "reply"; text: string; page?: WebPageRef; offer?: "contacts"; connect?: { request: string; offerId: string }; webTask?: WebOffer; receipt?: PaymentReceipt; mail?: MailScreen; cut?: true; stopped?: true; nothingMore?: true; botProposal?: BotProposalView }
   /** `choices`: tappable answers; a tap sends its `text` as the user's own message (PDR-028). */
   | { kind: "question"; text: string; choices?: Choice[]; offer?: "contacts" }
   /** `afterAction` (stopped only): an action that changes something had finished before the stop. */
@@ -224,15 +238,28 @@ export interface WebPageRef {
 /** HM-WEB-01: a page an answer used. In memory only, for this app run: it is other people's text. */
 export type WebPage = WebPageRecord & { id: string; at: number };
 
-export interface Hermit {
+/**
+ * HM-ACT-01's row: the signed log's, metadata only, and on a step a bot's turn ran or a change to a bot, the name that bot
+ * has now (multi-bot). The name is read when the row is shown, never stored in the log; a bot that was deleted has none.
+ */
+export type ActivityRowView = ActivityRow & { botName?: string };
+
+/** Multi-bot (Task 11): `bots` and `modes` for HM-BOT-01 to 04 and Settings, and sessions per bot (HermitBotsApi). */
+export interface Hermit extends HermitBotsApi {
   init(): Promise<void>;
-  startSession(opts?: { attended?: boolean }): Promise<string>;
-  /** US-CHAT-07: the chat picks up the last attended conversation after a restart, or starts one. */
-  resumeSession(): Promise<string>;
+  /** A session for a bot (Hermit's when absent); a bot that doesn't exist gets none. */
+  startSession(opts?: { attended?: boolean; botId?: string }): Promise<string>;
+  /** US-CHAT-07: a bot's chat (Hermit's when absent) picks up its last attended conversation after a restart, or starts one. */
+  resumeSession(botId?: string): Promise<string>;
+  /** HM-BOT-02's "New chat": a fresh chat with the same bot; its older chats stay. */
+  newChat(botId: string): Promise<string>;
   /** What the chat showed in this session (user words and final answers), and whether it read others' content. */
   transcript(sessionId: string): Promise<{ entries: TranscriptEntry[]; tainted: boolean }>;
-  /** "Clear conversation": the history goes (memories and the signed log stay); returns the fresh session's id. */
-  clearConversation(): Promise<string>;
+  /**
+   * "Clear conversation": that bot's history goes (Hermit's when absent; notes and the signed log stay); returns the
+   * fresh session's id. While a turn of that bot runs, nothing is cleared and the running session's id comes back (F-M14).
+   */
+  clearConversation(botId?: string): Promise<string>;
   /** HM-MEM-01 and HM-MEM-02 (US-MEM-04). */
   memories: {
     list: Memory["list"];
@@ -256,7 +283,7 @@ export interface Hermit {
   continueReply(sessionId: string, live?: { onToken?(t: string): void; signal?: StopSignal }): Promise<TurnView>;
   /** The notification listener feeds this (live, or the native queue on start). */
   messages: MessageStore;
-  activity(): Promise<{ rows: ActivityRow[]; chain: ChainView }>;
+  activity(): Promise<{ rows: ActivityRowView[]; chain: ChainView }>;
   /** HM-ACT-02 (US-ACT-03): the entries behind one row, or undefined if `seq` starts no row. */
   activityEntry(seq: number): Promise<ActivityDetail[] | undefined>;
   /**
@@ -299,7 +326,10 @@ export interface Hermit {
    * menu gets the recipes the user's words name (send), never these, so nothing it read can save or start a task.
    */
   web?: Omit<WebTasks, "turnSkills">;
-  /** ENT-Setting: small key and value settings (onboarding done, language override, calendar choice). */
+  /**
+   * ENT-Setting: small key and value settings (onboarding done, language override, calendar choice). `set` refuses the
+   * permission mode: only `modes` writes it, with the typed word and the fingerprint Don't ask needs.
+   */
   settings: { get(key: SettingKey): Promise<string | undefined>; set(key: SettingKey, value: string): Promise<void> };
   /** HM-REM-01 (US-REM-03): pending reminders, soonest first, and cancel by a tap. */
   reminders: {
@@ -347,6 +377,11 @@ export interface Hermit {
 
 /** Every setting key is declared here, so screens can't invent ad hoc ones. */
 export type SettingKey = "onboarding.done" | "locale.override" | "calendar.id" | "download.allowMobile"
+  /**
+   * Multi-bot (spec 6.4.1): the permission mode every bot without its own runs in, "ask", "auto" or "dont_ask"; absent
+   * means Ask. Read here; written only by `modes.setGlobal` (`settings.set` refuses it).
+   */
+  | "bots.mode"
   /** SL-37: the approval key's public part, pinned at enrollment (JSON). */
   | "approval.key"
   /** "1" once the user opted in to Dojo's relay on HM-CONN-05; absent means off (PDR-022, US-CONN-10). */
@@ -411,8 +446,17 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
   const reminders = () => createReminders(sql, ports.notifier, { timeZone: ports.timeZone(), now: ports.now });
   const briefings = createBriefings(sql);
   const nightLock = createNightLock(sql);
+  const store = createBotsStore(sql, ports.now);
+  // Multi-bot (spec 6.6): one model, one line. Every call waits its turn at the priority of the work it belongs to: a
+  // reader inside a turn at the turn's, the night's as a routine, a screen's own (connector drafts, a web task's reader
+  // and repair) as the user's.
+  const queue = ports.queue ?? createRunQueue();
+  const engineAt = (priority: RunPriority): CompletionEngine => queuedEngine(ports.engine, queue, priority);
 
-  const settings: Hermit["settings"] = {
+  // The settings table. Its one writer of the permission mode goes to `modes` only; every other caller, the app's screens
+  // included, gets `settings`, which refuses it, so nothing holding the settings can turn on Don't ask without the typed
+  // word and the fingerprint (controller's ruling on Task 10's review).
+  const table: Hermit["settings"] = {
     async get(key) {
       const [row] = await sql.query<{ value: string }>("SELECT value FROM settings WHERE key = ?", [key]);
       return row?.value;
@@ -421,6 +465,28 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       await sql.exec("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [key, value]);
     },
   };
+  const settings: Hermit["settings"] = {
+    get: table.get,
+    async set(key, value) {
+      if (isModeSetting(key)) throw new Error("The permission mode changes only through modes.setGlobal or modes.setBot, with their checks.");
+      await table.set(key, value);
+    },
+  };
+  // Multi-bot (Task 12): Hermit's bot proposals, in memory by a one-time id, each with the next unused shell. The card's
+  // Create and HM-BOT-03 reach them through the bots API, which uses an offer once and keeps a tainted one for the review.
+  const proposals = createBotProposals({ newId: ports.newId, nextLook: () => store.nextLook(), now: ports.now, mode: () => botsApi.modes.global() });
+  // Multi-bot (Task 11): HM-BOT-01 to 04 and Settings. A reset clears through clearConversation (F-M14); a bot is busy
+  // while a turn of it runs; the fingerprint is the app's, its prompt in the app's language.
+  const botsApi = createBotsApi({
+    store, sessions, memory, settings: table, audit,
+    clear: (botId) => api.clearConversation(botId),
+    busy: (botId) => running.has(botId),
+    ...(ports.bots ? { confirm: (prompt: string) => ports.bots!.confirm(prompt) } : {}),
+    ...(ports.copy ? { say: (key: string) => ports.copy!(ports.language(), key) } : {}),
+    proposals,
+    newId: ports.newId,
+    now: ports.now,
+  });
   // SL-57: HM-CONN-05's relay choices, in the same settings table (erased with it).
   const relay = createRelaySettings({
     settings: { get: settings.get, set: settings.set, remove: async (key) => void (await sql.exec("DELETE FROM settings WHERE key = ?", [key])) },
@@ -478,7 +544,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
     const said = userLanguage(text);
     return said === "English" ? "en" : said === "Spanish (Latin America)" ? "es-419" : ports.language();
   };
-  const web = (turn: { signal?: StopSignal; onPage(p: WebPage): void }) => {
+  const web = (turn: { engine: CompletionEngine; signal?: StopSignal; onPage(p: WebPage): void }) => {
     if (!ports.web) return [];
     const { fetch, copy } = ports.web;
     return readWebSkills({
@@ -487,7 +553,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       language: webLanguage,
       // FR-WEB-03: its own model call, no skills, only the page and the user's words.
       read: ({ question, text, language }) =>
-        quarantinedRead(ports.engine, profile, { question, untrusted: text, source: "read_web", language, kind: "page", ...(turn.signal ? { signal: turn.signal } : {}) }),
+        quarantinedRead(turn.engine, profile, { question, untrusted: text, source: "read_web", language, kind: "page", ...(turn.signal ? { signal: turn.signal } : {}) }),
       onPage: (record) => {
         const p: WebPage = { ...record, id: ports.newId(), at: ports.now() };
         pages.push(p);
@@ -498,7 +564,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
   };
 
   // US-WEB-03: the provider is read once per turn, so the cage, the sheet and the request all see the same one.
-  const search = (turn: { signal?: StopSignal; provider: SearchProvider | undefined }) => {
+  const search = (turn: { engine: CompletionEngine; signal?: StopSignal; provider: SearchProvider | undefined }) => {
     if (!ports.web) return [];
     const { fetch, copy } = ports.web;
     return searchWebSkills({
@@ -508,7 +574,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       provider: () => turn.provider,
       // FR-WEB-03: its own model call, no skills, only the results and the user's words.
       read: ({ question, text, language }) =>
-        quarantinedRead(ports.engine, profile, { question, untrusted: text, source: "search_web", language, kind: "results", ...(turn.signal ? { signal: turn.signal } : {}) }),
+        quarantinedRead(turn.engine, profile, { question, untrusted: text, source: "search_web", language, kind: "results", ...(turn.signal ? { signal: turn.signal } : {}) }),
     });
   };
 
@@ -542,16 +608,29 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       }
     : undefined;
   const firstWin = () => ({ timeZone: ports.timeZone(), now: ports.now, ...(answerWords ? { words: answerWords } : {}) });
-  const skills = (turn: Parameters<typeof web>[0] & { provider: SearchProvider | undefined; onConnect?(request: string): void }) => [
+
+  // Multi-bot (Task 12, spec 6.4 "Creating a bot", 6.8): create_bot creates nothing. It offers a card for the bot the user
+  // asked for, drawn by the app from the proposal's typed fields, and the turn ends in code's words in the language of the
+  // user's; the user taps Create or Review. With the copy only, since the model never words that answer. Only Hermit holds
+  // it (no group), and only the chat's own turns, which show the card, get it.
+  const proposalSay = answerWords ? (key: string, said: string) => answerWords.copy(answerWords.language(said), key) : undefined;
+  const botProposal = (turn: { onBotProposal?(view: BotProposalView): void }): SkillRuntime[] =>
+    proposalSay && turn.onBotProposal ? [createBotRuntime(proposals, proposalSay, turn.onBotProposal)] : [];
+  /**
+   * Every built-in runtime, for one turn: its readers wait in the queue at `engine`'s priority, and its notes are `notes`
+   * (the bot's own and the shared profile; Hermit's for the night shift and its suggestions).
+   */
+  const skills = (turn: Parameters<typeof web>[0] & { notes: BotMemory; provider: SearchProvider | undefined; onConnect?(request: string): void; onBotProposal?(view: BotProposalView): void }) => [
     ...web(turn),
     ...search(turn),
-    ...memorySkills(memory, answerWords ? { words: answerWords } : {}),
+    ...memorySkills(turn.notes, answerWords ? { words: answerWords } : {}),
     ...reminderSkills(reminders(), { locale: ports.language() === "es-419" ? "es-419" : "en", ...firstWin() }),
     ...calendarSkills(calendar, firstWin()),
     ...messageSkills(messages, ports.replySender, firstWin()),
     ...intents(),
     ...(ports.mail ?? []),
     ...connectOffer(turn),
+    ...botProposal(turn),
   ];
   // The mail skills the app wired, in its order (reads from SL-48, writes from SL-49): the menu offers exactly
   // the skills that can run. Web reading only with a web port, intent skills only when the app passes a launcher.
@@ -576,17 +655,18 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
   const menu = [
     ...firstWinSkills, ...(ports.web ? webSkills : []), ...(ports.intents ? intentSkills : []), ...(ports.mail ?? []).map((s) => s.def),
     ...(ports.connect ? [connectSkill as SkillDef] : []),
+    ...(proposalSay ? [createBotDef as SkillDef] : []),
     ...(payments ? [payDef as SkillDef] : []),
     ...(merchantOn ? [payMerchantDef as SkillDef] : []),
   ];
   // SL-41: the page a purchase paid for goes to the same quarantined reader as read_web's, and shows on HM-WEB-01.
-  const merchantTurn = (turn: { signal?: StopSignal; onPage(p: WebPage): void }): SkillRuntime[] => {
+  const merchantTurn = (turn: { engine: CompletionEngine; signal?: StopSignal; onPage(p: WebPage): void }): SkillRuntime[] => {
     if (!payments || !merchantOn || !ports.web) return [];
     const runtime = payments.merchantRuntime({
       t: ports.web.copy,
       language: webLanguage,
       read: ({ question, text, language }) =>
-        quarantinedRead(ports.engine, profile, { question, untrusted: text, source: "pay_merchant", language, kind: "page", ...(turn.signal ? { signal: turn.signal } : {}) }),
+        quarantinedRead(turn.engine, profile, { question, untrusted: text, source: "pay_merchant", language, kind: "page", ...(turn.signal ? { signal: turn.signal } : {}) }),
       onPage: (record) => {
         const p: WebPage = { ...record, id: ports.newId(), at: ports.now() };
         pages.push(p);
@@ -617,10 +697,11 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
           },
           save: (records) => settings.set("connectors.installed", JSON.stringify(records)),
         },
+        // HM-CONN-04's own calls: the user's, from the screen.
         engine: {
           async complete(req) {
             try {
-              const out = await ports.engine.complete({
+              const out = await engineAt("user").complete({
                 messages: [{ role: "system", content: req.system }, { role: "user", content: req.user }],
                 jsonSchema: req.jsonSchema,
                 thinking: { enabled: false },
@@ -642,9 +723,11 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
         },
       })
     : undefined;
+  // Multi-bot (spec 6.4): each operation says, from code, which connector it comes from; a bot holds it only through its sources.
   const connectorRuntimes = (turn: ConnectorSkill[]): SkillRuntime[] =>
     turn.map((c) => ({
       def: c.def,
+      source: c.connectorId,
       execute: async (args, ctx) => {
         const r = await c.execute(args, {
           session: ctx.session,
@@ -677,31 +760,37 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
         },
       })
     : undefined;
-  /** The MCP tools routed for the current turn (at most MAX_MCP_TOOLS_PER_TURN); the model port offers them after the fixed skills. */
-  let mcpTurn: SkillDef[] = [];
-  const mcpRuntimes = (turn: McpSkill[], opts: { language: WebLanguage; signal?: StopSignal }): SkillRuntime[] =>
+  // Multi-bot (spec 6.4): each tool says, from code, which server it comes from; a bot holds it only through its sources.
+  const mcpRuntimes = (turn: McpSkill[], opts: { engine: CompletionEngine; language: WebLanguage; signal?: StopSignal }): SkillRuntime[] =>
     turn.map((m) => ({
       def: m.def,
+      source: m.serverId,
       execute: async (args, ctx) => {
         const r = await m.execute(args, {
           ...ctx,
           // FR-WEB-03: the tool's free text is read by its own model call with no skills, memory or history.
           read: async ({ question, text }) =>
-            (await quarantinedRead(ports.engine, profile, { question, untrusted: text, source: m.def.id, language: opts.language, kind: "tool", ...(opts.signal ? { signal: opts.signal } : {}) }))?.answer,
+            (await quarantinedRead(opts.engine, profile, { question, untrusted: text, source: m.def.id, language: opts.language, kind: "tool", ...(opts.signal ? { signal: opts.signal } : {}) }))?.answer,
           say: (key) => ports.mcp!.copy(opts.language, key),
         });
         return { ...r, taintKind: "web" as const };
       },
     }));
 
-  /** One routed list for MCP tools and connector operations, capped at MAX_MCP_TOOLS_PER_TURN in all (Q93's rule). */
-  const extraForTurn = async (userText: string): Promise<Array<{ mcp?: McpSkill; connector?: ConnectorSkill }>> => {
+  /**
+   * One routed list for MCP tools and connector operations, capped at MAX_MCP_TOOLS_PER_TURN in all (Q93's rule), out of
+   * what the turn's bot holds (`held`, by each one's server or connector, spec 6.4). The cap applies to the bot's own,
+   * never before it, so Hermit's other installs can't push a bot's tools off its menu. Every install is routed, then what
+   * the bot holds is kept, then the first few: the same order as before, so Hermit, who holds them all, gets today's list.
+   */
+  const extraForTurn = async (userText: string, held: (def: SkillDef, source: string) => boolean): Promise<Array<{ mcp?: McpSkill; connector?: ConnectorSkill }>> => {
     // An installed tool or operation never shadows a built-in or another installed one: a clashing id stays off the
     // menu (and runTurn refuses duplicates outright).
     const taken = new Set<string>(menu.map((s) => s.id as string));
     const unique = <T extends { def: SkillDef }>(list: T[]) => list.filter((x) => !taken.has(x.def.id) && (taken.add(x.def.id), true));
-    const mcp = unique(mcpServers ? await mcpServers.skillsForTurn({ userText }) : []);
-    const conn = unique(connectors ? await connectors.skillsForTurn({ userText }) : []);
+    const own = <T extends { def: SkillDef }>(routed: T[], source: (x: T) => string) => routed.filter((x) => held(x.def, source(x))).slice(0, MAX_MCP_TOOLS_PER_TURN);
+    const mcp = unique(mcpServers ? own(await mcpServers.skillsForTurn({ userText, cap: Infinity }), (m) => m.serverId) : []);
+    const conn = unique(connectors ? own(await connectors.skillsForTurn({ userText, cap: Infinity }), (c) => c.connectorId) : []);
     if (!conn.length) return mcp.map((m) => ({ mcp: m }));
     const hosts = new Map((mcpServers ? await mcpServers.list() : []).map((v) => [v.id, v.host]));
     const installed = new Map((await connectors!.list()).map((v) => [v.id, v]));
@@ -736,20 +825,105 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
     };
   };
 
-  // Refreshed at the start of each turn from untainted memory (FR-MEM-06).
-  let profileLines: string[] = [];
-  const model = createModelPort(ports.engine, profile, menu, () => ({
-    language: ports.language(),
-    now: describeNowForModel(ports.now(), ports.timeZone()),
-    // The router reads day words on the phone's clock and zone (W1 review).
-    clock: { now: ports.now(), timeZone: ports.timeZone() },
-    profile: profileLines,
-  }), {
-    catchUpSummary: true,
-    extraSkills: () => mcpTurn,
-    // W1: "what can you do?" answered from the skills on this phone's menu that it can use right now, in code's words.
-    ...(ports.copy ? { capabilities: async (language: "es-419" | "en") => capabilityAnswer(menu.map((s) => s.id as string), (key, vars) => ports.copy!(language, key, vars), await capabilityAccess()) } : {}),
-  });
+  /**
+   * Multi-bot (spec 6.6): the values one turn runs with, built for the bot it runs as, every turn: its cage (grants,
+   * sources, the mode in effect), its menu and what it can't do, its role, its notes with the shared profile (FR-MEM-06)
+   * and what they were read from, and its cache key. Nothing here is shared with another turn.
+   */
+  const turnFor = async (botId: string): Promise<BotTurn> => {
+    const bot = await store.get(botId);
+    if (!bot) throw new Error(`No bot ${botId}.`);
+    // The mode every bot without its own runs in (spec 6.4.1): the user's choice in Settings, Ask until there is one.
+    const cage = cageFor(bot, await botsApi.modes.global());
+    const { menu: held, withheld } = botMenu(menu, cage);
+    // Security review 00:40: the snapshot never comes without what its notes were read from.
+    const notes = await memory.forBot(bot.id).snapshot();
+    const role = roleFor(bot);
+    return {
+      bot, cage, menu: held, withheld, ...(role ? { role } : {}),
+      profile: notes.text.split("\n").map((l) => l.replace(/^-\s*/, "").trim()).filter(Boolean),
+      profileReads: notes.kinds,
+      cacheKey: cacheKeyFor(bot.id),
+    };
+  };
+
+  /** HM-BOT-02: what a bot can't do, in code's words, by the group of the skill it lacks. Without the copy, the model words it. */
+  const withheldAnswer = (turn: BotTurn, skill: SkillId, language: "es-419" | "en"): string | undefined => {
+    const group = turn.withheld.find((s) => s.id === skill)?.group;
+    if (!group || !ports.copy) return undefined;
+    return ports.copy(language, "HM-BOT-02.withheld", { what: ports.copy(language, `HM-BOT-02.what.${group}`) });
+  };
+
+  /**
+   * The model for one turn: the bot's menu with this turn's installed tools after it, the bot's notes and role in its
+   * prompts, and every call in the queue through `engine`. Hermit's has no role and withholds nothing, so its prompts and
+   * picks are today's.
+   */
+  const portFor = (turn: BotTurn, engine: CompletionEngine, extra: readonly SkillDef[] = []) =>
+    createModelPort(engine, profile, turn.menu, () => ({
+      language: ports.language(),
+      now: describeNowForModel(ports.now(), ports.timeZone()),
+      // The router reads day words on the phone's clock and zone (W1 review).
+      clock: { now: ports.now(), timeZone: ports.timeZone() },
+      profile: turn.profile,
+      ...(turn.role ? { role: turn.role } : {}),
+    }), {
+      catchUpSummary: true,
+      extraSkills: () => extra,
+      ...(turn.withheld.length ? { withheld: { skills: turn.withheld, answer: (skill: SkillId, language: "es-419" | "en") => withheldAnswer(turn, skill, language) } } : {}),
+      // W1: "what can you do?" answered from the skills on this bot's menu that the phone can use right now, in code's words.
+      ...(ports.copy ? { capabilities: async (language: "es-419" | "en") => capabilityAnswer(turn.menu.map((s) => s.id as string), (key, vars) => ports.copy!(language, key, vars), await capabilityAccess()) } : {}),
+    });
+
+  /** Load the model and read the bot's fixed prompt while the user types (best effort, never blocks the session). */
+  const warm = (botId: string) => {
+    void turnFor(botId).then((turn) => portFor(turn, engineAt("user")).warm?.({ prefixCacheKey: turn.cacheKey })).catch(() => {});
+  };
+
+  /**
+   * Review Focus 1: the bots with a turn in progress, each with the sessions its turns run in, newest last. The bots API's
+   * busy check reads it (remove and reset refuse while a turn of that bot runs). `botOf` knows the bot of every session
+   * Hermit handed out or loaded, so a turn is marked the moment it starts, and a clear or reset called right after the
+   * send already sees it.
+   */
+  const running = new Map<string, string[]>();
+  const botOf = new Map<string, string>();
+  const markRunning = (botId: string, sessionId: string): (() => void) => {
+    running.set(botId, [...(running.get(botId) ?? []), sessionId]);
+    let ended = false;
+    return () => {
+      if (ended) return;
+      ended = true;
+      const left = [...(running.get(botId) ?? [])];
+      const at = left.lastIndexOf(sessionId);
+      if (at >= 0) left.splice(at, 1);
+      if (left.length) running.set(botId, left);
+      else running.delete(botId);
+    };
+  };
+
+  /**
+   * One of the chat's own turns (`send`, `continueReply`) in a session: it holds its priority in the queue until it ends,
+   * so lower-priority work waits for the whole turn, not just its current call (spec 6.6), and its bot is marked running.
+   */
+  const inTurn = <T>(sessionId: string, priority: RunPriority, run: (session: SessionState, botId: string) => Promise<T>): Promise<T> => {
+    const release = queue.hold(priority);
+    const handedOut = botOf.get(sessionId);
+    let unmark = handedOut !== undefined ? markRunning(handedOut, sessionId) : undefined;
+    return (async () => {
+      try {
+        const session = await sessions.load(sessionId);
+        if (!session) throw new Error(`No session ${sessionId}.`);
+        const botId = session.botId ?? HERMIT_BOT_ID;
+        botOf.set(sessionId, botId);
+        unmark ??= markRunning(botId, sessionId);
+        return await run(session, botId);
+      } finally {
+        unmark?.();
+        release();
+      }
+    })();
+  };
 
   /** One night pass under the lock `owner` holds; renews it after every job so a long night keeps it. */
   const runNightOnce = async (opts: Parameters<Hermit["night"]["run"]>[0], owner: string): Promise<Briefing | undefined> => {
@@ -758,13 +932,14 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
     const language = ports.language();
     const mail = ports.mailNight;
     let b = await runNightShift(night, {
-      // The same skills as the chat; the night shift runs only the reads its jobs name (nightRules).
-      skills: skills({ onPage: () => {}, provider: undefined }),
+      // The same skills as the chat; the night shift runs only the reads its jobs name (nightRules). It runs as no bot, so
+      // its decisions are today's (F-M13), and its readers wait in the queue as a routine.
+      skills: skills({ engine: engineAt("routine"), notes: memory.forBot(HERMIT_BOT_ID), onPage: () => {}, provider: undefined }),
       audit,
       startSession: (id) => sessions.start({ id, attended: false }),
       markTainted: (id, source) => sessions.markTainted(id, source),
       // FR-WEB-03: the quarantined reader, its own call with no skills, memory or history.
-      reader: ({ question, untrusted, source }) => quarantinedRead(ports.engine, profile, { question, untrusted, source, language }),
+      reader: ({ question, untrusted, source }) => quarantinedRead(engineAt("routine"), profile, { question, untrusted, source, language }),
       conditions: opts.conditions,
       now: ports.now,
       timeZone: ports.timeZone(),
@@ -843,7 +1018,8 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
     };
   })();
 
-  // SL-53: web tasks. The reader and the one-step repair are their own model calls with no skills, memory or history.
+  // SL-53: web tasks. The reader and the one-step repair are their own model calls with no skills, memory or history, made
+  // from HM-WEB-02 while the user watches: the user's in the queue.
   const webTasks: WebTasks | undefined = ports.browser
     ? createWebTasks({
         sql,
@@ -857,10 +1033,10 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
         onScreen: () => ports.browser!.onScreen(),
         ...(ports.browser.codes?.length ? { codes: ports.browser.codes } : {}),
         read: async ({ question, text }) => {
-          const r = await quarantinedRead(ports.engine, profile, { question, untrusted: text, source: "web_read", language: ports.language(), kind: "page" });
+          const r = await quarantinedRead(engineAt("user"), profile, { question, untrusted: text, source: "web_read", language: ports.language(), kind: "page" });
           return r ? { answer: r.answer, quotes: r.quotes } : undefined;
         },
-        repair: (input) => repairWebStep(ports.engine, profile, input),
+        repair: (input) => repairWebStep(engineAt("user"), profile, input),
         ...(approvalKey ? { signed: approvalKey.signedApprovals() } : {}),
         ...(ports.vault ? { vault: { key: ports.vault.key, cipher: ports.vault.cipher } } : {}),
       })
@@ -925,6 +1101,8 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
 
   const api: Hermit = {
     messages,
+    bots: botsApi.bots,
+    modes: botsApi.modes,
     async init() {
       await migrate(sql);
       // The autofill service's index follows the profile, also after an erase or an update (best effort).
@@ -932,25 +1110,35 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       await syncLogins().catch(() => {});
     },
     async startSession(opts = {}) {
+      const botId = opts.botId ?? HERMIT_BOT_ID;
+      // Only for a bot that exists (Hermit's row is the migration's own): a session of no bot could never run a turn.
+      if (botId !== HERMIT_BOT_ID && !(await store.get(botId))) throw new Error(`No bot ${botId}.`);
       const id = ports.newId();
-      await sessions.start({ id, attended: opts.attended ?? true });
-      // Load the model and read the fixed prompt while the user types (best effort, never blocks the session).
-      void model.warm?.({ prefixCacheKey: "hermit-v1" }).catch(() => {});
+      await sessions.start({ id, attended: opts.attended ?? true, botId });
+      botOf.set(id, botId);
+      warm(botId);
       return id;
     },
-    async resumeSession() {
-      const last = await sessions.latest();
-      if (!last) return api.startSession();
-      void model.warm?.({ prefixCacheKey: "hermit-v1" }).catch(() => {});
+    async resumeSession(botId = HERMIT_BOT_ID) {
+      const last = await sessions.latest(botId);
+      if (!last) return api.startSession({ botId });
+      botOf.set(last, botId);
+      warm(botId);
       return last;
     },
+    newChat: (botId) => api.startSession({ botId }),
     async transcript(sessionId) {
       const session = await sessions.load(sessionId);
+      // A chat opened from its bot's older chats is handed out here: its turns are marked running from their first moment.
+      if (session) botOf.set(sessionId, session.botId ?? HERMIT_BOT_ID);
       return { entries: await sessions.transcript(sessionId), tainted: (session?.taint.length ?? 0) > 0 };
     },
-    async clearConversation() {
-      await sessions.clear();
-      return api.startSession();
+    async clearConversation(botId = HERMIT_BOT_ID) {
+      // F-M14: while a turn of that bot runs nothing is cleared, so its late writes never land in a chat that is gone.
+      const runningIn = running.get(botId)?.at(-1);
+      if (runningIn !== undefined) return runningIn;
+      await sessions.clear(botId);
+      return api.startSession({ botId });
     },
     memories: {
       list: (opts) => memory.list(opts),
@@ -965,13 +1153,18 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
         return true;
       },
     },
-    async send(sessionId, text, live = {}) {
-      const session = await sessions.load(sessionId);
-      if (!session) throw new Error(`No session ${sessionId}.`);
+    // The user's own turn, run as the session's bot (spec 6.6): its values are this turn's, built for that bot.
+    send: (sessionId, text, live = {}) => inTurn(sessionId, "user", async (session, botId) => {
+      const turn = await turnFor(botId);
+      // Security review 00:40: what the prompt's notes were read from, this session has read too, before any model call.
+      addReads(session, turn.profileReads);
       const history = await sessions.history(sessionId, HISTORY_TURNS);
       const before = history.length;
       const taintBefore = session.taint.length;
-      profileLines = (await memory.profileSnapshot()).split("\n").map((l) => l.replace(/^-\s*/, "").trim()).filter(Boolean);
+      // Every call of this turn waits in the queue as the user's, its readers' too.
+      const engine = engineAt("user");
+      // Spec 6.4: the bot uses only what it holds, by a skill's group or, for a connector's or a server's, by its source.
+      const held = (def: SkillDef, source?: string) => holds(turn.cage, { group: def.group, source });
 
       const started = ports.now();
       let firstActionAt: number | undefined;
@@ -995,33 +1188,39 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
 
       let pageThisTurn: WebPage | undefined;
       let connectThisTurn: { request: string; offerId: string } | undefined;
+      // Task 12: the card Hermit's create_bot offered this turn, for the reply's view.
+      let proposalThisTurn: BotProposalView | undefined;
       const provider = ports.web ? searchProvider(await settings.get("search.provider")) : undefined;
       const known = approvedDomains.get(sessionId);
       if (known) session.approvedDomains = [...known];
       const knownProviders = approvedSearchProviders.get(sessionId);
       if (knownProviders) session.approvedSearchProviders = [...knownProviders];
-      const peopleDeps = people();
+      // PDR-028: names are looked up only for a bot that holds the contacts. Its menu holds only what it may use, so a
+      // name is never looked up for a skill the cage would deny.
+      const peopleDeps = holds(turn.cage, { group: "contacts" }) ? people() : undefined;
       // SL-54 and SL-55: the MCP tools and installed connector operations for this turn, routed together by the user's
-      // words and capped together, so the menu stays small whatever is installed.
-      const extra = await extraForTurn(text);
+      // words and capped together, so the menu stays small whatever is installed; only those the bot holds, capped after.
+      const extra = await extraForTurn(text, held);
       const mcpSkills = extra.flatMap((x) => (x.mcp ? [x.mcp] : []));
       const connSkills = extra.flatMap((x) => (x.connector ? [x.connector] : []));
       // SL-53: the saved recipes the user's words name (at most two), each offering HM-WEB-02's plan. Only here, in the
       // chat's own turns: the night shift and its suggestions never get one.
       let webThisTurn: WebOffer | undefined;
       const taken = new Set<string>([...menu, ...extra.map((x) => (x.mcp ?? x.connector)!.def)].map((d) => d.id as string));
-      const recipeSkills = webTasks ? (await webTasks.turnSkills(text, (o) => (webThisTurn = o))).filter((r) => !taken.has(r.def.id)) : [];
-      mcpTurn = [...extra.map((x) => (x.mcp ?? x.connector)!.def), ...recipeSkills.map((r) => r.def)];
+      const recipeSkills = webTasks ? (await webTasks.turnSkills(text, (o) => (webThisTurn = o))).filter((r) => !taken.has(r.def.id) && held(r.def)) : [];
       const result = await runTurn({ session, messages: history }, text, {
-        model,
+        model: portFor(turn, engine, [...extra.map((x) => (x.mcp ?? x.connector)!.def), ...recipeSkills.map((r) => r.def)]),
         skills: [
-          ...skills({ ...(signal ? { signal } : {}), onPage: (p) => (pageThisTurn = p), provider, onConnect: (r) => (connectThisTurn = { request: r, offerId: connectors!.offer(r) }) }),
-          ...mcpRuntimes(mcpSkills, { language: webLanguage(text), ...(signal ? { signal } : {}) }),
+          ...skills({ engine, notes: memory.forBot(botId), ...(signal ? { signal } : {}), onPage: (p) => (pageThisTurn = p), provider, onConnect: (r) => (connectThisTurn = { request: r, offerId: connectors!.offer(r) }), onBotProposal: (v) => (proposalThisTurn = v) }),
+          ...mcpRuntimes(mcpSkills, { engine, language: webLanguage(text), ...(signal ? { signal } : {}) }),
           ...connectorRuntimes(connSkills),
           ...recipeSkills,
           ...(payments ? [await payments.runtime()] : []),
-          ...merchantTurn({ ...(signal ? { signal } : {}), onPage: (p) => (pageThisTurn = p) }),
-        ],
+          ...merchantTurn({ engine, ...(signal ? { signal } : {}), onPage: (p) => (pageThisTurn = p) }),
+        ].filter((r) => held(r.def, r.source)),
+        // The bot's grants, sources and mode settle every decision, and its cache key goes with every call (spec 6.4, 6.6).
+        bot: turn.cage,
+        prefixCacheKey: turn.cacheKey,
         rules: payments ? withPay(defaultRules()) : defaultRules(),
         approvals,
         audit,
@@ -1087,7 +1286,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       const mailRan = [...result.events].reverse().find((e): e is Extract<StepEvent, { kind: "executed" }> => e.kind === "executed" && e.ok && Object.hasOwn(MAIL_SCREENS, e.skill));
       const mailLink = mailRan ? { mail: MAIL_SCREENS[mailRan.skill]! } : {};
       const base: TurnView =
-        result.kind === "final" ? { kind: "reply", text: result.text, ...(result.receipt ? { receipt: result.receipt } : {}), ...(pageThisTurn ? { page: { id: pageThisTurn.id, title: pageThisTurn.title, domain: pageThisTurn.domain } } : {}), ...(connectThisTurn ? { connect: connectThisTurn } : {}), ...(webThisTurn ? { webTask: webThisTurn } : {}), ...mailLink, ...offered, ...(result.cut ? { cut: true as const } : {}) }
+        result.kind === "final" ? { kind: "reply", text: result.text, ...(result.receipt ? { receipt: result.receipt } : {}), ...(pageThisTurn ? { page: { id: pageThisTurn.id, title: pageThisTurn.title, domain: pageThisTurn.domain } } : {}), ...(connectThisTurn ? { connect: connectThisTurn } : {}), ...(webThisTurn ? { webTask: webThisTurn } : {}), ...(proposalThisTurn ? { botProposal: proposalThisTurn } : {}), ...mailLink, ...offered, ...(result.cut ? { cut: true as const } : {}) }
         : result.kind === "needs_user" ? { kind: "question", text: result.question, ...(result.choices?.length ? { choices: result.choices } : {}), ...offered }
         : kept ? { kind: "reply", text: kept, cut: true, stopped: true }
         : result.kind === "stopped" ? { kind: "outcome", outcome: "stopped", ...(result.afterAction ? { afterAction: true as const } : {}) }
@@ -1108,22 +1307,25 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
         },
       });
       return view;
-    },
-    async continueReply(sessionId, live = {}) {
-      const session = await sessions.load(sessionId);
-      if (!session) throw new Error(`No session ${sessionId}.`);
+    }),
+    // Seguir, a reply the user is waiting for: it holds that priority, as the session's bot, with the bot's cache key (a
+    // long reply's Seguir reads under the bot's own long key).
+    continueReply: (sessionId, live = {}) => inTurn(sessionId, "reply", async (session, botId) => {
       // Seguir is the user's tap in the chat: never a night run, a briefing or anything else without them.
       if (session.unattended) throw new Error("Seguir runs only in the chat's own attended sessions.");
       const last = await sessions.lastReply(sessionId);
-      if (!last?.cut || !model.continueReply) throw new Error("Nothing to continue: the latest turn isn't a reply that stopped short.");
+      const turn = last?.cut ? await turnFor(botId) : undefined;
+      const model = turn ? portFor(turn, engineAt("reply")) : undefined;
+      if (!last?.cut || !turn || !model?.continueReply) throw new Error("Nothing to continue: the latest turn isn't a reply that stopped short.");
+      // Security review 00:40: the reply prompt holds the bot's notes too.
+      addReads(session, turn.profileReads);
       const history = await sessions.history(sessionId, HISTORY_TURNS);
-      profileLines = (await memory.profileSnapshot()).split("\n").map((l) => l.replace(/^-\s*/, "").trim()).filter(Boolean);
       const { signal } = live;
       let shown = "";
       const tainted = session.taint.length > 0 ? { tainted: true as const } : {};
       try {
         // Words only: the model with no tools offered, so nothing it writes is a call and the cage decides nothing.
-        const next = await model.continueReply({ prefixCacheKey: "hermit-v1", messages: history, ...(signal ? { signal } : {}) }, (t) => {
+        const next = await model.continueReply({ prefixCacheKey: turn.cacheKey, messages: history, ...(signal ? { signal } : {}) }, (t) => {
           if (signal?.aborted) return;
           shown += t;
           live.onToken?.(t);
@@ -1147,7 +1349,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
         await sessions.extendReply(sessionId, last.id, text, "stopped");
         return { kind: "reply", text, cut: true, stopped: true, ...tainted };
       }
-    },
+    }),
     settings,
     relay,
     ...(ports.mail?.length && ports.mailRender ? { mailSend } : {}),
@@ -1206,7 +1408,14 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
     },
     async activity() {
       const entries = await audit.entries();
-      return { rows: activityRows(entries), chain: chainView(entries, await audit.verify(await ports.signer.publicKey())) };
+      // Multi-bot: a step a bot's turn ran, or a change to a bot, shows that bot's name; the log holds only its id, so the
+      // name is read now.
+      const names = new Map((await store.list()).map((b) => [b.id, b.name]));
+      const rows = activityRows(entries).map((r): ActivityRowView => {
+        const botName = r.bot !== undefined ? names.get(r.bot) : undefined;
+        return botName !== undefined ? { ...r, botName } : r;
+      });
+      return { rows, chain: chainView(entries, await audit.verify(await ports.signer.publicKey())) };
     },
     async activityEntry(seq) {
       return activityDetail(await audit.entries(), seq);
@@ -1239,7 +1448,9 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       act(briefingId, suggestionId) {
         const mail = ports.mailNight;
         return actOnSuggestion({
-          skills: skills({ onPage: () => {}, provider: undefined }),
+          // The user's "Review" tap on a suggestion: no bot (F-M13, its decision is today's), Hermit's notes, and any
+          // reader in the queue as the user's.
+          skills: skills({ engine: engineAt("user"), notes: memory.forBot(HERMIT_BOT_ID), onPage: () => {}, provider: undefined }),
           audit,
           approvals: ports.approvals,
           render: async () => {

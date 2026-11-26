@@ -1,4 +1,4 @@
-import type { ApprovalSummary, MailRenderAccount, MailRenderContext, SkillDef } from "@hermit/core";
+import type { ApprovalSummary, MailRenderAccount, MailRenderContext, PermissionMode, SkillDef } from "@hermit/core";
 import { skillById } from "@hermit/skills";
 import { accountName, resolveAccounts, type MailAccount } from "./accounts.ts";
 import { forwardText } from "./mime.ts";
@@ -77,41 +77,42 @@ export function createMailWriteSkills(deps: MailSkillDeps): MailSkill[] {
     }
   };
   const failed = (what: string, problem: MailProblem, nothing = "Nothing was sent.") => trusted(false, `Couldn't ${what}: ${PROBLEM_TEXT[problem]} ${nothing}`);
-  const send = async (account: MailAccount, mail: OutgoingMail, what: string, done: string): Promise<MailSkillResult> => {
+  const send = async (account: MailAccount, mail: OutgoingMail, what: string, done: string, byMode: PermissionMode | undefined): Promise<MailSkillResult> => {
     const r = await attempt(() => deps.providerFor(account).send(mail));
     if (!r.ok) return failed(what, r.problem);
-    // Only an approved send the provider accepted teaches the book; reads and drafts never do.
-    deps.book?.add([...mail.to, ...mail.cc], "sent");
+    // Only a send the user approved and the provider accepted teaches the book; reads and drafts never do, and neither
+    // does a send a bot's mode let run without a sheet.
+    if (!byMode) deps.book?.add([...mail.to, ...mail.cc], "sent");
     return trusted(true, done);
   };
 
   return [
     {
       def: defs.send,
-      async execute(args, { approvedBinding }) {
+      async execute(args, { approvedBinding, byMode }) {
         const ok = await approved(defs.send, args, approvedBinding);
         if (!ok.ok) return ok.result;
         const [, accountId, from, to, cc] = ok.values as [string, string, string, string[], string[]];
         const account = await accountOf(accountId);
         if (!account) return trusted(false, "That account is not connected anymore. Nothing was sent.");
-        return send(account, { from, to, cc, subject: String(args.subject ?? ""), text: String(args.body ?? "") }, "send the email", `Sent from ${from} to ${[...to, ...cc].join(", ")}.`);
+        return send(account, { from, to, cc, subject: String(args.subject ?? ""), text: String(args.body ?? "") }, "send the email", `Sent from ${from} to ${[...to, ...cc].join(", ")}.`, byMode);
       },
     },
     {
       def: defs.reply,
-      async execute(args, { approvedBinding }) {
+      async execute(args, { approvedBinding, byMode }) {
         const ok = await approved(defs.reply, args, approvedBinding);
         if (!ok.ok) return ok.result;
         const [, ref, accountId, from, to, subject] = ok.values as [string, string, string, string, string, string];
         const h = cache.get(ref);
         const account = await accountOf(accountId);
         if (!h || !account) return trusted(false, "That email is gone from this chat. Nothing was sent.");
-        return send(account, { from, to: [to], cc: [], subject, text: String(args.body ?? ""), inReplyTo: h.id }, "send the reply", `Reply sent from ${from} to ${to}.`);
+        return send(account, { from, to: [to], cc: [], subject, text: String(args.body ?? ""), inReplyTo: h.id }, "send the reply", `Reply sent from ${from} to ${to}.`, byMode);
       },
     },
     {
       def: defs.forward,
-      async execute(args, { approvedBinding }) {
+      async execute(args, { approvedBinding, byMode }) {
         const ok = await approved(defs.forward, args, approvedBinding);
         if (!ok.ok) return ok.result;
         const [, ref, accountId, from, to, subject] = ok.values as [string, string, string, string, string[], string];
@@ -123,7 +124,7 @@ export function createMailWriteSkills(deps: MailSkillDeps): MailSkill[] {
         if (!original.ok) return failed("forward the email", original.problem);
         const m = original.value;
         const text = forwardText(String(args.body ?? ""), { from: m.from, to: m.to, subject: m.subject, date: localTime(m.at, deps.timeZone()), text: m.text });
-        return send(account, { from, to, cc: [], subject, text }, "forward the email", `Forwarded from ${from} to ${to.join(", ")}.`);
+        return send(account, { from, to, cc: [], subject, text }, "forward the email", `Forwarded from ${from} to ${to.join(", ")}.`, byMode);
       },
     },
     {

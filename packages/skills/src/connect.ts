@@ -39,6 +39,8 @@ export const connectSkill: SkillDef<Args> = {
   // Nothing leaves the phone and nothing is stored: the screen does the rest, behind the user's own taps.
   risk: "read",
   producesUntrusted: false,
+  // Low, and no group on purpose: only Hermit, the primary bot, holds it.
+  tier: "low",
   menuLine: "Start connecting a service or app Hermit can't use yet, by its name or a link to its API docs (\"connect to my gym's booking system\", \"conéctate a Todoist\"). It opens a review screen; nothing is installed until the user approves it there.",
   args,
   // The executor checks the service against the user's words (serviceFromUser) and asks when it isn't there.

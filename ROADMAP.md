@@ -19,10 +19,10 @@ What works today, on more phones and in more hands.
 
 Two tracks, built at the same time. Hermit becomes a small team that works for you, with Hermit coordinating it, and gets a bigger shell on a computer you own.
 
-**Several bots**
+**Several bots** ([wave 2's issues](https://github.com/DojoCodingLabs/hermit/milestone/2))
 
-- **Specialized bots.** Each one with its own chat, role, notes and skills, listed like contacts, with Hermit at the top.
-- **Permission modes.** You choose how much a bot may do on its own: **Ask** (the default), **Auto**, or **Don't ask** for people who accept the risk. Each mode explains what it allows before you turn it on. Payments and logins always wait for your fingerprint, in every mode.
+- **Specialized bots.** Each one with its own chat, role, notes and skills, listed like contacts, with Hermit at the top. Built in wave 1; it moves to Now once it passes its checks on a phone.
+- **Permission modes.** You choose how much a bot may do on its own: **Ask** (the default), **Auto**, or **Don't ask** for people who accept the risk. Each mode explains what it allows before you turn it on. Payments and logins always wait for your fingerprint, in every mode. Built in wave 1, with the bots.
 - **Routines.** Bots that work on a schedule, asked for in plain words, with guards for battery and heat, and honest about when they ran and when they'll run next.
 - **Bots that hand work to each other.** In the open, in the chat, and never as a way around the cage: a message from another bot is never your words.
 

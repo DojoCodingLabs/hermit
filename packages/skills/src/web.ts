@@ -49,7 +49,7 @@ const args: JsonSchema = {
  */
 export const webSkills: readonly SkillDef<Args>[] = [
   {
-    id: skillId("read_web"), version: 1, risk: "network", producesUntrusted: true,
+    id: skillId("read_web"), version: 1, risk: "network", producesUntrusted: true, tier: "low", group: "web_read",
     menuLine: "Open a web page the user gives a link to and answer their question about it (\"what does this page say about refunds?\", \"summarize this link\", \"¿qué dice esta página?\", \"resúmeme este enlace\").",
     args,
     normalize: normalizeReadWeb,
@@ -63,7 +63,7 @@ export const webSkills: readonly SkillDef<Args>[] = [
   {
     // US-WEB-03, FR-WEB-04: only the query goes to the provider chosen in settings; the cage asks the first time per
     // provider per session. Results reach the main model only through the quarantined reader.
-    id: skillId("search_web"), version: 1, risk: "network", producesUntrusted: true,
+    id: skillId("search_web"), version: 1, risk: "network", producesUntrusted: true, tier: "low", group: "web_read",
     menuLine: "Search the web for current facts: news, weather, prices, opening hours, results, anything recent (\"busca en internet...\", \"¿va a llover mañana en Lima?\", \"search the web for...\", \"who won last night?\"). For a link the user gave, use read_web.",
     args: searchArgs,
     normalize: normalizeSearchWeb,

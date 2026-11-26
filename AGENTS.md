@@ -13,7 +13,7 @@ This is the guide for everyone who changes Hermit: AI coding agents, the people 
 5. The model never gets a shell or a browser. It picks one typed skill from a menu, then fills in only that skill's fields.
 6. A pick is a request, never an action. The cage decides what takes effect, and a signed log records it.
 7. Text other people wrote (messages, web pages, mail, other bots) can never give Hermit orders.
-8. Payments and logins always wait for an approval sheet that code wrote, and your fingerprint. Sending asks first too. Permission modes that ask less are planned (ROADMAP.md, Next); none will ever skip the fingerprint for money or logins.
+8. Payments and logins always wait for an approval sheet that code wrote, and your fingerprint. Sending asks first too, unless you knowingly pick the Don't ask mode; no mode ever skips the fingerprint for money or logins.
 9. There is no telemetry. CI fails if a dependency that phones home is added.
 10. All of it is open: read the code, build it, check every claim.
 

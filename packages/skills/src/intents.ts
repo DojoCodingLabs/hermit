@@ -86,7 +86,7 @@ const line = (label: string, labelKey: SummaryLabelId, v: unknown) => (s(v) ? [{
 
 export const intentSkills: readonly SkillDef<Args>[] = [
   {
-    id: skillId("open_whatsapp_chat"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("open_whatsapp_chat"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Open WhatsApp on a new chat with a message ready; the user taps Send there (\"text Carlos on WhatsApp that...\", \"mándale un WhatsApp al 8888 1234 que...\"). For chats read_messages returned, use reply_message.",
     args: obj({ phone: PHONE, person: personArg("phone"), text: str("The message itself, in the language the user would use with that person", { maxLength: 1000 }) }, ["text"]),
     recipient: { field: "phone", kind: "phone" },
@@ -94,7 +94,7 @@ export const intentSkills: readonly SkillDef<Args>[] = [
     describeAction: (a, ctx) => ({ title: "Open WhatsApp with this message?", lines: [{ label: "To", labelKey: "to", ...valueOr(a.phone, "You pick the chat in WhatsApp", "pickChatWhatsapp") }, ...foundLines(ctx, "phone", [s(a.phone)]), { label: "Message", labelKey: "message", value: s(a.text) }] }),
   },
   {
-    id: skillId("compose_sms"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("compose_sms"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Open the SMS app with a text message written, for the user to review and send (\"send an SMS to...\", \"mándale un mensaje de texto a...\"). Not for WhatsApp.",
     args: obj({ phone: PHONE, person: personArg("phone"), body: str("The message itself", { maxLength: 1000 }) }, ["body"]),
     recipient: { field: "phone", kind: "phone" },
@@ -102,7 +102,7 @@ export const intentSkills: readonly SkillDef<Args>[] = [
     describeAction: (a, ctx) => ({ title: "Open your messages app with this text?", lines: [{ label: "To", labelKey: "to", ...valueOr(a.phone, "You pick the person in the app", "pickPersonApp") }, ...foundLines(ctx, "phone", [s(a.phone)]), { label: "Message", labelKey: "message", value: s(a.body) }] }),
   },
   {
-    id: skillId("compose_email"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("compose_email"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Open the email app with an email written (recipients, subject, body) for the user to review and send (\"email Ana the notes\", \"escríbele un correo a...\").",
     args: obj({
       to: str("Email addresses the user wrote in this message, comma separated; leave out if none", { maxLength: 400 }),
@@ -115,7 +115,7 @@ export const intentSkills: readonly SkillDef<Args>[] = [
     describeAction: (a, ctx) => ({ title: "Open your email app with this email?", lines: [{ label: "To", labelKey: "to", ...valueOr(a.to, "You add who it goes to in the app", "addRecipientApp") }, ...foundLines(ctx, "to", emailList(a.to)), ...line("Subject", "subject", a.subject), { label: "Message", labelKey: "message", value: s(a.body) }] }),
   },
   {
-    id: skillId("dial"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("dial"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Open the phone dialer with a number ready; the user taps call there, Hermit never calls (\"call Mom\", \"llama al 8888 1234\", \"márcale a...\").",
     args: obj({ phone: PHONE, person: personArg("phone") }, []),
     recipient: { field: "phone", kind: "phone" },
@@ -123,27 +123,27 @@ export const intentSkills: readonly SkillDef<Args>[] = [
     describeAction: (a, ctx) => ({ title: "Open the dialer?", lines: [{ label: "Number", labelKey: "number", ...valueOr(a.phone, "You pick who to call in the dialer", "pickNumberDialer") }, ...foundLines(ctx, "phone", [s(a.phone)])] }),
   },
   {
-    id: skillId("navigate"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("navigate"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Open the maps app on a destination to get directions (\"navigate to the dentist\", \"llévame al aeropuerto\", \"¿cómo llego a...?\").",
     args: obj({ destination: str("The place or address, in the user's words", { maxLength: 200 }) }, ["destination"]),
     normalize: userDestination,
     describeAction: (a) => ({ title: "Open maps?", lines: [{ label: "Destination", labelKey: "destination", value: s(a.destination) }] }),
   },
   {
-    id: skillId("share"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("share"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Open the share sheet with a text or link so the user picks the app to share it with (\"share this link\", \"compártelo\").",
     args: obj({ text: str("The text or link to share", { maxLength: 2000 }) }, ["text"]),
     describeAction: (a) => ({ title: "Share this?", lines: [{ label: "Text", labelKey: "text", value: s(a.text) }] }),
   },
   {
-    id: skillId("set_alarm"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("set_alarm"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Set an alarm in the clock app for a time in the next 24 hours; the user confirms there (\"wake me at 6\", \"pon una alarma a las 5:30\"). For a reminder message or a later day, use remind.",
     args: obj({ time: str("Alarm time as HH:MM on the 24-hour clock"), label: str("Short label, if the user gave one", { maxLength: 80 }) }, ["time"]),
     normalize: userAlarmTime,
     describeAction: (a) => ({ title: "Set this alarm?", lines: [{ label: "Time", labelKey: "time", value: s(a.time) }, ...line("Label", "label", a.label)] }),
   },
   {
-    id: skillId("add_contact"), version: 1, risk: "local_write", producesUntrusted: false,
+    id: skillId("add_contact"), version: 1, risk: "local_write", producesUntrusted: false, tier: "medium", group: "apps",
     menuLine: "Open the contacts app with a new contact filled in; the user saves it there (\"save this number as Ana's work\", \"guarda el 8888 1234 como Pedro\").",
     args: obj({ name: str("The contact's name as the user said it", { maxLength: 80 }), phone: PHONE, email: EMAIL }, ["name"]),
     normalize: chain(userPhone, (a, c) => userEmails("email", a, c, false)),

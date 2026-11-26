@@ -21,15 +21,20 @@ describe("schema (PRD 2.9)", () => {
 
   test("upgrades a database made by the old per-module migrate", async () => {
     const sql = nodeSql();
-    const memory = createMemory(sql);
-    await memory.migrate();
-    await memory.remember("Passport expires in March", { tainted: false });
+    // The old per-module DDL, inlined: Memory.migrate() now runs the whole schema.
+    await sql.exec(`
+      CREATE TABLE notes (id INTEGER PRIMARY KEY, fact TEXT NOT NULL, tainted INTEGER NOT NULL, created_at INTEGER NOT NULL);
+      CREATE VIRTUAL TABLE notes_fts USING fts5(fact, content='notes', content_rowid='id', tokenize='unicode61 remove_diacritics 2');
+      CREATE TRIGGER notes_ai AFTER INSERT ON notes BEGIN INSERT INTO notes_fts(rowid, fact) VALUES (new.id, new.fact); END;
+      CREATE TRIGGER notes_ad AFTER DELETE ON notes BEGIN INSERT INTO notes_fts(notes_fts, rowid, fact) VALUES ('delete', old.id, old.fact); END;
+      INSERT INTO notes (fact, tainted, created_at) VALUES ('Passport expires in March', 0, 1);`);
     await migrate(sql);
+    const memory = createMemory(sql);
     expect(await memory.recall("passport")).toHaveLength(1);
   });
 
   test("every slot names its owning slice", () => {
-    for (const m of MIGRATIONS) expect(m.slice).toMatch(/^(SL-\d{2}|W0)$/);
+    for (const m of MIGRATIONS) expect(m.slice).toMatch(/^(SL-\d{2}|W0|BOT-W1)$/);
   });
 
   test("the audit table is append-only", async () => {

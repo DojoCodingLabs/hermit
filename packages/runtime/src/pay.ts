@@ -402,8 +402,9 @@ export function createPayments(deps: PayDeps): Payments {
       }
       // Q128: one entry per submitted transfer, argsHash = transferRef(txHash), so HM-PAY-03 links the history row to it.
       // The log never holds the raw hash; the reason says how it ended when Hermit last looked.
+      // Multi-bot: like every entry of the turn, it names the bot the turn ran as.
       await deps.audit.append({
-        ts: deps.now(), sessionId: ctx.session.id, event: "spending", skill: "pay", argsHash: transferRef(hash),
+        ts: deps.now(), sessionId: ctx.session.id, ...(ctx.session.botId ? { bot: ctx.session.botId } : {}), event: "spending", skill: "pay", argsHash: transferRef(hash),
         outcome: status === "success" ? "ok" : "error", reason: status === "success" ? "payment.sent" : status === "reverted" ? "payment.reverted" : "payment.unconfirmed",
       }).catch(() => {});
       if (status === "success") {

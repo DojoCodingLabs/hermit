@@ -1,12 +1,13 @@
 import {
-  argsHash, coerceArgs, parseArgs, repairSkillName, validateArgs,
-  type ApprovalOutcome, type FoundPerson, type Msg, type ReplyText, type SessionState, type SignedApprovalPayload, type SignedApprovalRequest, type SkillDef, type SkillId,
-  type SignedApprovalTerms, type StopSignal, type TaintSource,
+  argsHash, coerceArgs, findUrls, parseArgs, parseWebUrl, readKind, repairSkillName, validateArgs,
+  type ApprovalOutcome, type FoundPerson, type Msg, type PermissionMode, type ReplyText, type SessionState, type SignedApprovalPayload, type SignedApprovalRequest,
+  type SkillDef, type SkillGroup, type SkillId, type SignedApprovalTerms, type StopSignal, type TaintSource,
 } from "@hermit/core";
 import { decide, SIGNED_APPROVAL_MAX_TTL_MS, type SignedApprovalExpected, type SignedApprovals } from "@hermit/cage";
 import { redactFound, resolvePeople, type PeopleOutcome } from "./people.ts";
-import type { HoldResult, LoopDeps, SignedBlockCode, SkillResult, StepEvent, TurnOutcome, TurnResult } from "./types.ts";
+import type { HoldResult, LoopDeps, SignedBlockCode, SkillResult, SkillRuntime, StepEvent, TurnOutcome, TurnResult } from "./types.ts";
 import { wrapUntrusted } from "./untrusted.ts";
+import { decodeEntities } from "./web-extract.ts";
 
 /** The taint warning's source in words, by what was read (the audit log keeps which skill read it). */
 const TAINT_WORDS: Record<TaintSource["kind"], string> = {
@@ -48,7 +49,112 @@ async function prepareSigned(
   return prepared.ok ? { ok: true, signed: { request: prepared.request, expected } } : { ok: false, reason: prepared.reason };
 }
 
+/** The prompt cache key of a turn with no bot (`LoopDeps.prefixCacheKey`). */
 const PREFIX_KEY = "hermit-v1";
+
+/** At most this much of what a turn read from others reaches the cage: the newest 64 KB. A link before it asks. */
+const READ_TEXT_MAX = 64 * 1024;
+
+/**
+ * Groups whose results are others' words: messages and mail. Notes, reminders and events are left out because the
+ * model writes them itself (remember, remind, calendar_add), and so is any group not named here. In wave 1 a web read
+ * gives nothing either: read_web and search_web hand the model the quarantined reader's summary (and search_web the
+ * model's own query), and a web task's recipe skills give code's text. Wave 2 may add the links code takes from the
+ * raw page, as data, never the summary.
+ */
+const OTHERS_WORDS: readonly SkillGroup[] = ["messages_read", "mail_read"];
+
+/** The skill reads others' words: its group says so, or, with no group, it comes from a connector or an MCP server. */
+const readsOthers = (runtime: SkillRuntime) => (runtime.def.group !== undefined ? OTHERS_WORDS.includes(runtime.def.group) : runtime.source !== undefined);
+
+/** Every string in a call's arguments, however deep: the values, in order, and with `keys` the keys too. */
+function stringsIn(v: unknown, keys = false): string[] {
+  if (typeof v === "string") return [v];
+  if (Array.isArray(v)) return v.flatMap((x) => stringsIn(x, keys));
+  if (v && typeof v === "object") return Object.entries(v).flatMap(([k, x]) => [...(keys ? [k] : []), ...stringsIn(x, keys)]);
+  return [];
+}
+
+/** Percent-escapes of ASCII characters and HTML entities decoded, in up to 3 rounds, until nothing changes. */
+function decoded(text: string): string {
+  let t = text;
+  for (let round = 0; round < 3; round++) {
+    const next = decodeEntities(t.replace(/%([0-7][0-9a-f])/gi, (_, hex: string) => String.fromCharCode(parseInt(hex, 16))));
+    if (next === t) break;
+    t = next;
+  }
+  return t;
+}
+
+/**
+ * The hosts of the addresses in a text, as written and decoded: each in lower case, without its port or a leading
+ * "www.", the trailing punctuation dropped (findUrls). However a page, a provider or a server writes an address back,
+ * its host comes out the same.
+ */
+function hostsIn(text: string): string[] {
+  const out: string[] = [];
+  for (const t of [text, decoded(text)]) {
+    for (const u of findUrls(t)) {
+      const host = parseWebUrl(u, { upgrade: true })?.domain;
+      if (host) out.push(host);
+    }
+  }
+  return out;
+}
+
+/**
+ * The addresses written in these texts, as the cage matches them (urlInText): found as written, read as https. Never
+ * decoded: an address the model writes in another spelling than the one it read is the model's own choice of spelling.
+ */
+function addressesWritten(...texts: string[]): Set<string> {
+  return new Set(texts.flatMap((t) => findUrls(t).flatMap((u) => parseWebUrl(u, { upgrade: true })?.url ?? [])));
+}
+
+/**
+ * The hosts of the addresses the model made up in its calls' arguments, kept for the live session: the sessions store
+ * keeps one object per session, so an echo in a later turn is caught too, and the record goes with the session.
+ */
+const MADE_UP = new WeakMap<SessionState, Set<string>>();
+
+/**
+ * What a turn read from others, for Auto's links (spec 6.4.1, `decide`'s `readText`): the untrusted results of the
+ * skills that read others' words (only the part others wrote, when the skill says which), the newest 64 KB of them.
+ * A word holding an address on a host where the model made one up in this session is left out, whatever its path or
+ * encoding: a read that says back what it was asked (mail_search heads its listing with the query) would hand the
+ * model's own address back to it as something read. An argument that is, whole, an address the model copied from the
+ * user's words or from what the turn read when it supplied it is not made up, so following a link marks no host.
+ */
+function readFromOthers(session: SessionState, userText: string) {
+  let text = "";
+  let madeUp = MADE_UP.get(session);
+  if (!madeUp) MADE_UP.set(session, (madeUp = new Set()));
+  const hosts = madeUp;
+  const own = (words: string) => hosts.size > 0 && hostsIn(words).some((h) => hosts.has(h));
+  return {
+    text: () => text,
+    /**
+     * Before a call runs: the hosts of the addresses it made up, in its arguments each one alone and all of them joined
+     * either way round (an address split across two arguments). An argument counts as copied only when, trimmed, it is
+     * one address exactly as a fetch would use it (parseWebUrl, as the cage reads the call) and that address is written
+     * in the user's words or in what the turn read: `https://ex.com/known"SECRET` is not `https://ex.com/known`, and
+     * anything more marks the host of every address in it.
+     */
+    calling(args: Record<string, unknown>) {
+      const copied = addressesWritten(userText, text);
+      const values = stringsIn(args);
+      for (const s of [...stringsIn(args, true), values.join(""), [...values].reverse().join("")]) {
+        const whole = parseWebUrl(s)?.url;
+        if (whole !== undefined && copied.has(whole)) continue;
+        for (const h of hostsIn(s)) hosts.add(h);
+      }
+    },
+    /** After a skill that reads others' words: what the model was given, or the part of it others wrote. */
+    read(result: string) {
+      const kept = own(result) ? result.split(/\s+/).filter((word) => !own(word)).join(" ") : result;
+      text = (text ? `${text}\n${kept}` : kept).slice(-READ_TEXT_MAX);
+    },
+  };
+}
 
 /** What the model sees in the history after the user stops a turn, so it never resumes the abandoned request. */
 export const STOPPED_NOTE = "(Stopped by the user. Nothing more was done for that request.)";
@@ -100,7 +206,9 @@ export async function runTurn(
   const maxSteps = deps.maxSteps ?? 4;
   const maxStrikes = deps.maxStrikes ?? 3;
   const timeoutMs = deps.approvalTimeoutMs ?? 120_000;
+  const prefixCacheKey = deps.prefixCacheKey ?? PREFIX_KEY;
   const { session } = state;
+  const fromOthers = readFromOthers(session, userText);
   const messages = state.messages;
   const events: StepEvent[] = [];
   const emit = (e: StepEvent) => {
@@ -115,8 +223,10 @@ export async function runTurn(
     byId.set(s.def.id, s);
   }
   const menu = deps.skills.map((s) => s.def.id);
-  const audit = (input: Omit<Parameters<LoopDeps["audit"]["append"]>[0], "ts" | "sessionId">) =>
-    deps.audit.append({ ts: deps.now(), sessionId: session.id, ...input });
+  // Multi-bot ("the signed log records bot ids"): every entry of a bot's turn names the bot; a turn with no bot (the night
+  // shift, the screens' own acts) names none, as before.
+  const audit = (input: Omit<Parameters<LoopDeps["audit"]["append"]>[0], "ts" | "sessionId" | "bot">) =>
+    deps.audit.append({ ts: deps.now(), sessionId: session.id, ...input, ...(deps.bot ? { bot: deps.bot.botId } : {}) });
   // A name couldn't be looked up because the contacts permission is off (PDR-028): the chat may offer it.
   let offer = false;
   const done = (r: TurnOutcome): TurnResult => ({ ...r, ...(offer && (r.kind === "final" || r.kind === "needs_user") ? { offer: "contacts" as const } : {}), events, messages });
@@ -137,7 +247,7 @@ export async function runTurn(
    */
   const words = async (history: Msg[]): Promise<ReplyText> => {
     emit({ kind: "words" });
-    const r = await untilStopped(deps.model.respond({ prefixCacheKey: PREFIX_KEY, messages: history, ...withSignal }, (t) => deps.onToken?.(t)), signal);
+    const r = await untilStopped(deps.model.respond({ prefixCacheKey, messages: history, ...withSignal }, (t) => deps.onToken?.(t)), signal);
     return typeof r === "string" ? { text: r } : r;
   };
   let skillCalls = 0;
@@ -151,7 +261,7 @@ export async function runTurn(
     let picked;
     try {
       picked = await untilStopped(deps.model.pick({
-        prefixCacheKey: PREFIX_KEY,
+        prefixCacheKey,
         messages,
         menu,
         live: { onIntent: (skill) => emit({ kind: "intent", skill }), onThinking: (t) => deps.onThinking?.(t), onToken: (t) => deps.onToken?.(t), onWords: () => emit({ kind: "words" }) },
@@ -205,7 +315,7 @@ export async function runTurn(
     const { def } = runtime;
     let args: Record<string, unknown>;
     try {
-      const filled = await untilStopped(deps.model.fill({ prefixCacheKey: PREFIX_KEY, messages, skill: def.id as SkillId, schema: def.args, ...withSignal }), signal);
+      const filled = await untilStopped(deps.model.fill({ prefixCacheKey, messages, skill: def.id as SkillId, schema: def.args, ...withSignal }), signal);
       args = coerceArgs(parseArgs(filled.rawText).value, def.args).args;
     } catch (err) {
       if (isStopped()) return halt();
@@ -278,7 +388,11 @@ export async function runTurn(
     messages.push({ role: "assistant", content: redactFound(JSON.stringify({ skill: def.id, args }), found) });
     await audit({ event: "call_proposed", skill: def.id, argsHash: call.argsHash });
 
-    const decision = decide(call, def.risk, session, deps.rules, { userText, foundByName: found.length > 0 });
+    // Multi-bot (spec 6.4, 6.4.1): the bot's grants, sources and mode, what code knows about the skill (its tier and group,
+    // the runtime's source) and what this turn read from others. With no bot, the cage decides exactly as before.
+    const decision = decide(call, def.risk, session, deps.rules, {
+      userText, readText: fromOthers.text(), foundByName: found.length > 0, bot: deps.bot, skill: { tier: def.tier, group: def.group, source: runtime.source },
+    });
     // The cage allowed only a narrower call (a tainted search runs on the user's matched words): that is what runs,
     // and what the audit and any approval are bound to from here on.
     if (decision.args) {
@@ -301,6 +415,8 @@ export async function runTurn(
 
     let approvedArgsHash: string | undefined;
     let approvedBinding: string | undefined;
+    // The mode that stood in for the sheet: the skill is held to what was decided, but remembers no approval of it.
+    let approvedByMode: PermissionMode | undefined;
     let approvedSigned: { payload: SignedApprovalPayload; payloadHash: string } | undefined;
     // SL-40: a money skill's reservation, freed on every way out that doesn't reach execute.
     let held: (() => Promise<void>) | undefined;
@@ -310,10 +426,28 @@ export async function runTurn(
       held = undefined;
       await r?.().catch(() => {});
     };
+    /** The exact action in code's words, for the sheet or for a step a mode runs; never the model's words. */
+    const summarize = async () => {
+      const render = typeof deps.render === "function" ? await deps.render() : deps.render;
+      return def.describeAction(args, found.length ? { ...render, found } : render);
+    };
+    /** A summary that can't show who or what the action reaches: it is never put in front of the user, nor run by a mode. */
+    const unresolved = async (reason: string) => {
+      await releaseHold();
+      didNotRun();
+      await audit({ event: "approval", skill: def.id, argsHash: call.argsHash, outcome: "denied" });
+      emit({ kind: "blocked", skill: def.id, reason });
+      messages.push({ role: "tool", content: `Blocked: ${reason}` });
+    };
+    /** A stop that came in before the step ran: nothing runs. */
+    const stoppedBeforeRun = async () => {
+      await releaseHold();
+      messages.push({ role: "tool", content: "Stopped by the user. Nothing was done." });
+      return halt();
+    };
     if (decision.effect === "ask") {
       const lastTaint = session.taint.at(-1);
-      const render = typeof deps.render === "function" ? await deps.render() : deps.render;
-      const summary = def.describeAction(args, found.length ? { ...render, found } : render);
+      const summary = await summarize();
       // SL-40 (FR-PAY-05): before the sheet, code checks the payment against the user's words, the caps and the balance
       // and reserves it. A refusal or a question ends the turn in code's own words; nothing is asked or signed.
       if (runtime.hold) {
@@ -338,11 +472,7 @@ export async function runTurn(
       }
       // A sheet that can't show who or what the action reaches is never put in front of the user.
       if (summary.unresolved) {
-        await releaseHold();
-        didNotRun();
-        await audit({ event: "approval", skill: def.id, argsHash: call.argsHash, outcome: "denied" });
-        emit({ kind: "blocked", skill: def.id, reason: summary.unresolved });
-        messages.push({ role: "tool", content: `Blocked: ${summary.unresolved}` });
+        await unresolved(summary.unresolved);
         continue;
       }
       // SL-37 (FR-CAGE-06): money and passwords need the Keystore key to sign the exact payload. It is built before
@@ -411,16 +541,31 @@ export async function runTurn(
       emit({ kind: "approved", skill: def.id });
       approvedArgsHash = call.argsHash;
       approvedBinding = summary.binding;
+    } else if (decision.effect === "allow" && decision.byMode) {
+      // Multi-bot (spec 6.4.1): the bot's mode let this step run without a sheet, so it is bound like an approval: code's
+      // summary is built, and one that can't be resolved blocks it as it would block the sheet; the approval is logged
+      // with the mode as its reason, so Activity can say the step ran rather than that someone approved it; the skill
+      // runs with what was approved, the arguments' hash and the binding code resolved.
+      const summary = await summarize();
+      if (summary.unresolved) {
+        await unresolved(summary.unresolved);
+        continue;
+      }
+      // A stop that came in during the render wins before the step is logged as let through.
+      if (isStopped()) return stoppedBeforeRun();
+      await audit({ event: "approval", skill: def.id, argsHash: call.argsHash, outcome: "ok", reason: `mode.${decision.byMode}` });
+      emit({ kind: "approved", skill: def.id, byMode: decision.byMode });
+      approvedArgsHash = call.argsHash;
+      approvedBinding = summary.binding;
+      approvedByMode = decision.byMode;
     }
 
     // Last point before a side effect: a stop that came in during the cage or the render wins.
-    if (isStopped()) {
-      await releaseHold();
-      messages.push({ role: "tool", content: "Stopped by the user. Nothing was done." });
-      return halt();
-    }
+    if (isStopped()) return stoppedBeforeRun();
     // The skill owns its reservation from here: it settles it, keeps it pending, or frees it.
     held = undefined;
+    // The addresses this call runs with are the model's own: a read that says one back hasn't read it from anyone.
+    fromOthers.calling(args);
     // From here the skill runs to its end, success or failure, even if the turn is stopped meanwhile
     // (atomic, FR-LOOP-06); the stop takes effect at the top of the next step.
     let result: SkillResult;
@@ -431,6 +576,7 @@ export async function runTurn(
         ...(call.destination !== undefined ? { destination: call.destination } : {}),
         ...(approvedArgsHash ? { approvedArgsHash } : {}),
         ...(approvedBinding ? { approvedBinding } : {}),
+        ...(approvedByMode ? { byMode: approvedByMode } : {}),
         ...(approvedSigned ? { signedApproval: approvedSigned } : {}),
         ...(found.length ? { found } : {}),
       });
@@ -444,6 +590,10 @@ export async function runTurn(
     if (changes && result.ok) afterAction = true;
     if (result.ok) doneThisTurn.add(`${def.id}:${call.argsHash}`);
     await audit({ event: "executed", skill: def.id, argsHash: call.argsHash, outcome: result.ok ? "ok" : "error" });
+    // The private-data split (spec 6.4.1): what this session has read, each kind once. A read that failed counts too: it
+    // may have read something before it did.
+    const kind = readKind(def.group, runtime.source);
+    if (kind && !session.reads?.includes(kind)) session.reads = [...(session.reads ?? []), kind];
 
     const untrusted = result.untrusted ?? def.producesUntrusted;
     // W1: the skill's own answer rides with its result; the model port answers with it once nothing more is owed.
@@ -451,7 +601,9 @@ export async function runTurn(
     if (untrusted) {
       session.taint.push({ kind: result.taintKind ?? "inbound_message", ref: def.id, at: deps.now() });
       await audit({ event: "taint_added", skill: def.id });
-      messages.push({ role: "tool", content: wrapUntrusted(redactFound(result.modelText, found), def.id, deps.newId()), untrusted: true, ...answered });
+      const seen = redactFound(result.modelText, found);
+      if (readsOthers(runtime)) fromOthers.read(result.othersText === undefined ? seen : redactFound(result.othersText, found));
+      messages.push({ role: "tool", content: wrapUntrusted(seen, def.id, deps.newId()), untrusted: true, ...answered });
     } else {
       messages.push({ role: "tool", content: redactFound(result.modelText, found), ...answered });
     }

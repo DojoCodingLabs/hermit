@@ -30,6 +30,8 @@ export const startNightScheduler = () => () => {};
 export const liveHermit = () => undefined;
 export const nightErasing = () => false;
 export const releaseModel = ok(undefined);
+export const forgetBotCaches = ok(undefined);
+export const setCacheOwners = () => {};
 export const pendingErase = ok(undefined);
 export const countedFetch = (...a: Parameters<typeof fetch>) => fetch(...a);
 export const MISSING: unknown[] = [];

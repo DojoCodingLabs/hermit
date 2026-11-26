@@ -246,7 +246,7 @@ Hermit is **pre-alpha.** It works, it has rough edges, and it has been tuned on 
     </td>
     <td valign="top">
       <ul>
-        <li><b>Several bots.</b> Specialized bots, each with its own chat, notes and permission mode, and Hermit coordinating them.</li>
+        <li><b>Several bots.</b> Specialized bots, each with its own chat, notes and permission mode, and Hermit coordinating them. Wave 1 is built and being checked on phones.</li>
         <li><b>Routines.</b> Bots that work on a schedule, with guards for battery and heat.</li>
         <li><b>Boost.</b> A companion app on your own computer for heavy tasks. A bigger shell, still yours.</li>
         <li><b>iOS.</b></li>

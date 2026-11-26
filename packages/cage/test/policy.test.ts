@@ -1,11 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { argsHash, skillId, type SessionState, type ToolCall } from "@hermit/core";
+import { skillId, type ToolCall } from "@hermit/core";
 import { decide, defaultRules, type PolicyRule } from "../src/policy.ts";
+import { call, session } from "./policy-cases.ts";
 
-const call = (skill: string, args: Record<string, unknown> = {}): ToolCall => ({
-  id: "c1", skill: skillId(skill), args, argsHash: argsHash(args), repairs: [],
-});
-const session = (over: Partial<SessionState> = {}): SessionState => ({ id: "s1", taint: [], unattended: false, ...over });
 const tainted = session({ taint: [{ kind: "inbound_message", ref: "whatsapp:ana", at: 1 }] });
 
 describe("decide", () => {

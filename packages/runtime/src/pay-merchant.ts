@@ -277,7 +277,8 @@ export function merchantPay(deps: MerchantPayDeps): SkillRuntime {
     // Q128: one entry per signed purchase, keyed by the requirement. The log never holds a hash, the address or the
     // merchant's text.
     await deps.audit.append({
-      ts: deps.now(), sessionId: ctx.session.id, event: "spending", skill: "pay_merchant",
+      // Multi-bot: like every entry of the turn, it names the bot the turn ran as.
+      ts: deps.now(), sessionId: ctx.session.id, ...(ctx.session.botId ? { bot: ctx.session.botId } : {}), event: "spending", skill: "pay_merchant",
       argsHash: argsHash({ requirement: h.offer.requirementHash }),
       outcome: used ? "ok" : "error", reason: used ? "payment.sent" : "payment.unconfirmed",
     }).catch(() => {});

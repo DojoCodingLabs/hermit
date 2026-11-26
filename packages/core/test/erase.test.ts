@@ -278,4 +278,5 @@ describe("clearTables (on a real SQLite)", () => {
     await clearTables(sql, schemaTables());
     await expect(clearTables(sql, schemaTables())).resolves.toBeUndefined();
   });
+  test("the erase list covers the bot tables", () => expect(schemaTables()).toEqual(expect.arrayContaining(["bots", "bot_grants", "bot_sources"])));
 });

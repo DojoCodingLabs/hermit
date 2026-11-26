@@ -392,8 +392,10 @@ export function Avatar({ name, tone = "accent" }: { name: string; tone?: TileTon
  * One row: a leading tile (or `leading`, an avatar), a title, an optional second line, and a trailing status, control
  * or chevron. A chevron only where the row opens something. Rows dim while pressed.
  */
-export function Row({ icon, leading, title, sub, trailing, chevron, iconColor, onPress, titleColor, top, a11y, hint, role = "button", disabled }: {
+export function Row({ icon, leading, title, sub, trailing, chevron, iconColor, onPress, onLongPress, titleColor, top, a11y, hint, role = "button", disabled }: {
   icon?: IconName; leading?: ReactNode; title: ReactNode; sub?: ReactNode; trailing?: ReactNode; chevron?: boolean; iconColor?: ColorRole; onPress?: () => void;
+  /** A press and hold (the roster's pin and hide); the row's `hint` says so for TalkBack. */
+  onLongPress?: () => void;
   titleColor?: ColorRole; top?: boolean; a11y?: string; hint?: string; role?: "button" | "link"; disabled?: boolean;
 }) {
   const p = usePalette();
@@ -413,6 +415,7 @@ export function Row({ icon, leading, title, sub, trailing, chevron, iconColor, o
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={disabled}
       accessibilityRole={role}
       accessibilityLabel={spoken}
@@ -429,15 +432,20 @@ export function Row({ icon, leading, title, sub, trailing, chevron, iconColor, o
  * A row's title with a short fact at its end (a time, an amount), on one baseline. With large text (Android's font
  * size at 130% and up) the fact moves under the title, so neither is squeezed to a word per line.
  */
-export function TitleLine({ title, lines, aside, asideV = "footnote", asideColor = "soft" }: {
-  title: string; lines?: number; aside: string; asideV?: Variant; asideColor?: Tone;
+export function TitleLine({ title, lines, aside, asideV = "footnote", asideColor = "soft", mark }: {
+  title: string; lines?: number; aside?: string; asideV?: Variant; asideColor?: Tone;
+  /** A small glyph right after the title (a star, a pin). */
+  mark?: ReactNode;
 }) {
   const { fontScale } = useWindowDimensions();
   const stacked = fontScale >= 1.3;
   return (
     <View style={stacked ? { gap: 2 } : { flexDirection: "row", alignItems: "baseline", gap: s.sm }}>
-      <T v="bodyStrong" lines={lines} style={stacked ? undefined : { flex: 1 }}>{title}</T>
-      <T v={asideV} color={asideColor} tabular>{aside}</T>
+      <View style={[{ flexDirection: "row", alignItems: "center", gap: s.xs }, stacked ? null : { flex: 1 }]}>
+        <T v="bodyStrong" lines={lines} style={{ flexShrink: 1 }}>{title}</T>
+        {mark}
+      </View>
+      {aside ? <T v={asideV} color={asideColor} tabular>{aside}</T> : null}
     </View>
   );
 }

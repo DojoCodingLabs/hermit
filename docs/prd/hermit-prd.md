@@ -40,13 +40,14 @@ Hermit differs from a typical Dojo platform in one structural way: there is no b
 | `ASM-NN`, `DEP-NN`, `RSK-NN`, `OQ-NN` | Assumption (and verified fact), dependency, risk, open question | ASM-01 |
 | `CT-NN` | Cross-cutting contract | CT-06 |
 | `W0` to `W6` | Wave of V1 delivery: W0 preflight and contracts, W1 the first win, then the widening waves | W1 |
+| `B1`, `B2` | Multi-bot wave: B1 bots, their chats, notes, permissions and modes; B2 handoffs, routines and group chats (PDR-029) | B1 |
 | `SL-NN` | Slice: the vertical unit that becomes one Linear issue (Part 3) | SL-08 |
 
 `HM` is the screen prefix (Hermit). Screens of later bands carry "(V2)" or "(V3)" in their names.
 
 ### Area codes
 
-- Phone app, user surfaces: `ONB` (setup), `CHAT` (talk), `MEM` (memory), `REM` (reminders), `CAL` (calendar), `MSG` (messages), `APPR` (approvals), `ACT` (activity and the signed log), `VOICE`, `WEB` (web reading and web tasks), `MAIL` (email), `CONN` (connectors), `APP` (opening other apps), `PHONE` (phone use), `NIGHT` (night shift), `VAULT`, `FORM` (forms and logins), `PAY` (wallet and payments), `MOVE` (changing phones), `SET` (settings).
+- Phone app, user surfaces: `ONB` (setup), `CHAT` (talk), `MEM` (memory), `REM` (reminders), `CAL` (calendar), `MSG` (messages), `APPR` (approvals), `ACT` (activity and the signed log), `VOICE`, `WEB` (web reading and web tasks), `MAIL` (email), `CONN` (connectors), `APP` (opening other apps), `PHONE` (phone use), `NIGHT` (night shift), `VAULT`, `FORM` (forms and logins), `PAY` (wallet and payments), `MOVE` (changing phones), `SET` (settings), `BOT` (bots).
 - Platform and cross-cutting: `CAGE` (policy engine), `LOOP` (the agent turn loop), `MODEL` (inference runtime and eval), `PRIV` (privacy enforcement), `PLAT` (builds and distribution), `I18N`, `SITE` (public website).
 - Later bands: `BOOST`, `TRAIN`, `IOS`, `A2A`, `WATCH`, `MAC`, `FAM`, `CLOUD`.
 
@@ -59,7 +60,7 @@ MoSCoW: `M` must have, `S` should have, `C` could have. Priority and release ban
 | Band | Meaning |
 | :---- | :---- |
 | V1 | The full phone-only agent: the first win, then ears and eyes, then hands (PDR-007) |
-| V2 | Boost (a bigger shell), fine-tuned Hermit models, iOS, agent-to-agent, and the deepening of V1 features (PDR-016) |
+| V2 | Boost (a bigger shell), fine-tuned Hermit models, iOS, agents of other people on the same bus, and the deepening of V1 features (PDR-016) |
 | V3 | Keep watch, Mac powers, family sharing, and the confidential-cloud Boost (PDR-016) |
 
 Waves sequence V1 only. Every V1 story carries the wave that delivers it (`W1` for the first win, then `W2` onward); stories in later bands carry no wave. W0 holds preflight and contracts, not user stories.
@@ -99,6 +100,7 @@ Stories are grouped by epic. Each states role, capability and benefit with testa
 | EP-25 | Connectors | Phone app |
 | EP-26 | Open other apps | Phone app |
 | EP-27 | Phone use (sideload build) | Phone app (V2) |
+| EP-28 | Bots | Phone app |
 
 ---
 
@@ -716,9 +718,9 @@ Goal: Hermit works while the phone charges at night, preparing a morning briefin
 
 ### US-NIGHT-05: Schedule my own recurring jobs
 - **As a** user, **I want** to ask "every Friday, summarize my week", **so that** I create my own routines.
-- **Priority:** S · **Release:** V2 · **Screens:** HM-NIGHT-01
+- **Priority:** S · **Release:** V1 · **Wave:** B2 · **Screens:** HM-BOT-04
 - **Acceptance criteria:**
-  - Deferred to V2 (PDR-016). Jobs remain unattended sessions under the same cage.
+  - Superseded by US-BOT-11 (routines). A routine belongs to a bot, runs unattended under the same cage and the bot's mode (PDR-029, PDR-031), and the night shift keeps its own jobs.
 
 ---
 
@@ -1429,6 +1431,109 @@ Goal: drive other apps on the phone (tap, type, scroll) for parity with cloud ag
 
 ---
 
+## EP-28: Bots
+
+Goal: several specialized bots that the user sees like contacts, with Hermit as the front door and the coordinator. Each bot has its own role, notes, permissions, sources and mode, and the cage enforces each bot's limits in code (PDR-029, PDR-031). Wave B1 is bots, their chats, notes, permissions and modes. Wave B2 is handoffs, routines, group chats and Hermit's report.
+
+### US-BOT-01: See my bots like contacts
+- **As a** user, **I want** a list of my bots, Hermit first, **so that** I open the one I need as I open a chat with a contact.
+- **Priority:** M · **Release:** V1 · **Wave:** B1 · **Screens:** HM-BOT-01
+- **Acceptance criteria:**
+  - The roster (HM-BOT-01) is home. Hermit is first, starred and labeled as the coordinator; the pinned bots come next; the rest follow by their newest activity.
+  - Each row shows the bot's shell, its name, the last line of its chat ("Tú: ..." for the user's words, or "No messages"), the time, and a chip when the bot runs in Auto or Don't ask.
+  - A user who had one chat before sees it as Hermit's, with its history and memories (EC-BOT-12).
+
+### US-BOT-02: Chat with one bot in its role
+- **As a** user, **I want** each bot to answer in its own role, **so that** a travel planner talks like a travel planner and nothing more.
+- **Priority:** M · **Release:** V1 · **Wave:** B1 · **Screens:** HM-BOT-02
+- **Acceptance criteria:**
+  - Each bot has one main chat with its own history; "New chat" starts a fresh one and the older chats stay in a list; leaving a chat stops its turn (EC-BOT-11).
+  - The bot's role is in its prompt, and it uses only the skill groups it holds. A request that only a withheld skill could do is answered by code ("No tengo permiso para ..."), never by the model (FR-BOT-03).
+  - A bot reads its own notes plus the shared profile. Its prompt cache is its own (FR-BOT-06).
+
+### US-BOT-03: Ask Hermit to create a bot
+- **As a** user, **I want** to say "ponme un bot de recetas", **so that** Hermit proposes one and I confirm it.
+- **Priority:** M · **Release:** V1 · **Wave:** B1 · **Screens:** HM-CHAT-01, HM-BOT-03
+- **Acceptance criteria:**
+  - The `create_bot` skill belongs to Hermit alone. Code renders the proposal's card (name, look, role, permissions, sources, mode) from its fields; the model's words are never shown as the card.
+  - A proposal drafted after reading other people's text is marked, and offers Review only: the user opens HM-BOT-03 with the proposal filled in and checks every field before it exists (EC-BOT-04).
+  - Create asks for the fingerprint when the grants include mail send, wallet and pay, or the vault and logins (a group no screen offers in wave 1), or the bot's own mode is Don't ask; for Don't ask it also asks for the typed word (FR-BOT-09).
+
+### US-BOT-04: Create a bot from "＋" or a template
+- **As a** user, **I want** to start from a template or from scratch, **so that** I don't depend on Hermit to make a bot.
+- **Priority:** M · **Release:** V1 · **Wave:** B1 · **Screens:** HM-BOT-01, HM-BOT-03
+- **Acceptance criteria:**
+  - The templates are travel, recipes, agenda and inbox; each fills the name and the role, and the user adjusts everything.
+  - The name is at most 40 characters, the role at most 800, and the roster holds at most 50 bots, Hermit included (EC-BOT-01, EC-BOT-06).
+  - The look is one of six shell shapes and four colors, chosen at creation and drawn by the brand pipeline, never an image model.
+
+### US-BOT-05: Give a bot its permissions and sources
+- **As a** user, **I want** to choose what a bot may do and where it may read, **so that** it is a boundary and not only a name.
+- **Priority:** M · **Release:** V1 · **Wave:** B1 · **Screens:** HM-BOT-03, HM-BOT-04
+- **Acceptance criteria:**
+  - The user toggles the permission groups the screens show; mail send, wallet and pay need the fingerprint to grant (FR-BOT-09). Vault and logins are not offered in wave B1.
+  - Sources are websites, written like wikivoyage.org, and installed connectors. Nothing runs from a connector that is uninstalled later; the bot works from its other sources (EC-BOT-07).
+  - Hermit's own grants, name and role are not edited on HM-BOT-04.
+
+### US-BOT-06: Choose how much a bot may do without asking
+- **As a** user, **I want** to pick Ask, Auto or Don't ask for all of Hermit and for each bot, **so that** I choose my own risk with clear warnings.
+- **Priority:** M · **Release:** V1 · **Wave:** B1 · **Screens:** HM-SET-01, HM-BOT-03, HM-BOT-04
+- **Acceptance criteria:**
+  - Ask is the default. Auto opens a sheet that says what will run without asking. Don't ask opens a red sheet with the concrete risks and needs the fingerprint and the typed word, "entiendo" or "I understand", in either language (FR-CAGE-08, PDR-031).
+  - A bot inherits the global mode until it has its own. A bot's own Don't ask needs the fingerprint and the word even when the global mode is Don't ask; a copy starts with no mode of its own.
+  - Auto and Don't ask show as a chip in the bot's chat bar and on its roster row. A turn keeps the mode it started with (EC-BOT-08).
+  - Payments and logins need the fingerprint in every mode, and never start from a bot's own work (PDR-031).
+
+### US-BOT-07: Pin, hide and search
+- **As a** user, **I want** to pin two bots, hide the ones I don't use and search the list, **so that** fifty bots stay manageable.
+- **Priority:** S · **Release:** V1 · **Wave:** B1 · **Screens:** HM-BOT-01
+- **Acceptance criteria:**
+  - At most 2 bots are pinned, below Hermit; a third is refused with a line that says to unpin one (EC-BOT-02).
+  - A hidden bot leaves the main list and shows under "Ocultos"; Hermit can't be hidden or pinned.
+  - Search matches a bot's name or the title of one of its chats; an empty result names the search.
+
+### US-BOT-08: Duplicate, reset or delete a bot
+- **As a** user, **I want** to copy a bot, clear its conversation or delete it, **so that** I stay in charge of what each bot keeps.
+- **Priority:** M · **Release:** V1 · **Wave:** B1 · **Screens:** HM-BOT-04
+- **Acceptance criteria:**
+  - A duplicate is named "<name> 2" and copies the role, the permissions and the sources, with no history, no notes and no mode of its own (it inherits the global mode).
+  - Reset clears the bot's conversation history and keeps its notes, routines and settings. Delete removes its chats and notes and can't be undone; both confirm first.
+  - Delete, Reset and Clear conversation are refused while the bot's turn runs, and say so (EC-BOT-03). Hermit can't be duplicated, hidden or deleted.
+
+### US-BOT-09: Share facts with every bot
+- **As a** user, **I want** to share one of a bot's notes with every bot, **so that** I don't repeat myself.
+- **Priority:** S · **Release:** V1 · **Wave:** B1 · **Screens:** HM-BOT-04, HM-MEM-01
+- **Acceptance criteria:**
+  - Sharing is one way: an untainted note of a bot becomes part of the shared profile. A tainted note can't be shared (tainted facts never enter the shared profile).
+  - Every bot reads the shared profile; the snapshot stays at most 1,400 characters (FR-MEM-06). Only Hermit may forget or delete a shared fact.
+  - Notes keep what the run that wrote them had read (private data, the web), so a bot that mixed them can't use the web alone across runs (FR-CAGE-08).
+
+### US-BOT-10: Bots hand work to each other
+- **As a** user, **I want** one bot to hand a job to another, **so that** a coordinating bot can hand work to my specialists.
+- **Priority:** S · **Release:** V1 · **Wave:** B2 · **Screens:** HM-BOT-02
+- **Acceptance criteria:**
+  - Deferred to wave B2 (PDR-030). A bot's words are data to the bot that reads them, results come back as cards, and the loop guards hold.
+
+### US-BOT-11: Routines in plain words
+- **As a** user, **I want** to tell a bot "revisa mi bandeja cada mañana", **so that** it works on a schedule I can read and change.
+- **Priority:** S · **Release:** V1 · **Wave:** B2 · **Screens:** HM-BOT-03, HM-BOT-04
+- **Acceptance criteria:**
+  - Deferred to wave B2 (PDR-029). Supersedes US-NIGHT-05. A routine runs unattended under the bot's mode; what the mode doesn't allow alone becomes a suggestion.
+
+### US-BOT-12: Group chats
+- **As a** user, **I want** to talk to several bots in one chat, **so that** they answer me together.
+- **Priority:** C · **Release:** V1 · **Wave:** B2 · **Screens:** HM-BOT-05
+- **Acceptance criteria:**
+  - Deferred to wave B2. The user and 2 to 6 bots; `@` names one; approvals, logins and drafts never appear in a group.
+
+### US-BOT-13: Ask Hermit what's new
+- **As a** user, **I want** to ask "¿qué hay de nuevo?", **so that** Hermit reports what my bots did.
+- **Priority:** S · **Release:** V1 · **Wave:** B2 · **Screens:** HM-BOT-02
+- **Acceptance criteria:**
+  - Deferred to wave B2. A bot's results reach Hermit's chat as cards rendered by code; Hermit reads a result only in the turn the user asks, and the chat then keeps a code-written line in place of the text (PDR-030).
+
+---
+
 # PART 2: PRODUCT REQUIREMENTS
 
 ## 2.1 Executive summary and product vision
@@ -1516,7 +1621,7 @@ A rule that tries to allow `send`, `credential` or `spend` without asking is ign
 
 ## 2.7 Information architecture and screen inventory
 
-Navigation is chat-first: the chat (HM-CHAT-01) is home. A drawer holds Activity, Memory, Reminders, Messages, Night shift, Vault, Wallet and Settings. Approvals are bottom sheets over whatever screen is open. Every screen carries an ID for change control.
+Navigation is bot-first: the roster (HM-BOT-01) is home, with Hermit first. Each bot's chat (HM-BOT-02) opens from it. A drawer holds Activity, Memory, Reminders, Messages, Night shift, Vault, Wallet and Settings. Approvals are bottom sheets over whatever screen is open. Every screen carries an ID for change control.
 
 | Screen ID | Name | Purpose | Key stories |
 | :---- | :---- | :---- | :---- |
@@ -1525,7 +1630,7 @@ Navigation is chat-first: the chat (HM-CHAT-01) is home. A drawer holds Activity
 | HM-ONB-03 | Model download | Size, Wi-Fi rule, progress, checksum states | US-ONB-03, US-ONB-07 |
 | HM-ONB-04 | Permissions walkthrough | Notification access (with restricted-settings help), calendar, contacts (PDR-028), Not now | US-ONB-04, US-ONB-05, US-ONB-08 |
 | HM-ONB-05 | Unsupported phone | Reason the phone is below the floor | US-ONB-06 |
-| HM-CHAT-01 | Chat (home) | Conversation, streaming, mascot state, mic, stop | US-CHAT-01, US-CHAT-03, US-CHAT-04, US-CHAT-05, US-CHAT-06, US-CHAT-07, US-CHAT-08, US-APP-01, US-APP-02, US-APP-03, US-APP-04 |
+| HM-CHAT-01 | Chat | Conversation, streaming, mascot state, mic, stop; HM-BOT-02 is this screen for one bot | US-CHAT-01, US-CHAT-03, US-CHAT-04, US-CHAT-05, US-CHAT-06, US-CHAT-07, US-CHAT-08, US-APP-01, US-APP-02, US-APP-03, US-APP-04 |
 | HM-CHAT-02 | Where Hermit runs | Model, device, last-turn speed, Boost state | US-CHAT-02, US-MODEL-01, US-BOOST-02 |
 | HM-CHAT-03 | Share into Hermit (V2) | Incoming shared content as an untrusted message | US-CHAT-09, US-WEB-05, US-IOS-03 |
 | HM-MEM-01 | Memory list | Facts, search, provenance marks | US-MEM-04, US-MEM-08 |
@@ -1577,6 +1682,11 @@ Navigation is chat-first: the chat (HM-CHAT-01) is home. A drawer holds Activity
 | HM-CONN-04 | Review a new connector | A drafted or imported spec to approve | US-CONN-04, US-CONN-05, US-CONN-06, US-CONN-12 |
 | HM-CONN-05 | Sign-in options | Own OAuth client IDs, own relay, Dojo relay opt-in | US-CONN-08, US-CONN-09, US-CONN-10 |
 | HM-PHONE-01 | Phone use (V2) | Allowed apps and the live action | US-PHONE-01, US-PHONE-02 |
+| HM-BOT-01 | Roster (home) | Hermit and the bots like contacts: pins, Ocultos, search, mode chips, create | US-BOT-01, US-BOT-07 |
+| HM-BOT-02 | A bot's chat | HM-CHAT-01 for one bot: its bar, mode chip, menu, older chats, the answer code gives when a skill is withheld | US-BOT-02, US-BOT-03 |
+| HM-BOT-03 | New bot | Templates, a proposal from Hermit, name, role, look, permissions, sources, mode, the fingerprint | US-BOT-03, US-BOT-04, US-BOT-05, US-BOT-06, US-BOT-11 |
+| HM-BOT-04 | Bot settings | A bot's details, notes, mode, duplicate, reset and delete; Hermit's variant is read-only | US-BOT-05, US-BOT-06, US-BOT-08, US-BOT-09, US-BOT-11 |
+| HM-BOT-05 | Group chat (wave B2) | The user and 2 to 6 bots in one chat | US-BOT-12 |
 | HM-SITE-01 | Website home | What Hermit is | US-SITE-01 |
 | HM-SITE-02 | Privacy policy | The public policy | US-SITE-02 |
 | HM-SITE-03 | Download | APK, hash, verify steps | US-SITE-03 |
@@ -1602,11 +1712,33 @@ Each FR is a contract that an agent implements and a test asserts. Where the cod
 ### The cage (`packages/cage`)
 
 - **FR-CAGE-01.** `decide(call, session)` evaluates the rules deny-wins: any matching `deny` wins over `ask`, and `ask` over `allow`. The decision carries a human reason.
-- **FR-CAGE-02.** Hard limits, not overridable by rules: `send` always asks; `spend` and `credential` are denied in tainted or unattended sessions and otherwise ask with a biometric; `remote_write` always asks; `local_write` asks when tainted; in an unattended session every `ask` becomes `deny`. The risks are `read`, `local_write`, `network`, `remote_write`, `send`, `credential` and `spend`.
+- **FR-CAGE-02.** Hard limits, not overridable by rules, per mode (amended for PDR-031). In Ask, the default: `send` always asks; `spend` and `credential` are denied in tainted or unattended sessions and otherwise ask with a biometric; `remote_write` always asks; `local_write` asks when tainted; in an unattended session every `ask` becomes `deny`. In Auto and Don't ask the mode may turn an `ask` into a run (FR-CAGE-08), but `spend` and `credential` keep their limit in every mode: denied in tainted or unattended sessions, and otherwise an approval with a biometric from the user's own words. The risks are `read`, `local_write`, `network`, `remote_write`, `send`, `credential` and `spend`.
 - **FR-CAGE-03.** An approval is valid only if it carries the `argsHash` of the exact call (canonical JSON, SHA-256), the request ID, a biometric when required, and passes `verifyApproval` (an HMAC proof over the hash and the request ID). It expires after the product rule of 2 minutes. Anything else is a denial.
 - **FR-CAGE-04.** Any skill marked `producesUntrusted` (read_messages, calendar_read, recall of a tainted fact, read_web, search_web, every mail read, every connector or MCP result, every page in the in-app browser) taints the session; its output is wrapped in untrusted markers (CT-09) before the model sees it. Taint never clears within a session.
 - **FR-CAGE-05.** Memory writes in a tainted session are recorded with `tainted: true` provenance and ask first.
 - **FR-CAGE-06.** From W5, approvals for `spend` and `credential` are signed in a native module by a non-exportable Android Keystore key that requires user authentication (ADR-007); the JS proof of FR-CAGE-03 remains for other risks.
+- **FR-CAGE-07.** Risk tiers are code, not the model. Each skill carries a tier (low, medium or high) in its definition, and the cage reads the tier; a skill without a tier is high. Reads, links, search, notes, and reminders and events for the user are low; deletes and every intent skill (`apps`) are medium; recipe skills, MCP tools and connector operations stay untiered, so they are high. A table test pins every skill's tier.
+- **FR-CAGE-08.** The mode sits over the tiers (PDR-031), and the cage reads the mode in effect (the bot's own, else the global one), the tier, whether the user is in the chat (attended) or the work is alone, and taint. Auto never asks the small model whether something is safe.
+  - Ask is today's rules in a chat. Alone, a bot reads its own sources and the private data its grants hold, never both in one run (the split below), and keeps notes about what it read, marked as read from outside; the rest waits as a suggestion.
+  - Auto in a chat never asks more than Ask and runs low-tier steps, even after outside text. It opens a link without asking only when the address appears verbatim in the user's messages and mail or in the user's own words; a link Hermit composes asks, and web reads give nothing to follow. Alone, Auto allows what Ask alone allows plus low tiers anywhere.
+  - Don't ask runs everything except money and logins.
+  - The private-data split: alone, in Ask and in Auto, a bot can't use private data (messages, mail, calendar, contacts) and the web in the same run. This is stricter than the first spec text, which allowed it in Auto (a coordinator ruling, 2026-11-25). Notes carry the kinds the run that wrote them had read, so the split holds across runs. Only Don't ask lifts it.
+  - Search alone stays fail-closed in Ask and Auto in wave B1, since no alone turns exist yet; wave B2 allows it scoped to the bot's listed sites. Don't ask runs it.
+  - A step a mode runs is logged as "ran" with the reason `mode.ask`, `mode.auto` or `mode.dont_ask`, bound like an approval (its summary built, any unresolved value blocked). It is never remembered as an approval: approved domains, search providers and new recipients are learned only from the user's own approval.
+  - Money and logins need the fingerprint in the user's own words in every mode, and never start from a bot's own work.
+
+### Bots (`packages/core`, `packages/runtime`, `packages/cage`, `apps/mobile`)
+
+- **FR-BOT-01.** The data (migration 17, forward-only): `bots` (id, name, role, shape, color, primary flag, pin order, hidden, notify, mode, created_at), `bot_grants`, `bot_sources`, `sessions.bot_id` and `sessions.title`, `notes.bot_id` and `notes.kinds`, and `audit.bot_id`. Hermit's row has the id `hermit` and comes from the migration. Every new table joins the erase list. At most 50 bots, Hermit included, and at most 2 pins.
+- **FR-BOT-02.** Sessions and notes are per bot: `latest(botId)` and `clear(botId)` replace the global versions, and a chat's title is the first user words. A bot reads its own notes plus the shared profile (`notes.bot_id` null). Untainted notes from before the migration became shared; tainted ones stayed Hermit's own. A note from a bot is that bot's own; sharing is one way, for untainted own notes; only Hermit may forget or delete a shared fact. A note keeps the read kinds (private, web) of the session that wrote it, and a missing value is refused.
+- **FR-BOT-03.** The boundary is in code over 13 groups: calendar, reminders, notes, messages read, messages reply, mail read, mail send, web read, web tasks, contacts, apps (open other apps with prefilled intents), vault and logins, and wallet and pay. A skill outside a bot's groups is denied and never offered in its menu. A skill with no group and no source (`connect_service`, `create_bot`) is held by Hermit only. Hermit holds every group in code; its name, role and grants are not editable. `vault_logins` is reserved: no screen offers it, and create and update refuse it in wave B1.
+- **FR-BOT-04.** Sources are the sites and connectors a bot works from. A site is a registrable name like wikivoyage.org, never a numeric address; a bot that works alone reads only these sites on the web in Ask (FR-CAGE-08), once alone turns exist in wave B2. The role is at most 800 characters and the name 40.
+- **FR-BOT-05.** One model, one queue. Priority: the user's own turn, then a reply the user is waiting for (Seguir in wave B1), then handoffs, then routines. A turn holds its priority until it ends; a running model call always finishes (the safe point) and is never cut for another bot. The night shift runs at routine priority and warm-up at user priority. A new user turn waits only for the current model call.
+- **FR-BOT-06.** The prompt cache has one key per bot, `hermit-v1:<botId>`, and one `:long` key for long answers and Seguir. At most 6 named caches stay on disk, least recently used out first, and Hermit's turn key is never evicted. The app logs the caches' total size on disk.
+- **FR-BOT-07.** Per-turn values: each turn takes the bot's role, grants, sources and mode, builds its menu from the bot's granted skills only, and passes the bot to the cage with every call. Wave B1 background callers (the night shift, morning suggestions) pass no bot.
+- **FR-BOT-08.** Proposals are rendered by code. `create_bot` shows a card whose every field is code-written; a proposal drafted after reading outside text offers Review only; an offer expires, works once, and is re-checked before it creates anything. A request to make a bot reaches `create_bot` through an intent hint in `packages/model`, in es and en.
+- **FR-BOT-09.** One rule, `needsFingerprint`, decides the fingerprint to grant: mail send, wallet and pay (and vault and logins) need it to grant, and a bot's own mode of Don't ask needs it plus the typed word, even under a global Don't ask. Create asks when the grants include those groups or the bot's own mode is Don't ask; duplicate starts with no mode of its own, so only fingerprint-gated grants ask. Settings can't write a mode key; only the mode setters do.
+- **FR-BOT-10.** The signed log records bot ids and never content: an audit entry may carry `bot_id` inside its hashed content, and entries from before bots still verify. Activity shows the bot's current name, or "bot borrado" when it is deleted, and the "ran" reason. Creating, changing, duplicating, resetting, deleting and sharing are logged. Delete, Reset and Clear conversation are refused while the bot's turn runs.
 
 ### Memory (`packages/agent/src/memory-skills.ts`, `packages/core/src/memory.ts`)
 
@@ -1748,15 +1880,18 @@ All entities live on the phone in one SQLCipher database (ADR-006), except vault
 
 | Entity | Purpose | Key fields and relationships | Table | First wave |
 | :---- | :---- | :---- | :---- | :---- |
-| `ENT-Note` | A remembered fact | id, text (max 500), tainted, source, created_at, embedding (reserved, V2) | `notes`, `notes_fts` | W1 |
+| `ENT-Note` | A remembered fact | id, text (max 500), tainted, source, bot_id (null is the shared profile), kinds, created_at, embedding (reserved, V2) | `notes`, `notes_fts` | W1 |
 | `ENT-Reminder` | A scheduled reminder | id, text, at, state {pending, fired, done, cancelled}, notification_id, created_at | `reminders` | W1 |
 | `ENT-Conversation` | A captured chat | id, app {whatsapp, whatsapp_business}, title, key, reply_handle, last_at | `conversations` | W1 |
 | `ENT-Message` | A captured message | id, conversation_id, sender, text, at, notification_key | `messages` | W1 |
 | `ENT-ChatTurn` | Conversation history with Hermit | id, session_id, role, text, untrusted, outcome, at | `chat_turns` | W1 |
-| `ENT-Session` | A session and its taint | id, attended, tainted, started_at | `sessions` | W1 |
+| `ENT-Session` | A session and its taint | id, bot_id, title, attended, tainted, started_at | `sessions` | W1 |
 | `ENT-ApprovalRequest` | A pending or resolved approval | request_id, session_id, skill, args_hash, state {pending, approved, denied, expired}, at | `approvals` | W1 |
-| `ENT-AuditEntry` | The signed log | seq, ts, session_id, event, skill, args_hash, decision, outcome, prev_hash, hash, sig | `audit` | W1 |
+| `ENT-AuditEntry` | The signed log | seq, ts, session_id, bot_id, event, skill, args_hash, decision, outcome, prev_hash, hash, sig | `audit` | W1 |
 | `ENT-Setting` | Key and value settings | key, value | `settings` | W1 |
+| `ENT-Bot` | A bot, Hermit included | id, name, role, shape, color, primary, pin_order, hidden, notify, mode (null inherits), created_at | `bots` | B1 |
+| `ENT-BotGrant` | A skill group a bot holds | bot_id, group | `bot_grants` | B1 |
+| `ENT-BotSource` | A site or connector a bot works from | bot_id, kind {site, connector}, value | `bot_sources` | B1 |
 | `ENT-ModelInstall` | The installed model | model_id, sha256, path, size, verified_at | `model_installs` | W1 |
 | `ENT-LocalEvent` | Local event log (2.13) | id, name, at, session_id, props | `local_events` | W1 |
 | `ENT-ConnectorSpec` | An installed connector spec | id, version, origin {shipped, registry, openapi, drafted}, spec_json, spec_hash, approved_at, enabled | `connector_specs` | W2 |
@@ -1967,7 +2102,7 @@ Rejected option: a bigger model (Qwen3.5-4B took about 15 s per call and overhea
 
 **PDR-015: The web is read-only through a quarantined reader; logins happen only through the vault with exact-origin matching.** Status: Accepted. The read-only part is superseded by PDR-018; the quarantined reader and exact-origin logins stand.
 
-**PDR-016: Release bands.** Status: Accepted. V1 as PDR-007. V2: Boost, tuned models, iOS, agent to agent, and V1 deepening. V3: keep watch, Mac powers, family sharing, confidential-cloud Boost.
+**PDR-016: Release bands.** Status: Accepted; amended for bots (Q201, 2026-11-25). V1 as PDR-007, plus bots: several bots, their handoffs and their routines are V1, in waves B1 and B2 (PDR-029). V2: Boost, tuned models, iOS, other people's agents (EP-21, on the bus PDR-030 designs), and V1 deepening. V3: keep watch, Mac powers, family sharing, confidential-cloud Boost. US-NIGHT-05 moved from V2 to V1 as US-BOT-11.
 
 **PDR-017: Email is in V1, direct from the phone.** Status: Accepted. Read, search, summarize, draft, archive and send across Gmail, Outlook and IMAP accounts; send always asks. Attachments, unsubscribe and style are V2 (Q19).
 
@@ -1992,6 +2127,12 @@ Rejected option: a bigger model (Qwen3.5-4B took about 15 s per call and overhea
 **PDR-028: Hermit may read the phone's contacts to find a person the user names, and resolves mail recipients by name.** Status: Accepted (Q49 and Q48, 2026-11-14). Context: "llama a mi mamá", "text Carlos on WhatsApp" and "forward it to Ana" name a person without a number or address. V1 declared no contacts permission, so the other app's own picker chose the person and mail asked for the address (SL-58, SL-49). Decision: Hermit asks for READ_CONTACTS (optional, offered once in the chat when a name could not be looked up, and on HM-ONB-04 and HM-SET-01) and code resolves the name: only a name that appears in the user's own words this turn is looked up; matching is by code, accent- and case-insensitive, on the contact's own name or nickname field, never a synonym table; the model never receives the contact list. For mail, a name also resolves from the people the user emailed before (address book entries with origin "sent" only) and from the contacts' email addresses; when Hermit has to ask for an address, the people the user emailed before are tappable suggestions, and a typed address keeps working as before. Zero or several matches end the turn with a question (names with the last four digits, or masked addresses); a match never runs without the approval sheet, which shows the exact number or address and where it came from ("from your contacts", "you emailed before"), and keeps the new recipient flag of FR-MAIL-04. Without the permission, behavior is the same as before (the other app's picker, or Hermit asks for the address). Rejected options: the other app's picker only (a person named in the request should resolve without a second search in the other app), Android's contact picker inside Hermit (an extra step for every request), and resolving mail names from senders (a look-alike sender could compete for the name). Consequence: the declared permissions add READ_CONTACTS; contact data stays on the phone, is read for one lookup and is never stored in Hermit's database (the stored history keeps the call without the found number or address); FR-APP-02 and FR-MAIL-04 change as written in Part 2.
 
 **PDR-022: Providers that require a client secret connect without a relay when possible, else through a relay the user chooses.** Status: Accepted. Default: an MCP server or the in-app browser. Options: the user's own open-source relay, or Dojo's relay as an explicit opt-in that stores nothing and is disclosed on the privacy screen (Q24).
+
+**PDR-029: Hermit holds several bots, each a boundary, with Hermit as the coordinator, in V1 and two waves.** Status: Accepted (Q200, Q201 and Q202, 2026-11-25). Context: assistants like Grok Bot let people keep one bot per chat: specialists that wake on a schedule and carry on their work, two pinned at the top, and one that coordinates the others. Hermit had one chat; sessions, memory, cage rules and the approval sheet were global; one model served one queue. Decision: bots are contacts. The home is the roster (HM-BOT-01), with Hermit starred at the top plus up to 2 pins, at most 50 bots. Each bot has one main chat, its own role, notes, permissions, sources and mode, and the cage enforces each bot's groups in code, so a bot is a real boundary, unlike Grok Bot's shared computer (FR-BOT-03). Hermit is the primary bot: exactly one, can't be deleted, hidden or duplicated, and the user can't make another bot primary in V1. A bot reads its own notes plus the shared profile, and tainted facts never enter the shared profile. Multi-bot is V1, built in two waves (Q201). Wave B1: the roster, a chat per bot, per-bot notes, grants, sources and modes, bots made by asking Hermit or from a form, and the upgrade that keeps today's chat as Hermit's. Wave B2: handoffs between bots (PDR-030), routines in plain words that wake a bot on a schedule (Q202: on battery too, at most hourly, one small step per wake, paused below 30% battery, when warm or in battery saver, down to every 15 minutes while charging, and each bot shows its last and next run), group chats, and Hermit's report. The model stays one and the queue one (FR-BOT-05). Rejected options: one Hermit with many chats (no specialists with boundaries, and nothing to coordinate); bots as @skills in one chat (furthest from one bot per chat); bots in V2 as the PRD said before; wake-ups only while charging, like the night shift, and any interval the user sets down to 15 minutes on battery (it can drain the battery). Consequence: EP-28 holds the stories (EP-23 is taken, and IDs are stable); migration 17 adds the tables (FR-BOT-01); US-NIGHT-05 is superseded by US-BOT-11; "Navigation is chat-first" becomes bot-first; with no bots and Ask mode, Hermit behaves as it did with one chat.
+
+**PDR-030: Bots talk through an in-process bus that follows A2A 1.0, with Hermit's trust rules; the bus is wave B2.** Status: Accepted as a wave 2 design record (Q203, Q205 and Q206, 2026-11-25). Context: the decision is an A2A framework with full parity with Grok Bot, so any bot can message any bot, the receiver wakes, handles it and replies later. Grok Bot has no switch for this and once snowballed. Decision: the bus follows the A2A 1.0 specification in process. Code generates an Agent Card per bot from its row and grants, and the model never writes a card. A message creates a Task with the A2A states and a `contextId`, Messages carry parts, results come back as Artifacts, and a follow-up names its task in `referenceTaskIds`. The model has two skills, `message_bot` and `reply_to_bot`, and code validates the target, the hop count and the budget before anything queues. The tables `a2a_tasks` and `a2a_messages` (migration 18) join the erase list; the signed log records bot ids and task ids, never content. Loop guards: one reply per message, a hop cap of 4 handoffs per chain, a daily budget of 24 handoff or routine turns per bot, an empty reply closes the task without a message, and a "Bots can message each other" switch on by default. Trust rules: a bot's words are data, so another bot's text enters a turn as untrusted input with a new `bot` taint kind, wrapped like a web page, and never counts as the user's own words. Work the user didn't start is unattended and follows the mode (PDR-031); what the mode doesn't allow alone becomes a suggestion card, shown in code-written text only. Results stay out of the chat's memory (Q205): they reach other chats as cards rendered by code, Hermit reads a result's text only in the turn the user asks, and afterwards the chat keeps a code-written line ("Leí el resultado de Viajes de las 10:00"), so the chat stays clean for payments and logins. Money and logins never start from a bot (Q206): the bot posts a code-written note ("Noticias quiere pagar: ábrelo para hacerlo") in its chat and in Hermit's report, and the user asks for it in their own words, in a clean turn, through the normal sheet and the fingerprint, in every mode. Built in wave B1 already: the per-bot boundary (FR-BOT-03), the tiers and modes (FR-CAGE-07, FR-CAGE-08), the fingerprint to grant (FR-BOT-09), the log by bot id (FR-BOT-10) and the money and login rule. Rejected options: bots through Hermit only, one level deep; no talking between bots in V1. Consequence: later, the same objects over A2A's HTTP+JSON or JSON-RPC bindings with signed Agent Cards serve Boost and other people's agents (EP-21, V2), so nothing in the bus may assume a bot is local beyond its binding.
+
+**PDR-031: Hermit has three permission modes, Ask, Auto and Don't ask, chosen by the user, globally and per bot.** Status: Accepted (Q204, 2026-11-25): each person picks their own risk tolerance, with clear warnings. Context: what a bot may do with nobody in its chat, and how much the user's own chat should ask. Decision: Ask is the default and today's rules. Auto runs low-risk steps without asking; medium and high risk ask. Don't ask runs everything except money and logins. The user picks one in Settings for all of Hermit and may give a bot its own; a bot inherits the global mode until it has one, and a copy of a bot inherits the global mode instead of its original's. Risk tiers are code: each skill carries a tier, a skill without one is high, and Auto never asks the small model whether something is safe, because a reviewer model on a 0.8B is weak and injectable (FR-CAGE-07, FR-CAGE-08). As built in wave B1: Auto opens only links that appear in the user's messages and mail or in the user's own words; a link Hermit composes still asks, and web reads give nothing to follow. Alone, a bot can't use private data and the web in one run, in Ask and in Auto; this is a coordinator ruling stricter than the first spec text, which allowed the combination in Auto, because reading private data and then using the web unattended is the exfiltration combination. Only Don't ask lifts it. Notes carry the read kinds of the run that wrote them across runs, so a bot that mixed private data and the web can't use the web alone later. A step a mode runs is logged as "ran" with its reason and is never remembered as an approval. A bot's own Don't ask needs the fingerprint and the typed word, "entiendo" or "I understand", even under a global Don't ask. Money and logins need the fingerprint in the user's own words in every mode, and never start from a bot (Q206). Warnings: the Auto sheet says what runs without asking (read, save notes, create reminders and events, open links and search the web even when they come from others' text); that a page with many links can steer which one it opens; that a search after reading other people's text sends the user's search provider a query Hermit wrote, which can include what it read; that it may open confirm, unsubscribe or sign-in links found in the user's mail and messages; that a link Hermit builds itself still asks; that it still asks before replying, sending an email or changing someone else's data; that alone it can't read private data and use the web in one task; and that payments and logins always need the fingerprint (right after its title). The Don't ask sheet is red and says a web page could make Hermit send messages or emails in the user's name, delete things or share their data; that tools from connected services run without asking and Hermit can't always tell whether one moves money; that payments and logins still need the fingerprint; and that turning it on needs the fingerprint and the typed word. While a chat or bot runs in Auto or Don't ask, its bar shows a chip (amber for Auto, red for Don't ask) and the roster shows it on the row. Rejected options: a reviewer model that judges safety (weak and injectable at 0.8B); a bot's grants as standing permissions in every case; bots that use only notes, calendar and reminders when alone. Ask keeps Q204's recommended rule: a bot alone reads its own sources and the private data its grants hold, and the private-data split governs what it may combine. Consequence: FR-CAGE-02 is amended and FR-CAGE-07 and FR-CAGE-08 are added; every mode keeps the signed log, the untrusted markers, code-written approval text, the loop guards and the user's erase and delete.
 
 ## 2.18 Quality, testing, and Definition of Done
 
@@ -2086,7 +2227,7 @@ Definition of Done (per slice): the behavior matches its stories' acceptance cri
 
 ## 2.20 Wave plan (sequencing only, no timelines)
 
-V1 is delivered in waves: W0 prepares the ground, W1 is the first win, and each later wave widens the product toward the complete V1. There are no dates, durations, or estimates. A wave ends at a gate of capability, never at a date.
+V1 is delivered in waves: W0 prepares the ground, W1 is the first win, and each later wave widens the product toward the complete V1. The multi-bot waves B1 and B2 are built beside W2 to W6 and are part of V1 (PDR-016). There are no dates, durations, or estimates. A wave ends at a gate of capability, never at a date.
 
 | Wave | Goal | Gate |
 | :---- | :---- | :---- |
@@ -2097,6 +2238,8 @@ V1 is delivered in waves: W0 prepares the ground, W1 is the first win, and each 
 | W4 | Hands I: vault, form fill and logins, web tasks, the MCP client and connectors Hermit drafts | A form in another app is filled after approval; a login fills only on the exact origin and refuses a lookalike; a reorder on a reference site completes with each committing step approved; "connect to" a service with no catalog entry yields an approved spec that works |
 | W5 | Hands II: the USD₮ wallet, caps, Keystore approvals and x402 | A testnet payment to a contact and an x402 testnet purchase both complete within caps, and an over-cap payment is denied |
 | W6 | Changing phones and distribution | A full transfer to a second phone verifies; the Play internal track and the reproducible APK are published; the website is live |
+| B1 | Bots (PDR-029): the roster, a chat per bot, notes, permissions, sources and the three modes | The multi-bot phone checks pass on the S26 Ultra: the upgrade keeps the chat as Hermit's, three synthetic bots follow their roles and every grant refusal is code's answer, Activity shows no skill outside a bot's grants, and a tainted proposal offers Review only |
+| B2 | Bots work together (PDR-030): handoffs, routines, group chats and Hermit's report | A handoff between two bots runs with the loop guards; a routine wakes a bot within the battery budget; a page read by one bot that tells another to pay ends as a suggestion at most |
 
 Later bands: V2 (Boost, tuned models, iOS, agent to agent, and the V1 deepening stories) and V3 (keep watch, Mac powers, family sharing, confidential cloud) stay on the map, outside the build queue.
 

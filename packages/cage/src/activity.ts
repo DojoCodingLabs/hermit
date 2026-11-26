@@ -1,3 +1,4 @@
+import { PERMISSION_MODES } from "@hermit/core";
 import type { AuditEntry, verifyChain } from "./audit.ts";
 
 /**
@@ -18,8 +19,13 @@ export interface ActivityRow {
   shortHash: string;
   /** "cleared" rows only: how many entries the clear removed (US-ACT-04). */
   clearedCount?: number;
-  /** Night job rows only (SL-24): why it paused or was skipped ("paused.hot"). */
+  /**
+   * A code, never text: why a night job paused or was skipped ("paused.hot", SL-24); the action of the user's own act
+   * ("vault.revealed", "bot.created"); or, on a call, the permission mode that let it run ("mode.auto", multi-bot).
+   */
   reason?: string;
+  /** Multi-bot: the bot whose turn made the call or the act; absent for what no bot ran and for entries from before bots. */
+  bot?: string;
 }
 
 /** SL-32, HM-ACT-02: one audit entry in full, as metadata and hashes only (US-ACT-03, FR-ACT-02). */
@@ -33,6 +39,8 @@ export interface ActivityDetail {
   argsHash?: string;
   clearedCount?: number;
   reason?: string;
+  /** Multi-bot: the bot whose turn wrote the entry. */
+  bot?: string;
   prevHash: string;
   hash: string;
   sig: string;
@@ -59,21 +67,36 @@ function rawRows(entries: readonly AuditEntry[]): ActivityRow[] {
     }
     // SL-33, SL-55, SL-38, SL-53 and SL-40: a vault action, a connector install, a wallet action, a web task's take over,
     // stop or saved recipe, or a cap or payee change is the user's own act, its own row; the reason is the action code.
-    if (e.event === "vault" || e.event === "connector" || e.event === "wallet" || e.event === "web_task" || e.event === "spending") {
-      rows.push({ seq: e.seq, at: e.ts, skill: e.event, mark: e.outcome === "ok" ? "ran" : "failed", shortHash: e.hash.slice(0, 8), ...(e.reason ? { reason: e.reason } : {}) });
+    // Multi-bot: so is a change to a bot or a permission mode.
+    if (STANDALONE_ACTS.has(e.event)) {
+      rows.push({ seq: e.seq, at: e.ts, skill: e.event, mark: e.outcome === "ok" ? "ran" : "failed", shortHash: e.hash.slice(0, 8), ...(e.reason ? { reason: e.reason } : {}), ...(e.bot ? { bot: e.bot } : {}) });
       current = undefined;
       continue;
     }
     if (e.event === "call_proposed") {
-      current = { seq: e.seq, at: e.ts, skill: e.skill ?? "unknown", mark: "proposed", shortHash: e.hash.slice(0, 8) };
+      current = { seq: e.seq, at: e.ts, skill: e.skill ?? "unknown", mark: "proposed", shortHash: e.hash.slice(0, 8), ...(e.bot ? { bot: e.bot } : {}) };
       rows.push(current);
       continue;
     }
     if (!current || e.skill !== current.skill) continue;
     const mark = markFor(e);
     if (mark) Object.assign(current, { mark, shortHash: e.hash.slice(0, 8) });
+    // F-M28: the mode that let the step run stays on its row, whatever its final mark (ran, failed, read others' text).
+    const mode = modeRun(e);
+    if (mode) current.reason = mode;
   }
   return rows.reverse();
+}
+
+/** The user's own acts, each its own row (see rawRows). */
+const STANDALONE_ACTS: ReadonlySet<AuditEntry["event"]> = new Set(["vault", "connector", "wallet", "web_task", "spending", "bot"]);
+
+/** Multi-bot (spec 6.4.1): the reasons the loop logs on a step a bot's permission mode let run without a sheet. */
+const MODE_RUNS: ReadonlySet<string> = new Set(PERMISSION_MODES.map((m) => `mode.${m}`));
+
+/** The mode's reason ("mode.auto") when this is the approval a permission mode gave in place of the user's sheet. */
+function modeRun(e: AuditEntry): string | undefined {
+  return e.event === "approval" && e.outcome === "ok" && e.reason !== undefined && MODE_RUNS.has(e.reason) ? e.reason : undefined;
 }
 
 function markFor(e: AuditEntry): ActivityMark | undefined {
@@ -81,6 +104,8 @@ function markFor(e: AuditEntry): ActivityMark | undefined {
     case "policy_decided":
       return e.decision === "deny" ? "blocked" : undefined;
     case "approval":
+      // F-M28: a step a mode let run ran; nobody approved it, so it never reads "approved".
+      if (modeRun(e)) return "ran";
       return e.outcome === "ok" ? "approved" : "denied";
     case "executed":
       // Keep "approved" visible on a send that went out; mark failures either way.
@@ -109,8 +134,11 @@ export function chainView(entries: readonly AuditEntry[], result: ReturnType<typ
   return result.ok ? { kind: "verified", count: entries.length } : { kind: "broken", atSeq: result.badSeq, reason: result.reason };
 }
 
-/** Entries that are a row on their own: the user's clear, a night job, a vault action, a connector install, a wallet, web task or spending act. */
-const STANDALONE: ReadonlySet<AuditEntry["event"]> = new Set(["log_cleared", "night_job", "vault", "connector", "wallet", "web_task", "spending"]);
+/**
+ * Entries that are a row on their own: the user's clear, a night job, a vault action, a connector install, a wallet, web
+ * task or spending act, a bot or mode change.
+ */
+const STANDALONE: ReadonlySet<AuditEntry["event"]> = new Set(["log_cleared", "night_job", ...STANDALONE_ACTS]);
 
 /**
  * HM-ACT-02: every entry behind the row that starts at `seq`, oldest first. A call row opens its proposal
@@ -139,5 +167,6 @@ function detail(e: AuditEntry): ActivityDetail {
   if (e.argsHash !== undefined) d.argsHash = e.argsHash;
   if (e.clearedCount !== undefined) d.clearedCount = e.clearedCount;
   if (e.reason !== undefined) d.reason = e.reason;
+  if (e.bot !== undefined) d.bot = e.bot;
   return d;
 }

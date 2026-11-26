@@ -162,3 +162,56 @@ describe("keep and clear the conversation (US-CHAT-07)", () => {
     expect(await sql.query("SELECT seq FROM audit")).toHaveLength(1);
   });
 });
+
+describe("sessions per bot", () => {
+  const clock = { t: 0 };
+  let s: ReturnType<typeof createSessions>;
+  const say = (id: string, text: string, at: number) => s.addTurn(id, { role: "user", text, untrusted: false, at });
+  beforeEach(() => {
+    clock.t = 0;
+    s = createSessions(sql, () => clock.t);
+  });
+
+  test("latest and clear are per bot", async () => {
+    clock.t = 1; await s.start({ id: "s1", attended: true }); await say("s1", "hola", 5);
+    clock.t = 2; await s.start({ id: "s2", attended: true, botId: "b1" });
+    expect(await s.latest("hermit")).toBe("s1");
+    expect(await s.latest()).toBe("s1");
+    expect(await s.latest("b1")).toBe("s2");
+    await s.clear("b1");
+    expect(await s.load("s2")).toBeUndefined();
+    expect(await s.history("s1")).toHaveLength(1);
+  });
+  test("a session started without a bot is Hermit's", async () => {
+    await s.start({ id: "n1", attended: false });
+    expect((await s.load("n1"))?.botId).toBe("hermit");
+  });
+  test("latest is the session with the newest activity, a fresh start included", async () => {
+    clock.t = 1; await s.start({ id: "a", attended: true, botId: "b1" });
+    await say("a", "x", 10);
+    clock.t = 20; await s.start({ id: "b", attended: true, botId: "b1" });
+    expect(await s.latest("b1")).toBe("b");
+    await say("a", "y", 30);
+    expect(await s.latest("b1")).toBe("a");
+  });
+  test("the first user words title the chat, once", async () => {
+    await s.start({ id: "a", attended: true, botId: "b1" });
+    await say("a", "Busca un hotel para José «Pepe» Ruiz\nen Lisboa", 2);
+    await say("a", "otra cosa", 3);
+    expect((await s.chats("b1")).find((c) => c.id === "a")?.title).toBe("Busca un hotel para José 'Pepe' Ruiz en Lisboa");
+  });
+  test("a first turn with no words leaves the chat untitled until a turn has some", async () => {
+    await s.start({ id: "a", attended: true, botId: "b1" });
+    await say("a", " \n\t ", 2);
+    expect((await s.chats("b1")).find((c) => c.id === "a")?.title).toBeUndefined();
+    await say("a", "Hola Pepe", 3);
+    expect((await s.chats("b1")).find((c) => c.id === "a")?.title).toBe("Hola Pepe");
+  });
+  test("chats lists only that bot's attended chats, newest activity first", async () => {
+    clock.t = 1; await s.start({ id: "s1", attended: true }); await s.start({ id: "n1", attended: false });
+    clock.t = 2; await s.start({ id: "a", attended: true, botId: "b1" });
+    clock.t = 3; await s.start({ id: "b", attended: true, botId: "b1" });
+    expect((await s.chats("b1")).map((c) => c.id)).toEqual(["b", "a"]);
+    expect((await s.chats("hermit")).map((c) => c.id)).toEqual(["s1"]);
+  });
+});

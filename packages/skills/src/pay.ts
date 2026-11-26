@@ -94,6 +94,8 @@ export const payDef: SkillDef<Args> = {
   version: 1,
   risk: "spend",
   producesUntrusted: false,
+  tier: "high",
+  group: "wallet_pay",
   menuLine:
     "Send money in USD₮ (dollars) from the user's wallet to a person or an address (\"send Ana 20 dollars\", \"pay 0x... 5 USD₮\", \"mándale 20 dólares a Ana\", \"págale a Carlos 10\"). Always needs the user's fingerprint.",
   args: obj({

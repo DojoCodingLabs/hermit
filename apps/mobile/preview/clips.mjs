@@ -37,8 +37,9 @@ function chromiumPath() {
   return join(cache, shell, "chrome-headless-shell-mac-arm64", "chrome-headless-shell");
 }
 
+// The chat is its own route since the roster became home (HM-BOT-01): "index" here still means Hermit's chat.
 const url = (screen, { theme = "light", lang = "es-419", variant = "", params = {} } = {}) =>
-  `${base}?${new URLSearchParams({ screen, theme, lang, variant, params: JSON.stringify(params) })}`;
+  `${base}?${new URLSearchParams({ screen: screen === "index" ? "chat" : screen, theme, lang, variant, params: JSON.stringify(screen === "index" ? { bot: "hermit", ...params } : params) })}`;
 
 /** Presses and holds the element with this accessible label, so the press state is on screen for a moment. */
 async function hold(page, label, ms = 260) {

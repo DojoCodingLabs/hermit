@@ -2,6 +2,8 @@ export * from "./types.ts";
 export * from "./ports.ts";
 export * from "./canonical.ts";
 export * from "./memory.ts";
+export * from "./bots.ts";
+export * from "./bots-store.ts";
 export * from "./repair.ts";
 export * from "./money.ts";
 export * from "./errors.ts";

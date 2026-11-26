@@ -216,6 +216,39 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE TRIGGER IF NOT EXISTS merchant_purchases_fixed BEFORE UPDATE ON merchant_purchases
         BEGIN SELECT RAISE(ABORT, 'merchant_purchases rows never change'); END;`,
   },
+  {
+    // BOT-W1 (multi-bot wave 1): more than one bot. Hermit's row is the primary (one partial unique index keeps it so);
+    // every session so far is Hermit's, untainted notes stay NULL (the shared profile: they were about the user) and
+    // tainted ones become Hermit's own. Foreign keys are off on the phone, so the store deletes children itself.
+    // Amended in Task 10 before it reached master (security review 00:40): notes.kinds keeps what the session that saved
+    // a note had read ("private", "web", both or neither), so the alone split holds across runs. Notes from before have
+    // none: they were the user's own words or the chat's, never an alone run's. Amended again in Task 10's fix round:
+    // audit.bot_id, the bot whose turn wrote an entry ("the signed log records bot ids"); signed into the entry's hash
+    // when present, so entries from before bots, with none, verify as they did.
+    id: 17,
+    name: "bots",
+    slice: "BOT-W1",
+    sql: `
+      CREATE TABLE IF NOT EXISTS bots (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL DEFAULT '', shape TEXT, color TEXT,
+        is_primary INTEGER NOT NULL DEFAULT 0 CHECK (is_primary IN (0, 1)), pin_order INTEGER,
+        hidden INTEGER NOT NULL DEFAULT 0, notify INTEGER NOT NULL DEFAULT 1,
+        mode TEXT CHECK (mode IS NULL OR mode IN ('ask', 'auto', 'dont_ask')), created_at INTEGER NOT NULL);
+      CREATE UNIQUE INDEX IF NOT EXISTS bots_one_primary ON bots (is_primary) WHERE is_primary = 1;
+      INSERT OR IGNORE INTO bots (id, name, is_primary, created_at) VALUES ('hermit', 'Hermit', 1, 0);
+      CREATE TABLE IF NOT EXISTS bot_grants (bot_id TEXT NOT NULL, grp TEXT NOT NULL, PRIMARY KEY (bot_id, grp));
+      CREATE TABLE IF NOT EXISTS bot_sources (
+        bot_id TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('site', 'connector')), value TEXT NOT NULL,
+        PRIMARY KEY (bot_id, kind, value));
+      ALTER TABLE sessions ADD COLUMN bot_id TEXT NOT NULL DEFAULT 'hermit';
+      ALTER TABLE sessions ADD COLUMN title TEXT;
+      CREATE INDEX IF NOT EXISTS sessions_by_bot ON sessions (bot_id, started_at);
+      ALTER TABLE notes ADD COLUMN bot_id TEXT;
+      ALTER TABLE notes ADD COLUMN kinds TEXT NOT NULL DEFAULT '' CHECK (kinds IN ('', 'private', 'web', 'private,web'));
+      ALTER TABLE audit ADD COLUMN bot_id TEXT;
+      UPDATE notes SET bot_id = 'hermit' WHERE tainted = 1;
+      CREATE INDEX IF NOT EXISTS notes_by_bot ON notes (bot_id, created_at);`,
+  },
 ];
 
 /** Applies every migration not yet recorded, each in its own transaction. Returns the ids it applied. */

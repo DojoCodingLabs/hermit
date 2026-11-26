@@ -37,7 +37,14 @@ export type AuditEvent =
    * fingerprint. `argsHash` is the hash of the new caps or of the payee id, `reason` the action code ("caps.changed",
    * "payee.saved", "payee.removed"); never a name or an address.
    */
-  | "spending";
+  | "spending"
+  /**
+   * Multi-bot (HM-BOT-01 to 04): the user changed a bot or a permission mode. `sessionId` is the bot's id ("user" for the
+   * global mode), `reason` the action code ("bot.created", "bot.granted", "bot.note_shared", "mode.dont_ask",
+   * "mode.inherit"); never a name, a role or a note. It carries the bot it changed as `bot`, so Activity names it; the
+   * global mode is about no bot and carries none.
+   */
+  | "bot";
 
 /** Metadata only: never message bodies or raw arguments, only their hash. */
 export interface AuditEntry {
@@ -59,6 +66,13 @@ export interface AuditEntry {
    */
   payloadHash?: string;
   approvalSig?: string;
+  /**
+   * Multi-bot ("the signed log records bot ids"): the id of the bot whose turn wrote this entry, or the bot the user's own
+   * act was about (a `bot` entry, a note deleted from its settings), so the log still says which bot it was after its
+   * chats are gone. Absent on what no bot ran (the night shift, the screens' other acts, the global mode) and on every
+   * entry written before bots.
+   */
+  bot?: string;
   /** The previous entry's hash; on a log_cleared genesis, the head hash of the chain it replaced. */
   prevHash: string;
   hash: string;
@@ -72,8 +86,9 @@ export const GENESIS_HASH = "0".repeat(64);
 /**
  * Hashes a fixed tuple, with null for absent optional fields, so an entry hashes
  * the same before and after a SQLite round trip (where missing columns come back NULL).
- * The cleared count, the night reason and the signed approval's hash and signature are appended only when present,
- * so every entry written before SL-32, SL-24 and SL-37 hashes as it did. The reason goes in as a one-key object, so it can never read as a count.
+ * The cleared count, the night reason, the signed approval's hash and signature and the bot are appended only when
+ * present, so every entry written before SL-32, SL-24, SL-37 and bots hashes as it did. The reason goes in as a one-key
+ * object, so it can never read as a count.
  */
 function entryHash(e: Omit<AuditEntry, "hash" | "sig">): string {
   const tuple: unknown[] = [e.seq, e.ts, e.sessionId, e.event, e.skill ?? null, e.argsHash ?? null, e.decision ?? null, e.outcome ?? null];
@@ -82,6 +97,8 @@ function entryHash(e: Omit<AuditEntry, "hash" | "sig">): string {
   // SL-37: the same rule, so every older entry hashes as it did; a one-key object each, so neither reads as the other.
   if (e.payloadHash !== undefined) tuple.push({ payloadHash: e.payloadHash });
   if (e.approvalSig !== undefined) tuple.push({ approvalSig: e.approvalSig });
+  // Multi-bot: the same rule again, so entries from before bots verify as they did and the bot can't be changed.
+  if (e.bot !== undefined) tuple.push({ bot: e.bot });
   return sha256Hex(e.prevHash + canonicalJson(tuple));
 }
 

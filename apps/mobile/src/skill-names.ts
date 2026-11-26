@@ -8,7 +8,7 @@ const named = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, `common
 /** Skill id, or the `skill` a non-skill log row carries, to its name's copy key. */
 export const SKILL_NAME_KEYS: Readonly<Record<string, string>> = {
   ...named([
-    "add_contact", "calendar_add", "calendar_read", "compose_email", "compose_sms", "connect_service", "dial", "fill_form",
+    "add_contact", "calendar_add", "calendar_read", "compose_email", "compose_sms", "connect_service", "create_bot", "bot", "dial", "fill_form",
     "fill_login", "forget", "mail_draft", "mail_forward", "mail_list", "mail_modify", "mail_read", "mail_reply",
     "mail_search", "mail_send", "navigate", "open_whatsapp_chat", "pay", "pay_merchant", "read_messages", "read_web",
     "recall", "remember", "remind", "reminder_cancel", "reminders_list", "reply_message", "search_web", "set_alarm",

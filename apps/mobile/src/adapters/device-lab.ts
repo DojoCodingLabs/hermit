@@ -7,7 +7,7 @@ import type { LabPorts, PhoneFacts } from "@hermit/eval";
 import { PROFILES, profileForPlan, type ModelProfile, type RuntimeConditions, type RuntimePlan } from "@hermit/model";
 import { HermitNotifications } from "../../modules/hermit-notifications";
 import { HermitVault } from "../../modules/hermit-vault";
-import { allowedCpus, loadPlan, modelFile } from "./device";
+import { allowedCpus, loadPlan, modelFile, thermalNow } from "./device";
 import { activeFile } from "./model-update";
 import { qvacEngine } from "./qvac-engine";
 
@@ -60,7 +60,7 @@ export async function labFacts(): Promise<PhoneFacts | undefined> {
     clusters: hw.clusters,
     cpuFeatures: { dotprod: hw.dotprod, i8mm: hw.i8mm, sve2: hw.sve2, sme2: hw.sme2 },
     ...(now ? { allowedCpus: now.cpus, cpuset: now.cpuset } : {}),
-    batterySaver: read(() => HermitNotifications.thermal().powerSave) === true,
+    batterySaver: read(() => thermalNow().powerSave) === true,
   };
 }
 
@@ -85,7 +85,7 @@ export function labPorts(profile: ModelProfile): LabPorts {
   const name = profile.file.url.split("/").pop()!;
   return {
     load: (plan) => qvacEngine((activeFile() ?? modelFile(name)).uri, profile, { plan, conditions: () => NOMINAL }),
-    thermal: () => read(() => HermitNotifications.thermal().status),
+    thermal: () => read(() => thermalNow().status),
     sleep: (ms, signal) =>
       new Promise<void>((resolve) => {
         if (signal.aborted) return resolve();
@@ -103,7 +103,7 @@ export function labPorts(profile: ModelProfile): LabPorts {
 
 /** Battery saver now, for the note before the lab starts. */
 export function batterySaverOn(): boolean {
-  return read(() => HermitNotifications.thermal().powerSave) === true;
+  return read(() => thermalNow().powerSave) === true;
 }
 
 /** The screen stays on while the lab runs (a window flag). A build without the call keeps the phone's own timeout. */

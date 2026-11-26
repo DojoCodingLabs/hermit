@@ -6,8 +6,9 @@ name: CI
 # request from a fork runs its own code. The trigger is `pull_request`, never `pull_request_target`, so a fork's run
 # gets a read-only token and no secrets.
 #
-# A maintainer can also run it by hand on a branch (Actions, CI, Run workflow). The device-data pull requests are
-# opened with the workflow token, which starts no workflow, so their checks come from a run started this way.
+# A maintainer can also run it by hand on a branch (Actions, CI, Run workflow). The device-report workflow pushes to
+# the device-data branch with the workflow token, which starts no workflow, so a pull request from that branch gets
+# fresh checks from a run started this way.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]

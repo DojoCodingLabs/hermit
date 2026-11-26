@@ -11,9 +11,9 @@ body:
 
         A report holds device and benchmark facts only: the phone's maker and model code, chip, memory, Android
         version and cores, and the lab's speed and accuracy numbers. It never holds your name, accounts, contacts,
-        messages, location or anything you typed. A check reads it as data, and if it passes, a pull request adds it
-        to the device table in [docs/devices.md](https://github.com/DojoCodingLabs/hermit/blob/HEAD/docs/devices.md).
-        This issue is public.
+        messages, location or anything you typed. A check reads it as data. If it passes, it goes on the device-data
+        branch, and a maintainer adds it to the device table in
+        [docs/devices.md](https://github.com/DojoCodingLabs/hermit/blob/HEAD/docs/devices.md). This issue is public.
 
   - type: textarea
     id: report

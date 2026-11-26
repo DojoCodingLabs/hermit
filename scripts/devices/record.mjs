@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 // The device-report workflow's record job: adds the report from the issue in the event file to the device-data
-// branch (data/devices and the table in docs/devices.md) and opens or updates the branch's pull request. It runs from
-// the default branch's checkout, with that checkout's scripts, and writes only into a worktree of the branch.
+// branch (data/devices and the table in docs/devices.md). It never opens, edits or approves a pull request: a
+// maintainer opens one from device-data and merges it. It runs from the default branch's checkout, with that
+// checkout's scripts, and writes only into a worktree of the branch.
 //
-// Runs for different issues can race. A push that loses is tried again on top of the winner, and the branch starts
-// again from the default branch only when its last pull request is done with (merged or closed), never while another
-// run's report waits there for its pull request.
+// Reports wait on the branch until they are in the default branch. The branch starts again from the default branch
+// only when every report on it is already there (merged, squashed or pushed); otherwise the new report goes on top.
+// Runs for different issues can race: a push that loses is tried again on top of the winner.
 //
 //   ISSUE=12 BASE=main GITHUB_REPOSITORY=o/r GITHUB_EVENT_PATH=... RUNNER_TEMP=... GITHUB_OUTPUT=... node scripts/devices/record.mjs
 //
-// Appends changed=true|false and url=<pull request> to GITHUB_OUTPUT.
+// Appends changed=true|false and url=<link> to GITHUB_OUTPUT: the pull request a maintainer opened from device-data,
+// else the page that compares the branch with the default branch.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -30,11 +32,6 @@ const tryRun = (cmd, args, cwd) => {
   }
 };
 
-/** The branch's pull requests, newest first: the open one (if any) and the ones done with. */
-function pullRequests(repo) {
-  return JSON.parse(run("gh", ["pr", "list", "--repo", repo, "--head", BRANCH, "--state", "all", "--json", "number,state,headRefOid,baseRefName,url", "--limit", "50"]));
-}
-
 /** The valid report in the event's issue; throws when there is none (the check job let it through, so it's a bug). */
 function reportFrom(eventPath) {
   const body = JSON.parse(readFileSync(eventPath, "utf8"))?.issue?.body ?? "";
@@ -45,8 +42,27 @@ function reportFrom(eventPath) {
   return found.report;
 }
 
+/**
+ * Where the reporter can follow the report: the open pull request a maintainer made from device-data, else the page
+ * comparing the branch with the default branch. Reading pull requests is only for this link, so if it fails the
+ * compare page stands in.
+ */
+function linkFor(repo, base, cwd) {
+  const found = tryRun("gh", ["pr", "list", "--repo", repo, "--head", BRANCH, "--base", base, "--state", "open", "--json", "url", "--limit", "1"], cwd);
+  if (found.ok) {
+    try {
+      const url = JSON.parse(found.out)[0]?.url;
+      if (typeof url === "string" && url.startsWith("https://")) return url;
+    } catch {
+      // Not what gh prints: the compare page below.
+    }
+  }
+  return `https://github.com/${repo}/compare/${base}...${BRANCH}`;
+}
+
 export function record({ issue, base, repo, eventPath, temp, cwd = process.cwd(), wait = (ms) => execFileSync("sleep", [String(ms / 1000)]) }) {
   if (!/^[0-9]+$/.test(String(issue))) throw new Error("ISSUE is not a number");
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(repo))) throw new Error("GITHUB_REPOSITORY is not owner/name");
   const number = Number(issue);
   const report = reportFrom(eventPath);
   const data = join(temp, BRANCH);
@@ -56,19 +72,19 @@ export function record({ issue, base, repo, eventPath, temp, cwd = process.cwd()
     rmSync(data, { recursive: true, force: true });
     run("git", ["worktree", "prune"], cwd);
     const tip = run("git", ["ls-remote", "origin", `refs/heads/${BRANCH}`], cwd).split(/\s+/)[0] ?? "";
-    const prs = pullRequests(repo);
-    const open = prs.some((p) => p.state === "OPEN" && p.baseRefName === base);
-    // Where this attempt starts, and what the push may replace.
+    // Where this attempt starts, and what the push may replace. No branch yet: start it from the default branch.
     let start = "HEAD";
     let lease = [`--force-with-lease=${BRANCH}:`];
     if (tip) {
-      const doneWith = !open && prs.some((p) => p.state !== "OPEN" && p.headRefOid === tip);
-      if (doneWith) {
-        lease = [`--force-with-lease=${BRANCH}:${tip}`];
-      } else {
-        run("git", ["fetch", "--no-tags", "--depth=1", "origin", BRANCH], cwd);
+      run("git", ["fetch", "--no-tags", "--depth=1", "origin", BRANCH], cwd);
+      // Reports on the branch that the default branch doesn't have, or has differently, still wait for a maintainer.
+      const waiting = run("git", ["diff", "--name-only", "--no-renames", "--diff-filter=AM", "HEAD", "FETCH_HEAD", "--", "data/devices"], cwd);
+      if (waiting) {
         start = "FETCH_HEAD";
         lease = [];
+      } else {
+        // Everything on the branch is in the default branch already: start again from it, unless the branch moves.
+        lease = [`--force-with-lease=${BRANCH}:${tip}`];
       }
     }
     run("git", ["worktree", "add", "-B", BRANCH, data, start], cwd);
@@ -82,24 +98,7 @@ export function record({ issue, base, repo, eventPath, temp, cwd = process.cwd()
     if (!pushed && attempt < TRIES) wait(1000 * attempt + Math.floor(Math.random() * 2000));
   }
   if (!pushed) throw new Error(`couldn't push ${BRANCH} after ${TRIES} tries`);
-
-  const openPr = () => pullRequests(repo).find((p) => p.state === "OPEN" && p.baseRefName === base);
-  let pr = openPr();
-  const bodyPath = join(temp, "device-data-pr.md");
-  if (!pr) {
-    writeFileSync(bodyPath, "Device reports filed with the Device report form, each checked by the Device report workflow. Merging adds them to the device table in docs/devices.md.\n\n");
-    // Another run may open it a moment before this one: then this one updates it below.
-    tryRun("gh", ["pr", "create", "--repo", repo, "--base", base, "--head", BRANCH, "--title", "Device reports", "--body-file", bodyPath], cwd);
-    pr = openPr();
-    if (!pr) throw new Error("couldn't open the pull request");
-  }
-  const body = JSON.parse(run("gh", ["pr", "view", String(pr.number), "--repo", repo, "--json", "body"], cwd)).body ?? "";
-  const closes = `Closes #${number}`;
-  if (!body.split("\n").includes(closes)) {
-    writeFileSync(bodyPath, `${body.replace(/\s*$/, "")}\n${closes}\n`);
-    run("gh", ["pr", "edit", String(pr.number), "--repo", repo, "--body-file", bodyPath], cwd);
-  }
-  return { changed: true, url: pr.url };
+  return { changed: true, url: linkFor(repo, base, cwd) };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

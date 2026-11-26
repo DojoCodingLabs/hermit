@@ -15,18 +15,25 @@ What works today, on more phones and in more hands.
 - **The harness.** Keep the blind score honest as the skill menu grows, and keep the first action under the 15-second bar on the phone.
 - **Open development.** Contributor docs, a public issue tracker and a steady stream of [good first issues](https://github.com/DojoCodingLabs/hermit/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
-## Next: several bots
+## Next: several bots, and Boost
 
-Hermit becomes a small team that works for you, with Hermit coordinating it.
+Two tracks, built at the same time. Hermit becomes a small team that works for you, with Hermit coordinating it, and gets a bigger shell on a computer you own.
+
+**Several bots**
 
 - **Specialized bots.** Each one with its own chat, role, notes and skills, listed like contacts, with Hermit at the top.
 - **Permission modes.** You choose how much a bot may do on its own: **Ask** (the default), **Auto**, or **Don't ask** for people who accept the risk. Each mode explains what it allows before you turn it on. Payments and logins always wait for your fingerprint, in every mode.
 - **Routines.** Bots that work on a schedule, asked for in plain words, with guards for battery and heat, and honest about when they ran and when they'll run next.
 - **Bots that hand work to each other.** In the open, in the chat, and never as a way around the cage: a message from another bot is never your words.
 
-## Later: a bigger shell
+**Boost** ([its issues](https://github.com/DojoCodingLabs/hermit/milestone/1))
 
-- **Boost.** A companion app on your own computer that runs a bigger model for heavy tasks. You pair it, you own it, and it never holds your keys.
+- **Pairing.** A companion app on your own computer, paired with your phone directly over Holepunch, with a QR code and a 6-digit code. You pair it, you own it, and it never holds your keys.
+- **A bigger model for heavy tasks.** The cage stays on the phone: you choose what may go to Boost, and Hermit shows you when a turn used it.
+- **Open-ended web tasks** too big for the phone, on a computer you own.
+
+## Later
+
 - **iOS,** and Hermit on the App Store.
 - **Voice.** Voice notes in, spoken replies out, in both languages.
 

@@ -335,13 +335,13 @@ The **Device lab** runs the speed and accuracy benchmark on your phone and turns
         <source media="(prefers-color-scheme: dark)" srcset="docs/brand/mascot/png/10-boost-dark.png">
         <img src="docs/brand/mascot/png/10-boost.png" alt="" width="60">
       </picture>
-      <br><b>Later</b><br>
-      Boost: a companion app on your own computer for heavy tasks. A bigger shell. Then iOS.
+      <br><b>Next, in parallel</b><br>
+      Boost: a companion app on your own computer for heavy tasks, paired over Holepunch. A bigger shell, built in the open now: <a href="https://github.com/DojoCodingLabs/hermit/milestone/1">its issues</a>.
     </td>
   </tr>
 </table>
 
-No dates, on purpose. Work moves to the next band when it passes its bar. The details: [ROADMAP.md](ROADMAP.md).
+Later: iOS and voice. No dates, on purpose. Work moves to the next band when it passes its bar. The details: [ROADMAP.md](ROADMAP.md).
 
 ## Contribute
 

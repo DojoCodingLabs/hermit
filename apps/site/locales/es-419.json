@@ -155,8 +155,9 @@
   "HM-SITE-01.getKicker": "Consigue Hermit",
   "HM-SITE-01.getTitleA": "Hecho a la vista de todos.",
   "HM-SITE-01.getTitleB": "Rumbo a las tiendas.",
-  "HM-SITE-01.getBody": "Hermit está en pre-alfa y todavía no está en las tiendas. Los APK de vista previa se publican en GitHub Releases; el primero llega muy pronto. Dale una estrella al repositorio para seguirlo, o compílalo desde el código hoy mismo.",
+  "HM-SITE-01.getBody": "Hermit está en pre-alfa y todavía no está en las tiendas. Los APK de vista previa para Android están en GitHub Releases: instala uno, corre el laboratorio de dispositivos y envía el reporte de tu teléfono. Dale una estrella al repositorio para seguirlo, o compílalo desde el código.",
   "HM-SITE-01.getSource": "Compilarlo desde el código",
+  "HM-SITE-01.getApk": "Descargar el APK de vista previa",
   "HM-SITE-01.peekAlt": "Hermit asomándose desde adentro de su concha",
 
   "HM-SITE-02.metaTitle": "Política de privacidad: Hermit",

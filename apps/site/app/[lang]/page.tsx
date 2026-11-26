@@ -13,6 +13,7 @@ import { StoreBadges } from "../../components/store-badges";
 import { MODEL } from "../../lib/harness";
 import { href, langOf, translator } from "../../lib/i18n";
 import { pageMetadata } from "../../lib/meta";
+import { RELEASE } from "../../lib/release";
 import { REPO_URL, repoTree } from "../../lib/site-config.mjs";
 
 type Props = { params: Promise<{ lang: string }> };
@@ -234,6 +235,11 @@ export default async function Home({ params }: Props) {
               <p className="section-lede">{k("getBody")}</p>
               <p className="actions">
                 {star}
+                {RELEASE.published ? (
+                  <a className="button ghost" href={href(lang, "download/")}>
+                    {k("getApk")}
+                  </a>
+                ) : null}
                 <a className="button ghost" href={`${REPO_URL}#develop`}>
                   {k("getSource")}
                   <span className="button-icon" aria-hidden="true"><Glyph name="arrowUpRight" /></span>

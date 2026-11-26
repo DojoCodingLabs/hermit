@@ -61,7 +61,9 @@ for (const file of files) {
     }
   } else if (file.endsWith(".css")) {
     problems.push(...checkCss(name, readFileSync(file, "utf8")));
-  } else if (/\.(m?js|txt)$/.test(file) && !name.endsWith("robots.txt")) {
+  } else if (/\.(m?js|txt)$/.test(file) && !name.endsWith("robots.txt") && !/(^|\/)OFL-[\w-]+\.txt$/.test(name)) {
+    // Next's scripts and payloads must be gone. robots.txt stays, and so do the fonts' OFL license texts
+    // (brand/fonts/OFL-*.txt), which ship with the fonts as the license asks.
     problems.push(`${name}: script or payload file left in out/`);
   }
   // The site moved to joinhermit.com; the old address must not come back in a page, the sitemap or robots.txt.

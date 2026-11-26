@@ -9,7 +9,7 @@ Everything here has to fit [VISION.md](VISION.md): on the phone first, nothing o
 What works today, on more phones and in more hands.
 
 - **The everyday loop.** Chat, memory, reminders, the calendar, WhatsApp replies, mail, the vault with autofill, the night shift and its morning briefing, and the testnet wallet with x402 payments. Fewer rough edges, clearer errors, the same cage.
-- **Preview APKs.** Preview APKs are published on GitHub Releases; the first one is coming soon. [How to install one](docs/devices.md).
+- **Preview APKs.** Signed preview APKs on [GitHub Releases](https://github.com/DojoCodingLabs/hermit/releases), from v0.1.0-preview.1 on, so anyone can try Hermit without building it. [How to install one](docs/devices.md).
 - **The Device lab.** Speed and accuracy numbers from phones other than the one Hermit was tuned on, so the device-adaptive runtime learns from real hardware. [How to run it](docs/devices.md).
 - **The harness.** Keep the blind score honest as the skill menu grows, and keep the first action under the 15-second bar on the phone.
 - **Open development.** Contributor docs, a public issue tracker and a steady stream of good first issues.

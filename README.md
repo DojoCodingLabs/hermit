@@ -370,7 +370,7 @@ A phone has to hold the model in memory next to everything else, stay cool in yo
 <details>
 <summary><b>Can I install it without building it?</b></summary>
 <br>
-Preview APKs are published on GitHub Releases; the first one is coming soon. Until then, you build it from source and run the dev build. The <a href="docs/devices.md">devices guide</a> explains how to install a preview and how to build one yourself.
+Yes, on Android. Preview APKs are published on <a href="https://github.com/DojoCodingLabs/hermit/releases">GitHub Releases</a>, signed, with their SHA-256 in the notes. The <a href="docs/devices.md">devices guide</a> explains how to install one, check it and build one yourself.
 </details>
 
 <details>

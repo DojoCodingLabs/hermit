@@ -137,3 +137,7 @@ done
 ```
 
 Device reports wait on the `device-data` branch: the device-report workflow commits them there and never opens a pull request. To publish them, open a pull request from `device-data` to `main` and merge it. The workflow's pushes start no workflow, so before you merge, run CI on the branch by hand: Actions, CI, Run workflow, branch `device-data`.
+
+Before you merge anything from GitHub, turn on **Keep my email addresses private** in your GitHub email settings. Otherwise the merge commit carries your account's primary email address, in public.
+
+A preview APK starts from a tag. On an up-to-date `main`, push a lightweight tag (no `-a`, so no tagger and no email address goes with it): `git tag v0.1.0-preview.2 && git push origin v0.1.0-preview.2`. The Release APK workflow builds the APK, signs it with the preview key and publishes the release with the APK's SHA-256. The workflow never makes a tag. To build an existing tag again, run it by hand from that tag: Actions, Release APK, Run workflow, and pick the tag. Then copy the release's file name, link and SHA-256 into `apps/site/lib/release.ts`.

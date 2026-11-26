@@ -10,9 +10,9 @@ it, copy it or share it.
 
 ## 1. Install the preview APK
 
-Preview APKs are published on GitHub Releases; the first one is coming soon. Each one is a release APK on the
-[Releases page](https://github.com/DojoCodingLabs/hermit/releases) with the app's code inside, signed with the
-project's preview key. Until the first one is out, build it yourself (below).
+Preview APKs are published on the [Releases page](https://github.com/DojoCodingLabs/hermit/releases), newest first.
+Each one is a release APK with the app's code inside, signed with the project's preview key. You can also build it
+yourself (below).
 
 **What the phone needs:** Android 13 or later on a 64-bit ARM processor (arm64-v8a). Hermit is built for phones with
 8 GB of memory or more. With less, the app says so and lets you continue; those reports help the most.

@@ -30,14 +30,14 @@ describe("site copy", () => {
     for (const [k, v] of all) expect(v, k).not.toMatch(banned);
   });
 
-  test("no time estimates: only the store label, the badges' alt text, the roadmap label and the preview APK line say coming, with no date", () => {
+  test("no time estimates: only the store label, the badges' alt text, the roadmap label and the download page's pending notice say coming, with no date", () => {
     const time = /\b(soon|coming|next (week|month|year)|in \d+ (days?|weeks?|months?)|pronto|próximamente)\b/i;
     const labels = new Set(["common.storeSoon", "common.badgeAppleAlt", "common.badgeGoogleAlt", "HM-SITE-01.comingLabel"]);
     const enDict: Record<string, string> = en;
     const esDict: Record<string, string> = es;
-    // The preview APK line is the same sentence on the home page and the download page, and nothing else there says soon.
+    // The download page's notice shows only while no release is published (lib/release.ts), and nothing else in it says soon.
     const preview = { en: "Preview APKs are published on GitHub Releases; the first one is coming soon.", es: "Los APK de vista previa se publican en GitHub Releases; el primero llega muy pronto." };
-    for (const k of ["HM-SITE-01.getBody", "HM-SITE-03.pendingBody"]) {
+    for (const k of ["HM-SITE-03.pendingBody"]) {
       expect(enDict[k], k).toContain(preview.en);
       expect(esDict[k], k).toContain(preview.es);
       expect(enDict[k]!.replace(preview.en, ""), k).not.toMatch(time);

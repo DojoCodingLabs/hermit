@@ -55,6 +55,40 @@ Without them the release build is signed with the debug key and Gradle says so: 
 signed with a key other than the preview's won't install over the preview: Android asks you to uninstall it first,
 which erases Hermit's data.
 
+### Run it on an iPhone (development build)
+
+There is no iPhone release yet, but you can build Hermit for your own iPhone, chat with it and run the Device lab.
+You need a Mac with Xcode, an Apple developer team and an iPhone with Developer Mode on. From the
+repository root:
+
+```sh
+pnpm install
+(cd apps/mobile && npx expo prebuild -p ios)
+node scripts/qvac-bundle.mjs                 # required: without it the QVAC worker aborts with CANNOT_READ
+(cd apps/mobile/ios && pod install)
+(cd apps/mobile/ios && xcodebuild -workspace Hermit.xcworkspace -scheme Hermit -configuration Release \
+  -destination generic/platform=iOS -derivedDataPath build -allowProvisioningUpdates \
+  DEVELOPMENT_TEAM=<your team id> PRODUCT_BUNDLE_IDENTIFIER=<your own id>)
+xcrun devicectl device install app --device <device id> \
+  apps/mobile/ios/build/Build/Products/Release-iphoneos/Hermit.app
+```
+
+The Release configuration puts the app's code inside, so it runs without Metro. Set the team and, if the bundle id is
+already taken for your team, your own bundle id on the command line as above, never in a file. `xcrun devicectl list
+devices` gives the device id. The first time, trust your developer account on the iPhone: Settings, General, VPN &
+Device Management.
+
+On an iPhone, Hermit is still missing pieces. Today:
+
+- Payments and logins are refused, because there is no Secure Enclave approval key yet. The vault and the wallet are
+  off.
+- There is no WhatsApp capture and no night shift.
+- **Delete everything** can't finish. Delete the app instead.
+- A stopped model download starts again from zero.
+- The Device lab report has the Android shape, so on an iPhone you copy or share it; it isn't filed into the device
+  table yet.
+- iOS thermal states are mapped onto Android's scale: nominal 0, fair 1, serious 3, critical 4.
+
 ## 2. Run the Device lab
 
 Open **Settings**, then **Device lab**, and tap **Start the lab**. We expect about 10 minutes on a mid-range phone;

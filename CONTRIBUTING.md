@@ -54,6 +54,8 @@ adb reverse tcp:8081 tcp:8081
 pnpm --filter @hermit/mobile start
 ```
 
+To build for an iPhone instead, with its current limits, see [Run it on an iPhone](docs/devices.md#run-it-on-an-iphone-development-build).
+
 ## The gates
 
 Run these before you open or update a pull request:

@@ -122,6 +122,8 @@ the account you file it with shows there.
 
 Generated from `data/devices` by `node scripts/devices/table.mjs`; don't edit it by hand. Tokens per second, the first
 token and the threads are at the thread count Hermit plans for each phone; "Right" counts the 12 accuracy cases.
+To compare each phone's planned thread count with the other counts its report timed, run
+`node scripts/devices/plans.mjs`; it only prints, and marks a row where another count was more than 10 percent faster.
 
 <!-- device-table:start -->
 No reports yet. Run the Device lab and file yours: the steps are above.

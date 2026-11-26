@@ -323,7 +323,7 @@ Create it once the release key exists (2.4) and the website is live on its domai
 3. **Branding** page, everything users and Google's reviewers see:
    - **App logo:** Hermit's mark from `docs/brand/` exactly as locked (never a new drawing).
    - **Application home page:** the English home page of the site, for example `https://hermit.dojocoding.io/en/` (Q160). Google's policy: the home page must describe the app, can't be only a login page, and "links to terms of service and a privacy policy" (Q168: the site has no terms page yet).
-   - **Application privacy policy link:** the site's privacy page, for example `https://hermit.dojocoding.io/en/privacy/`, the same URL the home page links to. Its contact is privacy@dojocoding.io (Q107).
+   - **Application privacy policy link:** the site's privacy page, for example `https://joinhermit.com/en/privacy/`, the same URL the home page links to. Its contact is privacy@dojocoding.io (Q107).
    - **Application terms of service link:** the terms page from Q168.
    - **Authorized domains:** `dojocoding.io`.
    - **Developer contact information:** the address that should get Google's review mail. Google warns that missing its notices "could result in the loss of access to Google APIs."

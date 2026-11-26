@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@10.15.1",
-  "engines": { "node": ">=24.9" },
+  "engines": { "node": ">=24.9 <25" },
   "scripts": {
     "check:privacy": "node scripts/check-privacy.mjs",
     "typecheck": "pnpm -r --if-present typecheck",

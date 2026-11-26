@@ -1,0 +1,42 @@
+name: Docs, roadmap or cleanup
+description: Something in the docs, the roadmap or the code that's wrong, missing or out of order. Not a bug in the app, and not a new feature.
+title: "Docs: "
+labels: ["docs", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a page that says something untrue, a roadmap item that looks wrong or out of order, or a cleanup split off from a pull request. A bug in the app goes in a bug report, and a new feature in a proposal.
+
+  - type: input
+    id: where
+    attributes:
+      label: Where?
+      description: The file and line, or the page's address.
+      placeholder: README.md, line 150
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What's wrong or missing?
+      description: What it says or does now, and what's true or what should change. Link the evidence if you have it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: What would you change?
+      description: Optional. A sentence, a rough fix, or "not sure".
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched the open issues and Discussions, and this isn't there yet.
+          required: true
+        - label: It has no personal data and no security problem. Security problems go through private reporting, as SECURITY.md says.
+          required: true

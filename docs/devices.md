@@ -28,7 +28,9 @@ yourself (below).
 3. **Install it.** Open the APK on the phone. Android asks you to allow installs from the app that opened it (your
    browser or file manager): allow it for that app, then go back and tap Install. Play Protect may warn that it
    doesn't know the app, because it isn't from the Play Store; choose to install anyway. From a computer,
-   `adb install hermit-<version>.apk` does the same.
+   `adb install hermit-<version>.apk` does the same. Android keeps some settings restricted for apps installed this
+   way: when Hermit asks for notification access and Android says the setting is restricted, open Hermit's App info,
+   tap the three dots, then **Allow restricted settings**.
 4. **First run.** Hermit downloads its model once, about 530 MB (Wi-Fi is best), and checks it against a pinned
    SHA-256 before using it. The model isn't in the APK. After that, Hermit works offline.
 
@@ -55,7 +57,8 @@ which erases Hermit's data.
 
 ## 2. Run the Device lab
 
-Open **Settings**, then **Device lab**, and tap **Start the lab**. It takes about 10 minutes on a mid-range phone.
+Open **Settings**, then **Device lab**, and tap **Start the lab**. We expect about 10 minutes on a mid-range phone;
+none has run it yet, so your report sets the real number.
 
 - Keep Hermit open on that screen. The screen stays on while the lab runs; leaving the screen stops the lab, because
   Android gives an app in the background fewer cores and the numbers would no longer compare.

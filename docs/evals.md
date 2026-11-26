@@ -30,22 +30,22 @@ Multi-turn **trajectories** are graded differently: on the end state. Was the re
 | **Trajectories** | 30 scenarios | Whole conversations through the real runtime (database, cage, loop, skills), including five prompt-injection scenarios. Run on several seeds. | Public, [`trajectory-eval.ts`](../packages/eval/src/trajectory-eval.ts) |
 | **Original blind held-out** | 100 | Written separately by someone who never read the harness code, and never read or tuned on while it was blind. The scores below were measured then. | Public, so it no longer counts as blind: [`holdout2-cases.ts`](../packages/eval/src/holdout2-cases.ts) |
 | **Original long-answer blind** | 80 | Checks that code recognizes when you asked for a long answer. Written without reading the detector. | Public, so it no longer counts as blind: [`long-form-blind-cases.ts`](../packages/eval/src/long-form-blind-cases.ts) |
-| **New blind sets** | Varies | The honest judge from here on. Written by someone who hasn't read the harness, and never read or tuned on by anyone working on it. | Kept outside this repository. Only their scores are published. |
+| **New blind sets** | Varies | The honest judge from here on. Written by someone who hasn't read the harness, and never read or tuned on by anyone working on it. | Kept outside this repository. None has been scored yet; when one is, its score goes here, never its cases. |
 
 The package also holds evals for experimental features, like tasks on websites, x402 payments to a site and connectors drafted from a service's docs. They're useful for the people working on those features and aren't part of the headline numbers. Their held-out fixtures are public too, so they no longer count as blind.
 
-The original blind sets are published for transparency: anyone can read the cases behind the numbers below. That also means they no longer count as blind, so new blind sets are kept outside the public repository, and future scores stay honest.
+The original blind sets are published for transparency: anyone can read the cases behind the numbers below. That also means they no longer count as blind, so new blind sets will be kept outside the public repository, and future scores stay honest.
 
 ## The rules
 
 These keep the numbers worth reading:
 
 1. **Never tune on a blind set.** Don't read its cases, don't look at its failures, don't change a prompt, a normalizer or the router because of it. If you do by accident, the set stops being blind: say so and stop quoting it.
-2. **New blind sets live outside this repository.** That way they can't leak into prompts, examples or training data. We publish their scores, not their cases. The original blind sets in this repository are public and count as development data now.
+2. **New blind sets live outside this repository.** That way they can't leak into prompts, examples or training data. We'll publish their scores, not their cases; none has been scored yet. The original blind sets in this repository are public and count as development data now.
 3. **New blind sets come from someone who hasn't read the harness:** the model package, the skills or the code that reads dates.
 4. **Report the blind number as the honest one.** Development sets show progress. The blind set shows whether it's real.
 5. **Same file, same clock, same scoring.** Record the model's SHA-256 and the profile id with every number. Change one thing at a time.
-6. **Mind the noise.** A 40-task set carries about ±15 points of noise between versions of the harness. Confirm a change on the 124-case set, on several seeds for trajectories, and on a blind set (the maintainers run the new ones) before you believe it.
+6. **Mind the noise.** A 40-task set carries about ±15 points of noise between versions of the harness. Confirm a change on the 124-case set, on several seeds for trajectories, and, once one exists, on a new blind set the maintainers run, before you believe it.
 7. **One run at a time.** A loaded machine changes nothing about accuracy, but it makes runs slow and it can corrupt timing numbers.
 8. **Pull requests that touch the harness include before and after numbers.** If a number went down, say so.
 

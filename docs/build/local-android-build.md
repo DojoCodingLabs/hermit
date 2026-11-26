@@ -1,7 +1,7 @@
 # Building the Android app on the Mac
 
-Q154 (2026-11-21): while GitHub Actions is stopped, the native code compiles on a local Mac. The steps mirror
-`.github/workflows/android-dev.yml`: `expo prebuild`, QVAC's worker bundle from the workspace root, the wallet worklet,
+Q154 (2026-11-21): the native code also compiles on a local Mac. The steps mirror
+`.github/workflows/android.yml`: `expo prebuild`, QVAC's worker bundle from the workspace root, the wallet worklet,
 then Gradle. The result is the debug APK, the dev build: it loads JavaScript from Metro on the Mac over `adb reverse`,
 so a JS change needs no rebuild. The first local build ran on 2026-11-21; its results are at the end.
 

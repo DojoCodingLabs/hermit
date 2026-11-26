@@ -31,7 +31,7 @@ const SPECS = ["RunsOn", "Telemetry", "License", "Status"] as const;
 const PROMISES = ["Local", "Memory", "Ok", "Finger", "Telemetry", "Open"] as const;
 
 /** Get the code and run its privacy checks. `git clone` makes a folder named after the repository. */
-const COMMANDS = [`git clone ${REPO_URL}`, `cd ${REPO_URL.split("/").pop()}`, "pnpm install", "pnpm check:privacy && pnpm test"];
+const COMMANDS = [`git clone ${REPO_URL}`, `cd ${REPO_URL.split("/").pop()}`, "corepack enable", "pnpm install", "pnpm check:privacy && pnpm test"];
 
 /** A command that may wrap after each slash on a narrow screen, never in the middle of a word. */
 const breakable = (command: string) =>
@@ -70,6 +70,11 @@ export default async function Home({ params }: Props) {
               <p className="hero-lede rise rise-2">{k("lede")}</p>
               <p className="actions rise rise-3">
                 {star}
+                {RELEASE.published ? (
+                  <a className="button ghost" href={href(lang, "download/")}>
+                    {k("getApk")}
+                  </a>
+                ) : null}
                 <a className="button ghost" href="#private">
                   {k("ctaPrivate")}
                   <span className="button-icon" aria-hidden="true"><Glyph name="arrowRight" /></span>
@@ -240,7 +245,7 @@ export default async function Home({ params }: Props) {
                     {k("getApk")}
                   </a>
                 ) : null}
-                <a className="button ghost" href={`${REPO_URL}#develop`}>
+                <a className="button ghost" href={`${REPO_URL}#build-it-yourself`}>
                   {k("getSource")}
                   <span className="button-icon" aria-hidden="true"><Glyph name="arrowUpRight" /></span>
                 </a>

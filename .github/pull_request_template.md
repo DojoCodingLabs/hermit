@@ -21,7 +21,7 @@ Closes #
 
 ## Checklist
 
-- [ ] It closes one issue, linked above. A feature has an `accepted` proposal.
+- [ ] It closes one issue, linked above, or it's a small fix (a typo, a broken link, a wrong comment). A feature has an `accepted` proposal.
 - [ ] I wrote the failing test first. It fails without this change and passes with it.
 - [ ] These pass: `pnpm check:privacy`, `pnpm typecheck`, `pnpm lint`, `pnpm test` and `node scripts/guard/check.mjs --patterns scripts/guard/patterns.txt`.
 - [ ] No new network call, telemetry, analytics, ads or crash reporting. (A new request in an app adapter is explained below, with its host, skill and risk.)

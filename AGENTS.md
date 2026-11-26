@@ -13,7 +13,7 @@ This is the guide for everyone who changes Hermit: AI coding agents, the people 
 5. The model never gets a shell or a browser. It picks one typed skill from a menu, then fills in only that skill's fields.
 6. A pick is a request, never an action. The cage decides what takes effect, and a signed log records it.
 7. Text other people wrote (messages, web pages, mail, other bots) can never give Hermit orders.
-8. Payments and logins always wait for an approval sheet that code wrote, and your fingerprint. Sending asks first too, unless you knowingly pick a mode that doesn't.
+8. Payments and logins always wait for an approval sheet that code wrote, and your fingerprint. Sending asks first too. Permission modes that ask less are planned (ROADMAP.md, Next); none will ever skip the fingerprint for money or logins.
 9. There is no telemetry. CI fails if a dependency that phones home is added.
 10. All of it is open: read the code, build it, check every claim.
 
@@ -142,7 +142,7 @@ Each part has one job.
 
 ## Setup
 
-You need Node 24.9 or later (`.nvmrc` names the major version), git, and pnpm through Corepack (`package.json` pins the version).
+You need Node 24, from 24.9 (`.nvmrc` names the major version), git, and pnpm through Corepack (`package.json` pins the version). Node 25 and later don't include Corepack, and Node 26 can't run the eval lab yet.
 
 ```sh
 corepack enable
@@ -199,7 +199,7 @@ Every pull request shows its work. A maintainer can't merge what they can't chec
 
 - **Tests:** the test that failed before your change and passes after it. A bug fix brings a regression test. A change near the cage shows the hard limits still hold with the configurable rules removed, as the tests in `packages/cage/test/policy.test.ts` do.
 - **Eval numbers, for any change on the model path.** The model path is `packages/model`, `packages/agent`, `packages/skills` and `packages/eval`, and anything else that changes the prompt, the router, tool descriptions, normalizers, examples or the model file. Run the sets [docs/evals.md](docs/evals.md) lists for your change, before and after, with the same model file and settings, and paste both.
-- **Screenshots, for any UI change:** each changed screen in both themes (light and Deep sea) and both languages (es-419 and en), with made-up data. Shots from a phone or from the preview harness in `apps/mobile/preview` are both fine.
+- **Screenshots, for any UI change:** each changed screen in both themes (light and Deep sea) and both languages (es-419 and en), with made-up data. Shots from a phone are fine. The preview harness in `apps/mobile/preview` works too, on an Apple Silicon Mac only for now.
 - **Network, if you touch it:** for a new or changed request in an adapter, name the host, why it's needed, and the skill and risk it runs under.
 
 ## What we will not merge

@@ -37,6 +37,14 @@ export const LICENSES: readonly LicenseEntry[] = [
   { name: "JetBrains Mono (typeface)", license: "OFL-1.1", url: "https://github.com/JetBrains/JetBrainsMono/blob/master/OFL.txt", font: "JetBrainsMono" },
   { name: "op-sqlite", license: "MIT", url: "https://github.com/OP-Engineering/op-sqlite", packages: ["@op-engineering/op-sqlite"] },
   { name: "SQLCipher", license: "BSD-3-Clause", url: "https://github.com/sqlcipher/sqlcipher" },
+  // Through Hermit's own packages (cage, core, model, payments, connectors), not the app's package.json.
+  { name: "noble-curves", license: "MIT", url: "https://github.com/paulmillr/noble-curves" },
+  { name: "noble-hashes", license: "MIT", url: "https://github.com/paulmillr/noble-hashes" },
+  // The testnet wallet's worklet (worklets/wallet/package.json), bundled apart from the app's dependencies.
+  { name: "WDK wallet for EVM", license: "Apache-2.0", url: "https://github.com/tetherto/wdk-wallet-evm" },
+  { name: "bare-crypto", license: "Apache-2.0", url: "https://github.com/holepunchto/bare-crypto" },
+  { name: "bare-node-runtime", license: "Apache-2.0", url: "https://github.com/holepunchto/bare-node-runtime" },
+  { name: "bip39", license: "ISC", url: "https://github.com/bitcoinjs/bip39" },
 ];
 
 export function covers(entry: LicenseEntry, dependency: string): boolean {

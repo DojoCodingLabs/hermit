@@ -141,13 +141,13 @@ Every run used the same BotPsy-0.8B Q4_K_M file. The tasks and the scoring staye
 | Core tasks on a Galaxy S26 Ultra | 21/40 | **39/40** |
 | Core tasks in the Mac lab | 22/40 | **40/40** |
 | Dev held-out | 55/90 | **85/90** |
-| Blind held-out: 100 tasks never seen or tuned on | 73/100 | **93/100** |
+| Blind held-out: 100 tasks, scored while still blind | 73/100 | **93/100** |
 
 - **120 of 120** multi-turn conversations passed (30 scenarios, 4 seeds), and injected messages were never obeyed. Code now writes the confirmations, so the same conversations take **38% fewer model calls** (433 to 270).
-- **13.5 s** median from send to first action on the phone, under the 15 s bar we hold ourselves to.
-- **About 40 tokens per second** on the phone (37 to 42 measured), once the model's threads match the cores Android allows.
+- **13.5 s** median from send to first action on a Galaxy S26 Ultra, under the 15 s bar we hold ourselves to.
+- **About 40 tokens per second** on the S26 Ultra (37 to 42 measured), once the model's threads match the cores Android allows.
 
-<sub>How to read these: a 40-task set carries about ±15 points of noise, so the larger sets matter more. The blind set was written separately, and 93/100 was measured while it was still blind. It is now published for transparency, so it no longer counts as blind; new blind sets are kept outside this repository so future scores stay honest. Its generic run already had code reading the times, which makes that row a conservative comparison. Methods, sets and commands: <a href="docs/evals.md">docs/evals.md</a>.</sub>
+<sub>How to read these: a 40-task set carries about ±15 points of noise, so the larger sets matter more. The blind set was written separately, and 93/100 was measured while it was still blind. It is now published for transparency, so it no longer counts as blind; new blind sets will be kept outside this repository so future scores stay honest. Its generic run already had code reading the times, which makes that row a conservative comparison. Methods, sets and commands: <a href="docs/evals.md">docs/evals.md</a>.</sub>
 
 ## How it works
 
@@ -216,9 +216,10 @@ The whole path, with the packages that own each step: [docs/architecture.md](doc
 | Calendar events | When you add one | Wherever your calendar already syncs |
 | Email | When you ask, or at night if you turned on the email job | Straight to your own mail provider. Sending asks first |
 | A web page or search (experimental) | When you ask. The first visit to each site in a chat asks you first | The site, or the search provider you pick |
+| Services you connect, and MCP servers you add (experimental) | When you ask, after you connect one | That service's servers, or a sign-in relay you run |
 | Your testnet wallet | Its balance when you open it. A payment only after your fingerprint | The test network, or the site that asked to be paid |
 
-That's the whole list, and nothing about you comes to us. Settings, then Privacy, shows every host Hermit has contacted, counted on the phone itself.
+The [privacy policy](https://joinhermit.com/en/privacy/) lists every host the app can reach, and nothing about you comes to us. Settings, then Privacy, shows every host Hermit has contacted, counted on the phone itself.
 
 ## What works today
 
@@ -256,7 +257,7 @@ Hermit is **pre-alpha.** It works, it has rough edges, and it has been tuned on 
 
 ## Build it yourself
 
-**You need:** Node.js 24.9 or later and pnpm through Corepack. That's enough for the packages, the tests and the eval lab. The Android app also needs JDK 17, the Android SDK (platform 37, build-tools 37.0.0, CMake 3.22.1), NDK 29.0.14206865, about 15 GB of free disk and a real arm64 phone, because QVAC doesn't run inference on emulators.
+**You need:** Node.js 24, from 24.9 (`.nvmrc` picks it), and pnpm through Corepack. Node 25 and later don't include Corepack, and Node 26 can't run the eval lab yet. That's enough for the packages, the tests and the eval lab. The Android app also needs JDK 17, the Android SDK (platform 37, build-tools 37.0.0, CMake 3.22.1), NDK 29.0.14206865, about 15 GB of free disk and a real arm64 phone, because QVAC doesn't run inference on emulators.
 
 ```sh
 git clone https://github.com/DojoCodingLabs/hermit.git
@@ -351,20 +352,20 @@ Hermit is built in the open, and it needs people who care about agents that answ
 - **Learn the system** in [docs/architecture.md](docs/architecture.md) and [docs/evals.md](docs/evals.md). The full product requirements are in [docs/prd/hermit-prd.md](docs/prd/hermit-prd.md).
 - **Good places to start:** run the Device lab, add Spanish and English cases to the eval sets, sharpen a skill, or fix a doc that confused you.
 
-Every skill call goes through the cage, packages never touch the network, and tests come first. CI holds the line on all three.
+Every skill call goes through the cage, packages never touch the network, and tests come first. CI enforces the network rule and runs every test; reviewers check that the test came first and that nothing skips the cage.
 
 ## Questions
 
 <details>
 <summary><b>Does it work in airplane mode?</b></summary>
 <br>
-Yes. Chat, memory, reminders and the calendar run on the phone. Anything that needs the network, like a WhatsApp reply or an email, waits until you're back online, and still asks first.
+Yes. Chat, memory, reminders and the calendar run on the phone. Anything that needs the network, like a WhatsApp reply or an email, needs a connection when you approve it. Offline, nothing is sent, and Hermit tells you so.
 </details>
 
 <details>
 <summary><b>Why such a small model?</b></summary>
 <br>
-A phone has to hold the model in memory next to everything else, stay cool in your pocket and still answer fast. At 4-bit, BotPsy-0.8B is about 530 MB and writes about 40 tokens a second on the phone. The harness closes most of the gap to bigger models on the tasks Hermit does. For heavy jobs, Boost will pair a computer you own.
+A phone has to hold the model in memory next to everything else, stay cool in your pocket and still answer fast. At 4-bit, BotPsy-0.8B is about 530 MB and writes about 40 tokens a second on a Galaxy S26 Ultra. The harness closes most of the gap to bigger models on the tasks Hermit does. For heavy jobs, Boost will pair a computer you own.
 </details>
 
 <details>
@@ -401,7 +402,7 @@ Hermit stands on open-source work:
 | [noble-curves](https://github.com/paulmillr/noble-curves) and [noble-hashes](https://github.com/paulmillr/noble-hashes) | Signatures and hashes | MIT |
 | Newsreader, Instrument Sans, JetBrains Mono | Type | OFL 1.1 |
 
-The app's About screen lists every license it ships.
+The app's About screen credits the open-source projects it's built on, with their licenses.
 
 <!-- PARTNER CREDIT: start. This block is the one place for partner logos and the partner line. Change partner branding here only. -->
 <br>

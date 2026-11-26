@@ -15,7 +15,7 @@ The rules live in [AGENTS.md](AGENTS.md). Read its non-negotiables before your f
 
 ## Set up
 
-You need Node 24.9 or later (`.nvmrc` names the major version), git, and pnpm through Corepack (`package.json` pins the version).
+You need Node 24, from 24.9 (`.nvmrc` names the major version), git, and pnpm through Corepack (`package.json` pins the version). Node 25 and later don't include Corepack, and Node 26 can't run the eval lab yet.
 
 ```sh
 git clone https://github.com/DojoCodingLabs/hermit.git
@@ -74,7 +74,7 @@ CI runs three workflows on pull requests, on GitHub-hosted runners with read-onl
 - **Guard:** the PR guard and its own tests.
 - **Android:** the debug APK and the app's JVM tests, only for pull requests that touch the app and are ready for review.
 
-A red check blocks the merge. If you think a check is wrong, say so in the pull request rather than working around it.
+A red CI or Guard check blocks the merge, and a maintainer won't merge with a red Android check either. If you think a check is wrong, say so in the pull request rather than working around it.
 
 ## Make a change
 
@@ -104,11 +104,11 @@ You are responsible for every line you submit: read it, run it, and be ready to 
 
 ## Review
 
-- A maintainer reviews every pull request. CODEOWNERS requests the maintainer for the cage, the core, the privacy check, the guard and the workflows.
+- A maintainer reviews every pull request from a contributor. CODEOWNERS requests the maintainer for the cage, the core, the privacy check, the guard and the workflows.
 - Reviewers check, in this order: the change fits the vision, it keeps the non-negotiables, the tests came first and cover the change, the evidence is there (eval numbers, screenshots), it sticks to one issue, and the code is clear.
 - Expect questions and requested changes. That's normal, not a rejection. Reply in the thread and push new commits instead of force-pushing, so reviewers can see what changed.
-- Style is the linters' job, so reviews focus on behavior and risk.
-- A maintainer merges once the pull request is approved and every check is green. A pull request that goes quiet for a long time may be closed; you can reopen it whenever you're back.
+- Style is the linters' job in the packages, scripts and site, so reviews focus on behavior and risk. The app in `apps/mobile` isn't linted yet: match the code around your change.
+- A maintainer merges a contributor's pull request once it's approved and the required checks are green. A pull request that goes quiet for a long time may be closed; you can reopen it whenever you're back.
 
 ## Talk to us
 
@@ -136,7 +136,7 @@ jq -c '.[]' .github/labels.json | while read -r label; do
 done
 ```
 
-Device reports wait on the `device-data` branch: the device-report workflow commits them there and never opens a pull request. To publish them, open a pull request from `device-data` to `main` and merge it. The workflow's pushes start no workflow, so before you merge, run CI on the branch by hand: Actions, CI, Run workflow, branch `device-data`.
+Device reports wait on the `device-data` branch: the device-report workflow commits them there and never opens a pull request. To publish them, open a pull request from `device-data` to `main`; opening it runs CI and Guard. The workflow's own pushes start no run, so if another report lands while the pull request is open, close and reopen it so both checks run on its newest commit. Then merge it.
 
 Before you merge anything from GitHub, turn on **Keep my email addresses private** in your GitHub email settings. Otherwise the merge commit carries your account's primary email address, in public.
 

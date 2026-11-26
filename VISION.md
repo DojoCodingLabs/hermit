@@ -15,7 +15,7 @@ A hermit crab carries its home on its back and keeps to itself. That's the whole
 ## What Hermit is
 
 - **A personal agent for one person,** on that person's phone. It talks, remembers, reminds, answers messages and mail, fills logins, pays, and works overnight.
-- **A small model in a strong harness.** The model runs on the phone. Around it, a harness of typed skills, a router, code that reads what code can read and checks on every step makes it reliable. We measure the harness and publish the numbers. New blind sets stay outside the public repository, so the scores stay honest.
+- **A small model in a strong harness.** The model runs on the phone. Around it, a harness of typed skills, a router, code that reads what code can read and checks on every step makes it reliable. We measure the harness and publish the numbers. New blind sets will stay outside the public repository, so future scores stay honest.
 - **A cage the model can't talk its way out of.** A policy engine in plain TypeScript decides every action. Approvals are written by code and bound to the exact action. A signed, hash-chained log records every step.
 - **Open source.** The code is Apache 2.0, so anyone can read it, build it and check what it does.
 - **Bilingual from the first line.** Spanish (Latin America) and English, equally.

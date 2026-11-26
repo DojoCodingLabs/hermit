@@ -26,6 +26,7 @@ import {
 import { HermitNotifications } from "../../modules/hermit-notifications";
 import { modelFile, phoneDownload, phoneFacts } from "./device";
 import { countedFetch, countOutbound } from "./net";
+import { byteCount } from "../platform-facts";
 
 /**
  * Where a signed manifest comes from and the Ed25519 public key (hex) that must have signed it. Both unset
@@ -117,7 +118,7 @@ async function apply(e: UpdateEffect): Promise<UpdateEvent> {
         await phoneDownload(e.url, e.fileName, e.from, () => {}, expected);
         return { type: "downloaded" };
       } catch {
-        return { type: "download_failed", received: modelFile(`${e.fileName}.part`).exists ? modelFile(`${e.fileName}.part`).size : 0 };
+        return { type: "download_failed", received: modelFile(`${e.fileName}.part`).exists ? byteCount(modelFile(`${e.fileName}.part`).size) : 0 };
       }
     }
     case "verify": {
@@ -132,7 +133,7 @@ async function apply(e: UpdateEffect): Promise<UpdateEvent> {
       }
       if (!part.exists) return { type: "verified", size: 0, sha256: "" };
       const sha = (await HermitNotifications.sha256File(part.uri).catch(() => "")).toLowerCase();
-      const size = part.size;
+      const size = byteCount(part.size);
       const expected = state.phase === "verifying" ? state.manifest.file : undefined;
       if (expected && size === expected.size && sha === expected.sha256) {
         sidecar.write(sha);
@@ -214,7 +215,7 @@ export function recoverModelUpdate(): Promise<void> {
   return exclusive(async () => {
     const pointer = readJson<InstalledModel>(POINTER);
     const staged = journal.phase === "downloading" || journal.phase === "waiting" ? modelFile(`${stagedName(journal)}.part`) : undefined;
-    await run(recoverUpdate(journal, { pointerSha256: pointer?.sha256, stagedBytes: staged?.exists ? staged.size : undefined }));
+    await run(recoverUpdate(journal, { pointerSha256: pointer?.sha256, stagedBytes: staged?.exists ? byteCount(staged.size) : undefined }));
   });
 }
 

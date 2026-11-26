@@ -101,7 +101,8 @@ export default function DeviceLab() {
     }
   };
 
-  if (Platform.OS !== "android") {
+  // The lab runs on an iPhone too; its report is Android-shaped, so it is copied or shared, never filed.
+  if (Platform.OS !== "android" && Platform.OS !== "ios") {
     return (
       <Page title={t("HM-SET-10.title")}>
         <T v="body">{t("HM-SET-10.androidOnly")}</T>
@@ -245,7 +246,7 @@ function Report({ report, onAgain }: { report: DeviceReport; onAgain(): void }) 
       <Label>{t("HM-SET-10.shareTitle")}</Label>
       <T v="small" color="soft" style={{ marginBottom: s.md, paddingHorizontal: s.lg }}>{t("HM-SET-10.shareBody")}</T>
       <View style={{ gap: s.sm }}>
-        <Btn label={t("HM-SET-10.file")} icon="arrow-up-right" full onPress={() => void file()} />
+        {Platform.OS === "android" ? <Btn label={t("HM-SET-10.file")} icon="arrow-up-right" full onPress={() => void file()} /> : null}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: s.sm }}>
           <Btn label={t("HM-SET-10.copy")} kind="secondary" icon="copy" style={{ flexGrow: 1 }} onPress={() => void copy()} />
           <Btn label={t("HM-SET-10.share")} kind="secondary" icon="send" style={{ flexGrow: 1 }} onPress={() => void share()} />

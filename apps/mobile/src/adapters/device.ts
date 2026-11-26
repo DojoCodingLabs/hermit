@@ -1,9 +1,10 @@
 import { Directory, DownloadTask, File, Paths } from "expo-file-system";
 import * as Network from "expo-network";
-import { Linking } from "react-native";
+import { Linking, Platform } from "react-native";
 import { allowedCpuSet, cpuListText, initialPlan, threadPlan, threadsReload, withThreads, type HardwareFacts, type RuntimePlan, type ThreadPlan } from "@hermit/model";
 import { HermitNotifications } from "../../modules/hermit-notifications";
 import { nightDeviceState, type NightDeviceState } from "../night-device";
+import { byteCount, hardwareFactsFor, hardwarePlatform, thermalFromNative, type NativeThermal } from "../platform-facts";
 import { observedTokensPerSecond } from "./qvac-engine";
 
 /** Calls back when the phone comes back online, so an interrupted download can resume. Returns unsubscribe. */
@@ -27,7 +28,7 @@ export async function openStorageSettings(): Promise<void> {
 export async function phoneFacts(): Promise<{ network: "wifi" | "cellular" | "none"; freeBytes: number }> {
   const s = await Network.getNetworkStateAsync();
   const network = !s.isConnected ? "none" : s.type === Network.NetworkStateType.WIFI || s.type === Network.NetworkStateType.ETHERNET ? "wifi" : "cellular";
-  return { network, freeBytes: Paths.availableDiskSpace };
+  return { network, freeBytes: byteCount(Paths.availableDiskSpace) };
 }
 
 const CHUNK = 4 * 1024 * 1024;
@@ -59,7 +60,7 @@ export function partialBytes(name: string): number {
     if (part.exists) part.delete();
     final.move(part);
   }
-  return part.exists ? part.size : 0;
+  return part.exists ? byteCount(part.size) : 0;
 }
 
 /**
@@ -82,9 +83,9 @@ export async function phoneDownload(url: string, name: string, from: number, onP
     final.move(part);
   }
   if (sidecar.exists) sidecar.delete();
-  const offset = from > 0 && part.exists ? Math.min(from, part.size) : 0;
+  const offset = from > 0 && part.exists ? Math.min(from, byteCount(part.size)) : 0;
   if (offset === 0 && part.exists) part.delete();
-  const onBytes = { onProgress: ({ bytesWritten }: { bytesWritten: number }) => onProgress(bytesWritten) };
+  const onBytes = { onProgress: ({ bytesWritten }: { bytesWritten: number | bigint }) => onProgress(byteCount(bytesWritten)) };
   let file: File | null;
   if (offset > 0 && offset === expectedSize) {
     // Complete already: go straight to the check, which still runs.
@@ -127,18 +128,7 @@ export async function phoneDownload(url: string, name: string, from: number, onP
 export async function hardwareFacts(): Promise<HardwareFacts | undefined> {
   try {
     const h = await HermitNotifications.hardwareFacts();
-    const allowed = allowedCpuSet(h.allowedCpus);
-    return {
-      platform: "android",
-      model: h.model,
-      soc: h.soc,
-      totalRamBytes: h.totalRamBytes,
-      isLowRamDevice: h.isLowRamDevice,
-      clusters: h.clusters,
-      logicalCores: h.logicalCores,
-      ...(allowed ? { allowedCpus: allowed } : {}),
-      cpuFeatures: { dotprod: h.dotprod, i8mm: h.i8mm, sve2: h.sve2, sme2: h.sme2 },
-    };
+    return hardwareFactsFor(Platform.OS, h, allowedCpuSet(h.allowedCpus));
   } catch {
     return undefined; // older build without the function: the profile's own runtime applies
   }
@@ -159,6 +149,11 @@ export function allowedCpus(): { cpus: number[]; cpuset: string } | undefined {
   }
 }
 
+/** The thermal reading on Android's THERMAL_STATUS_* scale on every platform (iOS maps its ThermalState). Throws as the module does. */
+export function thermalNow(): NativeThermal {
+  return thermalFromNative(Platform.OS, HermitNotifications.thermal());
+}
+
 /** Current heat and battery conditions, mapped to the runtime's levels (Android THERMAL_STATUS_*). */
 /** The S26 generates 40 to 50 tok/s when free; under 10 something is starving the model, under 3 it is paging. */
 export function pressureFromSpeed(tps: number | undefined): "none" | "moderate" | "critical" {
@@ -168,7 +163,7 @@ export function pressureFromSpeed(tps: number | undefined): "none" | "moderate" 
 
 export function runtimeConditions(): import("@hermit/model").RuntimeConditions {
   try {
-    const t = HermitNotifications.thermal();
+    const t = thermalNow();
     const thermal = t.status >= 4 ? "critical" : t.status === 3 ? "serious" : t.status >= 1 ? "fair" : "nominal";
     return { thermal, ...(Number.isFinite(t.headroom) && t.headroom > 0 ? { thermalHeadroom: t.headroom } : {}), lowPowerMode: t.powerSave, memoryPressure: pressureFromSpeed(observedTokensPerSecond()) };
   } catch {
@@ -186,7 +181,7 @@ export async function nightConditions(): Promise<NightDeviceState> {
     }
   };
   const network = await phoneFacts().then((f) => f.network, () => "none" as const);
-  return nightDeviceState(read(() => HermitNotifications.power()), read(() => HermitNotifications.thermal()), network);
+  return nightDeviceState(read(() => HermitNotifications.power()), read(() => thermalNow()), network);
 }
 
 let factsOnce: Promise<HardwareFacts | undefined> | undefined;
@@ -251,7 +246,7 @@ export async function floorFacts(): Promise<import("@hermit/model").FloorFacts> 
   // Loaded here, not at the top: a missing native module only leaves these facts unknown (never blocking).
   const Device: Partial<typeof import("expo-device")> = await import("expo-device").catch(() => ({}));
   return {
-    platform: "android",
+    platform: hardwarePlatform(Platform.OS),
     apiLevel: Device.platformApiLevel ?? undefined,
     abis: Device.supportedCpuArchitectures ?? undefined,
     totalRamBytes: hw?.totalRamBytes ?? Device.totalMemory ?? undefined,

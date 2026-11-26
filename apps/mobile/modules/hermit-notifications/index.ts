@@ -22,6 +22,8 @@ declare class HermitNotificationsNative extends NativeModule<Events> {
     i8mm: boolean;
     sve2: boolean;
     sme2: boolean;
+    /** iOS only: performance cores (hw.perflevel0.physicalcpu). */
+    performanceCores?: number;
   }>;
   /**
    * The cores this process may run on right now (Cpus_allowed_list: the cpuset with the affinity mask) and the cpuset's

@@ -1,4 +1,4 @@
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { VAULT_KEY, type SecureRandom, type VaultCipherPort, type VaultKeyPort } from "@hermit/core";
@@ -28,6 +28,8 @@ export function wrappedKeyPort(entry: { key: string; service: string }): VaultKe
     // A SecureStore read of this entry always prompts, so the module checks for it natively, without one.
     exists: () => HermitVault.hasWrappedKey(entry.service, entry.key),
     async store(key, prompt) {
+      // iOS: no hardware-backed wrapped key exists there yet, so no vault or wallet key is ever made (fails closed).
+      if (Platform.OS !== "android") return "unavailable";
       if (!SecureStore.canUseBiometricAuthentication()) return "unavailable";
       try {
         // trackPrompt: the app lock must not read the prompt's trip away as the user leaving.

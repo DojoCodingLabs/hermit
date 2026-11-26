@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, s
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { chromiumPath } from "./browser.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, "dist");
@@ -30,12 +31,6 @@ const server = createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}/`;
-
-function chromiumPath() {
-  const cache = join(process.env.HOME, "Library/Caches/ms-playwright");
-  const shell = readdirSync(cache).filter((d) => d.startsWith("chromium_headless_shell-")).sort().pop();
-  return join(cache, shell, "chrome-headless-shell-mac-arm64", "chrome-headless-shell");
-}
 
 // The chat is its own route since the roster became home (HM-BOT-01): "index" here still means Hermit's chat.
 const url = (screen, { theme = "light", lang = "es-419", variant = "", params = {} } = {}) =>

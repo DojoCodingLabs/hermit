@@ -100,6 +100,24 @@ node --test scripts/guard/check.test.mjs
 
 The gates still run everything before a pull request. Use these commands only to check your work as you go.
 
+## Screenshots for a UI change
+
+AGENTS.md asks every UI pull request for screenshots in both themes and both languages. The preview harness in `apps/mobile/preview` takes them for you: it renders the real screens in a browser with made-up data. It's dev-only, outside the pnpm workspace, and nothing in the app imports it.
+
+```sh
+cd apps/mobile/preview
+pnpm install --ignore-workspace   # once: the harness has its own lockfile
+pnpm build                        # bundles the screens into dist/
+pnpm shoot about                  # the shots whose file name contains "about"; no filter shoots them all
+```
+
+- The filter matches file names in `shots.mjs`, such as `about` or `settings-x2`.
+- The pictures land in `apps/mobile/preview/out/screens`, which git ignores, with `out/index.html` to look through them.
+- To add a shot, add a line to `shots.mjs`: `core(...)` shoots light and dark in es-419 and English, `other(...)` light and dark in es-419 only.
+- `pnpm compress` shrinks the pictures before you attach them. It's optional and needs Python with Pillow.
+
+The harness drives a headless Chromium and never downloads one. It uses `HERMIT_PREVIEW_CHROMIUM` when that holds the path to a Chromium or `chrome-headless-shell` executable. Otherwise it takes the newest `chromium_headless_shell-*` in Playwright's cache: `PLAYWRIGHT_BROWSERS_PATH` when it's set, else `~/Library/Caches/ms-playwright` on macOS, `~/.cache/ms-playwright` on Linux (or under `$XDG_CACHE_HOME`) and `%LOCALAPPDATA%\ms-playwright` on Windows. If you have none, `pnpm exec playwright-core install chromium-headless-shell` in `apps/mobile/preview` puts one there. When it finds nothing, it stops with a message that names the variable.
+
 ## Make a change
 
 1. Find the issue, or open one. A feature needs the `accepted` label first. A change to a non-negotiable needs an accepted RFC.

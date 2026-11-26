@@ -86,9 +86,12 @@ On an iPhone, Hermit is still missing pieces. Today:
 - **Delete everything** before you delete the app: iOS keeps an app's Keychain entries (Hermit's database key and
   tokens) after the app is gone.
 - A stopped model download starts again from zero.
-- The Device lab report has the Android shape, so on an iPhone you copy or share it; it isn't filed into the device
-  table yet.
-- iOS thermal states are mapped onto Android's scale: nominal 0, fair 1, serious 3, critical 4.
+- iOS thermal states are mapped onto Android's scale: nominal 0, fair 1, serious 3, critical 4. An iPhone report keeps
+  both: the mapped state, and iOS's own name for it.
+
+The Device lab runs on an iPhone, and you file its report the same way as on Android (section 3). The report says
+it came from an iPhone and has its model identifier (for example iPhone16,2) and iOS version; iOS doesn't name the
+chip, and has no API level or ABI.
 
 ## 2. Run the Device lab
 
@@ -97,13 +100,13 @@ none has run it yet, so your report sets the real number.
 
 - Keep Hermit open on that screen. The screen stays on while the lab runs; leaving the screen stops the lab, because
   Android gives an app in the background fewer cores and the numbers would no longer compare.
-- If the phone gets hot (Android's thermal status reaches severe), the lab pauses until it cools down, then carries
-  on. The report counts the pauses.
+- If the phone gets hot (Android's thermal status reaches severe, or iOS's reaches serious), the lab pauses until it
+  cools down, then carries on. The report counts the pauses.
 - Battery saver slows the phone down. The lab runs anyway and the report says it was on.
 
 What it runs, in order:
 
-1. **The phone's facts:** maker and model, chip, memory, Android version, processor cores and their top clocks, the
+1. **The phone's facts:** maker and model, chip, memory, Android or iOS version, processor cores and their top clocks, the
    CPU features llama.cpp uses, the cores Android lets the app use on screen, the thermal status and battery saver.
 2. **The speed probe:** the same fixed prompt at the thread count Hermit plans for this phone, then at 2 and 4
    threads (never more than the cores the app may use). Each count loads the model, makes one warm-up call and two
@@ -140,9 +143,10 @@ To check a report yourself: `node scripts/devices/validate.mjs report.json`.
 
 | Part | Fields |
 | :---- | :---- |
-| `schema`, `app`, `model` | The report format (`hermit-device-report/1`), the app version, and the model profile the lab ran |
-| `device` | Maker (`Build.MANUFACTURER`) and model code (`Build.MODEL`), chip (`Build.SOC_MODEL` on Android 12 and later, else the `Hardware` line of `/proc/cpuinfo`, else `Build.HARDWARE`) and its vendor, total memory in GB, Android version and API level, primary ABI, core count, each core's top clock, and the CPU features dotprod, i8mm, SVE2 and SME2 |
-| `runtime` | Hermit's plan for the phone (tier, threads, core mask, context, batch, thinking budget, fast route), the cores Android allowed the app on screen and its cpuset, the thermal status at the start and the highest during the run, and whether battery saver was on |
+| `schema`, `app`, `model` | The report format (`hermit-device-report/2`; reports filed as `hermit-device-report/1`, Android only, stay valid), the app version, and the model profile the lab ran |
+| `device` on an iPhone | `platform` (`ios`), maker (Apple), the model's name and its identifier (`hw.machine`, for example iPhone16,2), total memory in GB, iOS version, core count, and the CPU features dotprod, i8mm, SVE2 and SME2 |
+| `device` on Android | `platform` (`android`, left out in version 1), maker (`Build.MANUFACTURER`) and model code (`Build.MODEL`), chip (`Build.SOC_MODEL` on Android 12 and later, else the `Hardware` line of `/proc/cpuinfo`, else `Build.HARDWARE`) and its vendor, total memory in GB, Android version and API level, primary ABI, core count, each core's top clock, and the CPU features dotprod, i8mm, SVE2 and SME2 |
+| `runtime` | Hermit's plan for the phone (tier, threads, core mask, context, batch, thinking budget, fast route), the cores Android allowed the app on screen and its cpuset, the thermal status at the start and the highest during the run (on an iPhone, also in iOS's own words), and whether battery saver was on |
 | `speed` | Tokens per second writing and reading, the time to the first token and the model's load time at the plan's thread count, and the same for each other count tried |
 | `eval` | Cases right out of cases run, the median and 90th percentile time to the first action, and for each case its id, whether it was right, its time and the action picked; never the case's text |
 | `run` | How long the run took, how many times and how long it paused for heat, and the day (UTC), never the time |

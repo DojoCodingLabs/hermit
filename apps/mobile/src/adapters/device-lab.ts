@@ -7,6 +7,7 @@ import type { LabPorts, PhoneFacts } from "@hermit/eval";
 import { PROFILES, profileForPlan, type ModelProfile, type RuntimeConditions, type RuntimePlan } from "@hermit/model";
 import { HermitNotifications } from "../../modules/hermit-notifications";
 import { HermitVault } from "../../modules/hermit-vault";
+import { hardwarePlatform, iosLabFacts } from "../platform-facts";
 import { allowedCpus, loadPlan, modelFile, thermalNow } from "./device";
 import { activeFile } from "./model-update";
 import { qvacEngine } from "./qvac-engine";
@@ -30,7 +31,8 @@ export function appVersion(): string {
 /**
  * What the report may say about this phone, read once at the start, on screen. Only Build fields that describe the
  * model of phone (never Build.SERIAL, the fingerprint or the device name a person sets), the hardware the runtime
- * already reads, the cores the app may use now, and battery saver. Undefined when the hardware can't be read.
+ * already reads, the cores the app may use now, and battery saver. On an iPhone, only what iOS gives (iosLabFacts).
+ * Undefined when the hardware can't be read.
  */
 export async function labFacts(): Promise<PhoneFacts | undefined> {
   let hw: Awaited<ReturnType<typeof HermitNotifications.hardwareFacts>>;
@@ -40,6 +42,7 @@ export async function labFacts(): Promise<PhoneFacts | undefined> {
     return undefined;
   }
   const Device: Partial<typeof import("expo-device")> = await import("expo-device").catch(() => ({}));
+  if (hardwarePlatform(Platform.OS) === "ios") return iosLabFacts(Device, hw, read(() => thermalNow().powerSave) === true);
   const apiLevel = Device.platformApiLevel ?? (typeof Platform.Version === "number" ? Platform.Version : Number(Platform.Version));
   // A build from before the Device lab has no chipFacts: its hardwareFacts' soc is Build.SOC_MODEL on Android 12 and
   // later, Build.HARDWARE before.

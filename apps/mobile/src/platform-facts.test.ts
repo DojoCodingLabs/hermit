@@ -2,7 +2,7 @@
 // The platform the runtime plan and the floor check read, and the iOS thermal state on Android's scale. Made-up facts.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { byteCount, hardwareFactsFor, hardwarePlatform, thermalFromNative } from "./platform-facts.ts";
+import { byteCount, hardwareFactsFor, hardwarePlatform, iosLabFacts, thermalFromNative } from "./platform-facts.ts";
 
 const native = {
   clusters: [],
@@ -61,4 +61,26 @@ test("byte counts from native code are plain numbers, even when iOS hands back a
   assert.equal(byteCount(529_000_000), 529_000_000);
   assert.equal(typeof byteCount(0n), "number");
   assert.equal(byteCount(5_000_000_000n) - 1, 4_999_999_999);
+});
+
+test("the Device lab's facts on an iPhone: maker, model name, model identifier and iOS version, and nothing Android-only", () => {
+  const f = iosLabFacts({ manufacturer: "Apple", modelName: "iPhone 99 Example", osVersion: "27.0" }, { ...native, performanceCores: 2 }, true);
+  assert.deepEqual(f, {
+    platform: "ios",
+    manufacturer: "Apple",
+    model: "iPhone 99 Example",
+    modelId: "iPhone99,1",
+    iosVersion: "27.0",
+    totalRamBytes: 8 * 1024 ** 3,
+    logicalCores: 6,
+    cpuFeatures: { dotprod: true, i8mm: true, sve2: false, sme2: false },
+    batterySaver: true,
+  });
+});
+
+test("an iPhone expo-device can't name is named by its model identifier", () => {
+  const f = iosLabFacts({ manufacturer: null, modelName: null, osVersion: null }, native, false);
+  assert.equal(f.manufacturer, "Apple");
+  assert.equal(f.model, "iPhone99,1");
+  assert.equal(f.iosVersion, undefined);
 });

@@ -15,7 +15,8 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSyn
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const REPORT_SCHEMA = "hermit-device-report/1";
+/** The newest report format. Version 1 reports, Android only and from before the platform was named, stay valid. */
+export const REPORT_SCHEMA = "hermit-device-report/2";
 const SCHEMA_PATH = fileURLToPath(new URL("../../docs/devices/schema.json", import.meta.url));
 /** The Device lab didn't exist before this day, so no report can be older. */
 const FIRST_DAY = "2026-11-01";
@@ -28,7 +29,7 @@ export function loadSchema(path = SCHEMA_PATH) {
 
 // The JSON Schema keywords this validator implements. Any other keyword in the schema is an error, so a constraint
 // can never be skipped silently.
-const KEYWORDS = new Set(["type", "const", "enum", "pattern", "minLength", "maxLength", "minimum", "maximum", "required", "properties", "additionalProperties", "items", "minItems", "maxItems", "$ref", "$defs"]);
+const KEYWORDS = new Set(["type", "const", "enum", "pattern", "minLength", "maxLength", "minimum", "maximum", "required", "properties", "additionalProperties", "items", "minItems", "maxItems", "oneOf", "$ref", "$defs"]);
 const ANNOTATIONS = new Set(["$schema", "$id", "$comment", "title", "description"]);
 
 const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -52,12 +53,44 @@ function resolve(root, ref) {
   return target;
 }
 
+const deref = (root, s) => (s.$ref ? deref(root, resolve(root, s.$ref)) : s);
+
+/**
+ * oneOf: exactly one shape must fit. When none does, the errors are those of the shape the value says it is: every
+ * const field it has matches, and a required one isn't missing (a device whose platform is ios is checked as an
+ * iPhone). A const field that matches no shape is named; failing that, a const field every shape requires.
+ */
+function oneOfErrors(schema, value, root, path) {
+  const shapes = schema.oneOf.map((s) => deref(root, s));
+  const results = shapes.map((s) => schemaErrors(s, value, root, path));
+  const fitting = results.filter((r) => !r.length).length;
+  if (fitting === 1) return [];
+  if (fitting > 1) return [`${path}: matches more than one allowed shape`];
+  const consts = (s) => Object.entries(s.properties ?? {}).filter(([, p]) => "const" in p);
+  if (isObject(value)) {
+    const claims = (s) => consts(s).every(([k, p]) => (Object.hasOwn(value, k) ? value[k] === p.const : !(s.required ?? []).includes(k)));
+    const i = shapes.findIndex(claims);
+    if (i >= 0) return results[i];
+    const named = shapes.flatMap(consts).find(([k]) => Object.hasOwn(value, k));
+    if (named) return [`${path}.${named[0]}: isn't one of the allowed values`];
+    const everywhere = consts(shapes[0]).find(([k]) => shapes.every((s) => (s.required ?? []).includes(k)));
+    if (everywhere) return [`${path}: misses ${everywhere[0]}`];
+  }
+  const first = results[0].join("\n");
+  return results.every((r) => r.join("\n") === first) ? results[0] : [`${path}: isn't one of the allowed shapes`];
+}
+
 /** Errors for `value` against `schema` (the subset in KEYWORDS), each "path: what is wrong". */
 export function schemaErrors(schema, value, root = schema, path = "report") {
   for (const k of Object.keys(schema)) {
     if (!KEYWORDS.has(k) && !ANNOTATIONS.has(k)) throw new Error(`schema keyword ${k} is not supported by this validator`);
   }
   if (schema.$ref) return schemaErrors(resolve(root, schema.$ref), value, root, path);
+  if (schema.oneOf) {
+    const beside = Object.keys(schema).filter((k) => k !== "oneOf" && !ANNOTATIONS.has(k));
+    if (beside.length) throw new Error(`schema keyword ${beside[0]} next to oneOf is not supported by this validator`);
+    return oneOfErrors(schema, value, root, path);
+  }
   const errors = [];
   if (schema.type) {
     if (!TYPE_OK[schema.type]) throw new Error(`schema type ${schema.type} is not supported by this validator`);
@@ -113,9 +146,21 @@ export function privacyErrors(value, path = "report", depth = 0) {
 
 const day = (d) => d.toISOString().slice(0, 10);
 
+/** iOS's thermal states and the state each one is mapped to on Android's scale (apps/mobile/src/platform-facts.ts). */
+const IOS_THERMAL = { nominal: "none", fair: "light", serious: "severe", critical: "critical" };
+
 /** Checks the numbers against each other; runs only on a report the schema accepts. */
 function consistencyErrors(r, today) {
   const errors = [];
+  // Version 1 is from before reports named their platform; version 2 always names it.
+  const named = Object.hasOwn(r.device, "platform");
+  if (r.schema === "hermit-device-report/1" && named) errors.push("report.device.platform: isn't in a version 1 report");
+  if (r.schema !== "hermit-device-report/1" && !named) errors.push("report.device: misses platform");
+  for (const [own, mapped] of [["osThermalStart", "thermalStart"], ["osThermalMax", "thermalMax"]]) {
+    if (!Object.hasOwn(r.runtime, own)) continue;
+    if (r.device.platform !== "ios") errors.push(`report.runtime.${own}: is for an iPhone report only`);
+    else if (r.runtime[own] !== "unknown" && IOS_THERMAL[r.runtime[own]] !== r.runtime[mapped]) errors.push(`report.runtime.${own}: doesn't match ${mapped}`);
+  }
   const e = r.eval;
   if (e.score > e.n) errors.push("report.eval.score: is more than n");
   if (e.firstActionMedianMs > e.p90Ms) errors.push("report.eval.firstActionMedianMs: is more than p90Ms");

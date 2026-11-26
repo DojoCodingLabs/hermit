@@ -7,27 +7,54 @@ import { createTranslator, type Dictionary } from "@hermit/copy";
 import { clockText, issueLink, MAX_FORM_URL, REPORT_FORM_URL, reportGroups, reportText } from "./device-lab-view.ts";
 
 const locale = (name: string) => JSON.parse(readFileSync(new URL(`../../../packages/copy/locales/${name}.json`, import.meta.url), "utf8")) as Dictionary;
-const report = JSON.parse(readFileSync(new URL("../../../scripts/devices/fixtures/good-report.json", import.meta.url), "utf8"));
+const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../../scripts/devices/fixtures/${name}`, import.meta.url), "utf8"));
+const report = fixture("good-report-android.json");
+const iphone = fixture("good-report-iphone.json");
 const en = createTranslator(locale("en"));
 const es = createTranslator(locale("es-419"));
 
 const flat = (groups: ReturnType<typeof reportGroups>) => groups.flatMap((g) => [g.title, ...g.rows.flatMap((r) => [r.label, r.value])]).join("\n");
 
 test("the report in plain words: every part of it, in both languages, with no key or placeholder missing", () => {
-  for (const [t, tag] of [[en, "en"], [es, "es-419"]] as const) {
-    const groups = reportGroups(report, t, tag);
-    assert.deepEqual(groups.map((g) => g.rows.length > 0), [true, true, true, true, true]);
-    for (const g of groups) for (const r of g.rows) assert.ok(r.label.trim() && r.value.trim(), `${tag}: ${g.title}`);
-    assert.ok(!/\{\w+\}/.test(flat(groups)), `${tag}: a placeholder was left unfilled`);
+  for (const r of [report, iphone]) {
+    for (const [t, tag] of [[en, "en"], [es, "es-419"]] as const) {
+      const groups = reportGroups(r, t, tag);
+      assert.deepEqual(groups.map((g) => g.rows.length > 0), [true, true, true, true, true]);
+      for (const g of groups) for (const row of g.rows) assert.ok(row.label.trim() && row.value.trim(), `${tag}: ${g.title}`);
+      assert.ok(!/\{\w+\}/.test(flat(groups)), `${tag}: a placeholder was left unfilled`);
+    }
   }
   const text = flat(reportGroups(report, en, "en"));
   for (const shown of [
-    "Examplecorp EX-1000", "Examplechip XC9000", "7.5 GB", "15 (API 35)", "8 cores, arm64-v8a", "4 at 2.0 GHz, 3 at 2.6 GHz, 1 at 3.1 GHz",
+    "Examplecorp EX-1000", "Examplechip XC9000", "7.5 GB", "Android\n15 (API 35)", "8 cores, arm64-v8a", "4 at 2.0 GHz, 3 at 2.6 GHz, 1 at 3.1 GHz",
     "dotprod, i8mm", "4 threads, mid-range plan", "0-7 (top-app)", "cores mask f0", "thinking up to 256 tokens", "Context of 8,192 tokens, batches of 512, 4 threads reading",
     "cool at the start, a little warm at most", "18.4 tokens a second with 4 threads", "72.5 tokens a second", "4.8 s", "3.9 s",
     "With 2 threads", "writes 11.2 tokens a second", "first token in 8.6 s", "11 of 12", "31.0 s", "47.0 s",
     "es-remind-1", "Right, 30.5 s", "Wrong, 47.0 s: picked respond", "9 min 12 s", "Once, 45 s", "2026-11-25", "Hermit 0.1.0, botpsy-q4-native-think256",
   ]) assert.ok(text.includes(shown), `missing: ${shown}\n${text}`);
+});
+
+test("an iPhone's report reads as an iPhone: its model identifier and iOS version, and no Android API level, ABI or chip", () => {
+  const text = flat(reportGroups(iphone, en, "en"));
+  for (const shown of ["Apple iPhone 99 Example", "Model identifier\niPhone99,1", "iOS\n27.0", "Processor\n6 cores\n", "hot at most"]) assert.ok(text.includes(shown), `missing: ${shown}\n${text}`);
+  for (const hidden of ["API", "Android", "arm64", "Chip", "Top clock"]) assert.ok(!text.includes(hidden), `shown: ${hidden}\n${text}`);
+  const es419 = flat(reportGroups(iphone, es, "es-419"));
+  for (const shown of ["Identificador del modelo\niPhone99,1", "iOS\n27.0", "Procesador\n6 núcleos\n"]) assert.ok(es419.includes(shown), `missing: ${shown}\n${es419}`);
+});
+
+test("the lab's words that show on every phone don't say Android", () => {
+  for (const name of ["en", "es-419"]) {
+    const d = locale(name);
+    for (const key of ["HM-SET-10.whatFacts", "HM-SET-10.never", "HM-SET-10.exactNote", "HM-SET-10.shareBody"]) assert.ok(d[key] && !/Android/.test(d[key]!), `${name}: ${key}`);
+  }
+});
+
+test("File it on GitHub works for an iPhone's report too: the title names the iPhone", () => {
+  const link = issueLink(iphone);
+  assert.equal(link.prefilled, true);
+  const url = new URL(link.url);
+  assert.equal(url.searchParams.get("title"), "Device report: Apple iPhone 99 Example");
+  assert.deepEqual(JSON.parse(url.searchParams.get("report")!), iphone);
 });
 
 test("what the phone couldn't say reads as unknown, and no processor feature reads as none", () => {

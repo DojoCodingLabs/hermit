@@ -56,20 +56,29 @@ export function reportGroups(r: DeviceReport, t: Translate, locale: string): Rep
 
   // Equal clocks side by side read as one group: "4 at 2.0 GHz, 3 at 2.6 GHz".
   const clocks: string[] = [];
-  for (let i = 0; i < (d.coreMaxMHz?.length ?? 0); ) {
-    const mhz = d.coreMaxMHz![i]!;
+  const mhzs = d.platform === "android" ? (d.coreMaxMHz ?? []) : [];
+  for (let i = 0; i < mhzs.length; ) {
+    const mhz = mhzs[i]!;
     let n = 0;
-    while (d.coreMaxMHz![i + n] === mhz) n++;
+    while (mhzs[i + n] === mhz) n++;
     clocks.push(mhz > 0 ? t("HM-SET-10.clockGroup", { count: n, ghz: one.format(mhz / 1000) }) : t("HM-SET-10.clockUnread", { count: n }));
     i += n;
   }
   const features = FEATURES.filter((f) => d.cpuFeatures[f]);
+  const memory = row("HM-SET-10.memory", t(d.platform === "android" && d.lowRam ? "HM-SET-10.memoryLow" : "HM-SET-10.memoryValue", { gb: one.format(d.ramGB) }));
+  // An iPhone has no chip name, API level or ABI to show; its model identifier says which iPhone it is.
+  const system =
+    d.platform === "ios"
+      ? [row("HM-SET-10.modelId", d.modelId), memory, row("HM-SET-10.ios", d.ios), row("HM-SET-10.processor", t("HM-SET-10.processorCores", { cores: d.cores }))]
+      : [
+        row("HM-SET-10.chip", d.chipVendor ? `${d.chipVendor} ${d.chip}` : d.chip),
+        memory,
+        row("HM-SET-10.android", t("HM-SET-10.androidValue", { version: d.android, api: d.api })),
+        row("HM-SET-10.processor", t("HM-SET-10.processorValue", { cores: d.cores, abi: d.abi })),
+      ];
   const phone = [
     row("HM-SET-10.phone", `${d.manufacturer} ${d.model}`),
-    row("HM-SET-10.chip", d.chipVendor ? `${d.chipVendor} ${d.chip}` : d.chip),
-    row("HM-SET-10.memory", t(d.lowRam ? "HM-SET-10.memoryLow" : "HM-SET-10.memoryValue", { gb: one.format(d.ramGB) })),
-    row("HM-SET-10.android", t("HM-SET-10.androidValue", { version: d.android, api: d.api })),
-    row("HM-SET-10.processor", t("HM-SET-10.processorValue", { cores: d.cores, abi: d.abi })),
+    ...system,
     ...(clocks.length ? [row("HM-SET-10.clocks", clocks.join(", "))] : []),
     row("HM-SET-10.features", features.length ? features.join(", ") : t("HM-SET-10.featuresNone")),
   ];

@@ -47,7 +47,7 @@ function notes(r) {
   return out.join(", ");
 }
 
-const HEADER = ["Phone", "Chip", "RAM", "Android", "Threads", "Tokens/s", "First token", "Right", "First action, median", "First action, p90", "Notes", "App", "Date", "Data"];
+const HEADER = ["Phone", "Chip", "RAM", "System", "Threads", "Tokens/s", "First token", "Right", "First action, median", "First action, p90", "Notes", "App", "Date", "Data"];
 const ALIGN = [":----", ":----", "----:", ":----", "----:", "----:", "----:", "----:", "----:", "----:", ":----", ":----", ":----", ":----"];
 
 /** The table's markdown: fastest first (tokens per second at the plan's thread count). */
@@ -57,10 +57,11 @@ export function renderTable(entries) {
   const rows = [...entries]
     .sort((a, b) => b.report.speed.tokensPerSecond - a.report.speed.tokensPerSecond || phone(a.report).localeCompare(phone(b.report)) || b.report.run.date.localeCompare(a.report.run.date) || a.file.localeCompare(b.file))
     .map(({ file, report: r }) => [
-      phone(r),
-      r.device.chipVendor ? `${r.device.chipVendor} ${r.device.chip}` : r.device.chip,
+      // An iPhone doesn't name its chip; its model identifier says which one it is. A version 1 report is Android's.
+      r.device.platform === "ios" ? `${phone(r)} (${r.device.modelId})` : phone(r),
+      r.device.platform === "ios" ? "unknown" : r.device.chipVendor ? `${r.device.chipVendor} ${r.device.chip}` : r.device.chip,
       `${r.device.ramGB} GB`,
-      `${r.device.android} (API ${r.device.api})`,
+      r.device.platform === "ios" ? `iOS ${r.device.ios}` : `Android ${r.device.android} (API ${r.device.api})`,
       r.speed.threads,
       r.speed.tokensPerSecond.toFixed(1),
       seconds(r.speed.firstTokenMs),

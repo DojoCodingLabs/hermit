@@ -7,9 +7,11 @@ import type { LabRun, SpeedRun } from "./device-lab.ts";
  * the way the device table's checker (scripts/devices/validate.mjs) checks it: what doesn't pass becomes "unknown"
  * or is left out. Never the device name a person sets, an account, an identifier, a place or anything typed.
  */
-export const REPORT_SCHEMA = "hermit-device-report/1" as const;
+export const REPORT_SCHEMA = "hermit-device-report/2" as const;
 
 export type ThermalName = "none" | "light" | "moderate" | "severe" | "critical" | "emergency" | "shutdown" | "unknown";
+/** iOS's own thermal state (ProcessInfo.ThermalState), recorded next to the state it was mapped to. */
+export type IosThermalName = "nominal" | "fair" | "serious" | "critical" | "unknown";
 export type ChipSource = "soc" | "cpuinfo" | "build" | "unknown";
 export type Abi = "arm64-v8a" | "armeabi-v7a" | "x86_64" | "x86" | "unknown";
 
@@ -21,25 +23,43 @@ export interface ReportSpeed {
   loadMs: number;
 }
 
+type CpuFeatures = { dotprod: boolean; i8mm: boolean; sve2: boolean; sme2: boolean };
+
+export interface AndroidDevice {
+  platform: "android";
+  manufacturer: string;
+  model: string;
+  chip: string;
+  chipVendor?: string;
+  chipSource: ChipSource;
+  ramGB: number;
+  lowRam?: boolean;
+  android: string;
+  api: number;
+  abi: Abi;
+  cores: number;
+  coreMaxMHz?: number[];
+  cpuFeatures: CpuFeatures;
+}
+
+/** An iPhone: iOS doesn't name its chip, and has no API level, ABI, low-memory flag or per-core clocks. */
+export interface IosDevice {
+  platform: "ios";
+  manufacturer: string;
+  model: string;
+  /** hw.machine, for example iPhone16,2. */
+  modelId: string;
+  ramGB: number;
+  ios: string;
+  cores: number;
+  cpuFeatures: CpuFeatures;
+}
+
 export interface DeviceReport {
   schema: typeof REPORT_SCHEMA;
   app: string;
   model: string;
-  device: {
-    manufacturer: string;
-    model: string;
-    chip: string;
-    chipVendor?: string;
-    chipSource: ChipSource;
-    ramGB: number;
-    lowRam?: boolean;
-    android: string;
-    api: number;
-    abi: Abi;
-    cores: number;
-    coreMaxMHz?: number[];
-    cpuFeatures: { dotprod: boolean; i8mm: boolean; sve2: boolean; sme2: boolean };
-  };
+  device: AndroidDevice | IosDevice;
   runtime: {
     tier: Tier;
     threads: number;
@@ -53,6 +73,9 @@ export interface DeviceReport {
     cpuset?: string;
     thermalStart: ThermalName;
     thermalMax: ThermalName;
+    /** iPhone only: the same states in iOS's own words. */
+    osThermalStart?: IosThermalName;
+    osThermalMax?: IosThermalName;
     batterySaver: boolean;
   };
   speed: ReportSpeed & { firstTokenMs: number; sweep: ReportSpeed[] };
@@ -68,10 +91,16 @@ export interface DeviceReport {
 
 /** What the phone says about itself, as the app read it. Only these fields are ever looked at. */
 export interface PhoneFacts {
-  /** Build.MANUFACTURER. */
+  /** Android when left out. On an iPhone only the fields marked iOS, and the ones both platforms have, are read. */
+  platform?: "android" | "ios";
+  /** Build.MANUFACTURER; on iOS, Apple. */
   manufacturer?: string;
-  /** Build.MODEL, the maker's model code (not the device name a person sets). */
+  /** Build.MODEL, the maker's model code (not the device name a person sets); on iOS, the model's name. */
   model?: string;
+  /** iOS: hw.machine, the model identifier (iPhone16,2). */
+  modelId?: string;
+  /** iOS: the iOS version. */
+  iosVersion?: string;
   /** Build.SOC_MANUFACTURER and Build.SOC_MODEL, Android 12 and later. */
   socManufacturer?: string;
   socModel?: string;
@@ -83,7 +112,8 @@ export interface PhoneFacts {
   lowRam?: boolean;
   /** Build.VERSION.RELEASE. */
   androidRelease?: string;
-  apiLevel: number;
+  /** Build.VERSION.SDK_INT; none on iOS. */
+  apiLevel?: number;
   /** Build.SUPPORTED_ABIS, the primary first. */
   abis?: readonly string[];
   logicalCores: number;
@@ -149,6 +179,11 @@ export function p90(xs: readonly number[]): number {
 }
 
 const thermalName = (s: number | undefined): ThermalName => (s !== undefined && Number.isInteger(s) && s >= 0 && s < THERMAL.length ? THERMAL[s]! : "unknown");
+/** The app maps iOS's states onto Android's scale (nominal 0, fair 1, serious 3, critical 4); this undoes it. */
+const IOS_THERMAL: Partial<Record<number, IosThermalName>> = { 0: "nominal", 1: "fair", 3: "serious", 4: "critical" };
+const iosThermalName = (s: number | undefined): IosThermalName => (s !== undefined && IOS_THERMAL[s]) || "unknown";
+const VERSION = /^[0-9]{1,2}(\.[0-9]{1,2}){0,2}$/;
+const MODEL_ID = /^[A-Za-z]{1,16}[0-9]{1,3},[0-9]{1,3}$/;
 
 function speedOf(r: SpeedRun): ReportSpeed {
   return {
@@ -160,7 +195,7 @@ function speedOf(r: SpeedRun): ReportSpeed {
   };
 }
 
-function chipOf(f: PhoneFacts): Pick<DeviceReport["device"], "chip" | "chipVendor" | "chipSource"> {
+function chipOf(f: PhoneFacts): Pick<AndroidDevice, "chip" | "chipVendor" | "chipSource"> {
   const soc = name(f.socModel);
   if (soc) {
     const vendor = name(f.socManufacturer);
@@ -181,15 +216,51 @@ function coreClocks(f: PhoneFacts, cores: number): number[] | undefined {
   return mhz.some((x) => x > 0) ? mhz : undefined;
 }
 
-export function buildDeviceReport(input: { app: string; profile: ReportProfile; facts: PhoneFacts; lab: LabRun }): DeviceReport {
-  const { facts: f, lab, profile } = input;
-  const api = int(f.apiLevel, 21, 60);
-  const release = typeof f.androidRelease === "string" && /^[0-9]{1,2}(\.[0-9]{1,2}){0,2}$/.test(f.androidRelease.trim()) ? f.androidRelease.trim() : (ANDROID_BY_API[api] ?? "0");
+const featuresOf = (f: PhoneFacts): CpuFeatures => ({ dotprod: f.cpuFeatures?.dotprod === true, i8mm: f.cpuFeatures?.i8mm === true, sve2: f.cpuFeatures?.sve2 === true, sme2: f.cpuFeatures?.sme2 === true });
+
+function androidDevice(f: PhoneFacts): AndroidDevice {
+  const api = int(f.apiLevel ?? 0, 21, 60);
+  const release = typeof f.androidRelease === "string" && VERSION.test(f.androidRelease.trim()) ? f.androidRelease.trim() : (ANDROID_BY_API[api] ?? "0");
   const cores = int(f.logicalCores, 1, 64);
   const clocks = coreClocks(f, cores);
-  const abi = ABIS.find((a) => a === f.abis?.[0]) ?? "unknown";
-  const allowed = cpuListText(f.allowedCpus);
-  const cpuset = typeof f.cpuset === "string" ? f.cpuset.trim().replace(/^\/+/, "").toLowerCase() : "";
+  return {
+    platform: "android",
+    manufacturer: name(f.manufacturer) ?? "unknown",
+    model: name(f.model) ?? "unknown",
+    ...chipOf(f),
+    ramGB: tenth(f.totalRamBytes / GB, 0.5, 64),
+    ...(typeof f.lowRam === "boolean" ? { lowRam: f.lowRam } : {}),
+    android: release,
+    api,
+    abi: ABIS.find((a) => a === f.abis?.[0]) ?? "unknown",
+    cores,
+    ...(clocks ? { coreMaxMHz: clocks } : {}),
+    cpuFeatures: featuresOf(f),
+  };
+}
+
+/** Only what iOS says: never a chip, API level, ABI, low-memory flag or clock, whatever else the facts carry. */
+function iosDevice(f: PhoneFacts): IosDevice {
+  const version = typeof f.iosVersion === "string" ? f.iosVersion.trim() : "";
+  const id = typeof f.modelId === "string" ? f.modelId.trim() : "";
+  return {
+    platform: "ios",
+    manufacturer: name(f.manufacturer) ?? "unknown",
+    model: name(f.model) ?? "unknown",
+    modelId: MODEL_ID.test(id) ? id : "unknown",
+    ramGB: tenth(f.totalRamBytes / GB, 0.5, 64),
+    ios: VERSION.test(version) ? version : "0",
+    cores: int(f.logicalCores, 1, 64),
+    cpuFeatures: featuresOf(f),
+  };
+}
+
+export function buildDeviceReport(input: { app: string; profile: ReportProfile; facts: PhoneFacts; lab: LabRun }): DeviceReport {
+  const { facts: f, lab, profile } = input;
+  const ios = f.platform === "ios";
+  // iOS has no cpusets: whatever the facts say, the cores the app may use are unknown there.
+  const allowed = ios ? "" : cpuListText(f.allowedCpus);
+  const cpuset = !ios && typeof f.cpuset === "string" ? f.cpuset.trim().replace(/^\/+/, "").toLowerCase() : "";
   const plan = lab.plan;
   const times = lab.cases.map((c) => c.ms);
   const durationMs = int(lab.endedAt - lab.startedAt, 1, 14_400_000);
@@ -197,19 +268,7 @@ export function buildDeviceReport(input: { app: string; profile: ReportProfile; 
     schema: REPORT_SCHEMA,
     app: /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,4}(-[0-9A-Za-z.]{1,24})?$/.test(input.app) ? input.app : "0.0.0",
     model: profile.id,
-    device: {
-      manufacturer: name(f.manufacturer) ?? "unknown",
-      model: name(f.model) ?? "unknown",
-      ...chipOf(f),
-      ramGB: tenth(f.totalRamBytes / GB, 0.5, 64),
-      ...(typeof f.lowRam === "boolean" ? { lowRam: f.lowRam } : {}),
-      android: release,
-      api,
-      abi,
-      cores,
-      ...(clocks ? { coreMaxMHz: clocks } : {}),
-      cpuFeatures: { dotprod: f.cpuFeatures?.dotprod === true, i8mm: f.cpuFeatures?.i8mm === true, sve2: f.cpuFeatures?.sve2 === true, sme2: f.cpuFeatures?.sme2 === true },
-    },
+    device: ios ? iosDevice(f) : androidDevice(f),
     runtime: {
       tier: plan.tier,
       threads: int(plan.threads, 1, 16),
@@ -223,6 +282,7 @@ export function buildDeviceReport(input: { app: string; profile: ReportProfile; 
       ...(/^[a-z][a-z0-9-]{0,23}$/.test(cpuset) ? { cpuset } : {}),
       thermalStart: thermalName(lab.thermal.start),
       thermalMax: thermalName(lab.thermal.max),
+      ...(ios ? { osThermalStart: iosThermalName(lab.thermal.start), osThermalMax: iosThermalName(lab.thermal.max) } : {}),
       batterySaver: f.batterySaver === true,
     },
     speed: {

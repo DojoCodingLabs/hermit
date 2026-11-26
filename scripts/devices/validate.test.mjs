@@ -9,7 +9,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MAX_DEPTH, canonicalJson, extractReport, issueComment, loadSchema, reportFileName, schemaErrors, validateReport, writeReport } from "./validate.mjs";
 
+// A version 1 report, as filed before reports named their platform, and version 2 reports from each platform.
 const GOOD = JSON.parse(readFileSync(new URL("./fixtures/good-report.json", import.meta.url), "utf8"));
+const ANDROID = JSON.parse(readFileSync(new URL("./fixtures/good-report-android.json", import.meta.url), "utf8"));
+const IPHONE = JSON.parse(readFileSync(new URL("./fixtures/good-report-iphone.json", import.meta.url), "utf8"));
 const SCHEMA = loadSchema();
 const TODAY = new Date("2026-11-26T12:00:00Z");
 const SCRIPT = fileURLToPath(new URL("./validate.mjs", import.meta.url));
@@ -28,6 +31,76 @@ const body = (json, { box = "X", notes = "_No response_" } = {}) =>
 
 test("the good fixture passes the schema and the privacy rules", () => {
   assert.deepEqual(check(clone()), { ok: true, errors: [] });
+});
+
+test("version 2 reports from an Android phone and from an iPhone pass", () => {
+  assert.deepEqual(check(ANDROID), { ok: true, errors: [] });
+  assert.deepEqual(check(IPHONE), { ok: true, errors: [] });
+});
+
+/** A copy of `report` with one change, checked. */
+const changed = (report, change) => {
+  const r = JSON.parse(JSON.stringify(report));
+  change(r);
+  return check(r);
+};
+
+/** Each change fails with a message matching its pattern. */
+const failsWith = (cases) => {
+  for (const [report, change, message] of cases) {
+    const v = changed(report, change);
+    assert.equal(v.ok, false, String(message));
+    assert.ok(v.errors.some((e) => message.test(e)), `${message}: ${v.errors.join("; ")}`);
+  }
+};
+
+test("version 2: the device says its platform, and each platform has only its own fields", () => {
+  failsWith([
+    [ANDROID, (r) => { delete r.device.platform; }, /^report\.device: misses platform$/],
+    [ANDROID, (r) => { r.device.platform = "web"; }, /^report\.device\.platform: isn't one of the allowed values$/],
+    [ANDROID, (r) => { r.device.modelId = "iPhone99,1"; }, /^report\.device: has a field that isn't in the schema \(modelId\)$/],
+    [IPHONE, (r) => { r.device.api = 35; }, /^report\.device: has a field that isn't in the schema \(api\)$/],
+    [IPHONE, (r) => { r.device.abi = "arm64-v8a"; }, /^report\.device: has a field that isn't in the schema \(abi\)$/],
+    [IPHONE, (r) => { r.device.android = "15"; }, /^report\.device: has a field that isn't in the schema \(android\)$/],
+    [IPHONE, (r) => { delete r.device.ios; }, /^report\.device: misses ios$/],
+    [IPHONE, (r) => { r.device.modelId = "Lab phone 1"; }, /^report\.device\.modelId: doesn't have the allowed form$/],
+    [IPHONE, (r) => { r.device.ios = "twenty"; }, /^report\.device\.ios: doesn't have the allowed form$/],
+    // Version 1 is the Android shape, with no platform.
+    [GOOD, (r) => { r.device.platform = "android"; }, /^report\.device\.platform: isn't in a version 1 report$/],
+    [GOOD, (r) => { r.device = JSON.parse(JSON.stringify(IPHONE.device)); }, /^report\.device\.platform: isn't in a version 1 report$/],
+  ]);
+});
+
+test("an iPhone's model identifier may be unknown, as on a simulator", () => {
+  assert.deepEqual(changed(IPHONE, (r) => { r.device.modelId = "unknown"; }), { ok: true, errors: [] });
+});
+
+test("the platform's own thermal state is for iPhone reports only, and agrees with the mapped one", () => {
+  failsWith([
+    [ANDROID, (r) => { r.runtime.osThermalMax = "serious"; }, /^report\.runtime\.osThermalMax: is for an iPhone report only$/],
+    [GOOD, (r) => { r.runtime.osThermalStart = "nominal"; }, /^report\.runtime\.osThermalStart: is for an iPhone report only$/],
+    [IPHONE, (r) => { r.runtime.osThermalMax = "fair"; }, /^report\.runtime\.osThermalMax: doesn't match thermalMax$/],
+    [IPHONE, (r) => { r.runtime.osThermalStart = "toasty"; }, /^report\.runtime\.osThermalStart: isn't one of the allowed values$/],
+  ]);
+  // A state iOS never reports reads as unknown, whatever the mapped one was; and both may be left out.
+  assert.deepEqual(changed(IPHONE, (r) => { r.runtime.thermalMax = "moderate"; r.runtime.osThermalMax = "unknown"; }), { ok: true, errors: [] });
+  assert.deepEqual(changed(IPHONE, (r) => { delete r.runtime.osThermalStart; delete r.runtime.osThermalMax; }), { ok: true, errors: [] });
+});
+
+test("oneOf: a value that fits no shape gets the errors of the shape it says it is, else the field that tells them apart", () => {
+  const schema = {
+    oneOf: [
+      { type: "object", additionalProperties: false, required: ["kind", "a"], properties: { kind: { const: "x" }, a: { type: "integer" } } },
+      { type: "object", additionalProperties: false, required: ["kind", "b"], properties: { kind: { const: "y" }, b: { type: "string" } } },
+    ],
+  };
+  assert.deepEqual(schemaErrors(schema, { kind: "x", a: 1 }), []);
+  assert.deepEqual(schemaErrors(schema, { kind: "y", b: 2 }), ["report.b: should be text"]);
+  assert.deepEqual(schemaErrors(schema, { kind: "z" }), ["report.kind: isn't one of the allowed values"]);
+  assert.deepEqual(schemaErrors(schema, {}), ["report: misses kind"]);
+  assert.deepEqual(schemaErrors(schema, 3), ["report: should be an object"]);
+  assert.deepEqual(schemaErrors({ oneOf: [{ type: "integer" }, { type: "number" }] }, 2), ["report: matches more than one allowed shape"]);
+  assert.deepEqual(schemaErrors({ oneOf: [{ type: "integer" }, { type: "boolean" }] }, "x"), ["report: isn't one of the allowed shapes"]);
 });
 
 test("perCase and the optional fields may be left out", () => {
@@ -64,7 +137,7 @@ test("missing, mistyped and out-of-range fields fail", () => {
     [(r) => { r.speed.tokensPerSecond = 99999; }, /report\.speed\.tokensPerSecond: is above 5000/],
     [(r) => { r.speed.firstTokenMs = -1; }, /report\.speed\.firstTokenMs: is below 0/],
     [(r) => { r.device.ramGB = 512; }, /report\.device\.ramGB: is above 64/],
-    [(r) => { r.schema = "hermit-device-report/2"; }, /report\.schema: should be hermit-device-report\/1/],
+    [(r) => { r.schema = "hermit-device-report/3"; }, /^report\.schema: isn't one of the allowed values$/],
     [(r) => { r.runtime.thermalStart = "toasty"; }, /report\.runtime\.thermalStart: isn't one of the allowed values/],
     [(r) => { r.run.date = "2026-13-01"; }, /report\.run\.date: doesn't have the allowed form/],
     [(r) => { r.device.model = "X".repeat(60); }, /report\.device\.model: is longer than 48 characters/],
@@ -235,6 +308,17 @@ test("the CLI reads the issue from the event file: a good report sets valid=true
     assert.match(r.output, new RegExp(`^file=${name}$`, "m"));
     assert.equal(r.stdout.trim(), name);
     assert.deepEqual(JSON.parse(readFileSync(join(r.dir, "data", name), "utf8")), { issue: 42, report: JSON.parse(canonicalJson(GOOD)) });
+  } finally {
+    rmSync(r.dir, { recursive: true, force: true });
+  }
+});
+
+test("the CLI, as the device-report workflow runs it, takes an iPhone's report and names its file after the iPhone", () => {
+  const r = runEvent({ issue: { number: 46, body: body(JSON.stringify(IPHONE, null, 2)) } }, ["--write", "$DIR/data"]);
+  try {
+    assert.equal(r.code, 0);
+    assert.match(r.output, /^valid=true$/m);
+    assert.match(r.output, /^file=apple-iphone-99-example-[0-9a-f]{8}\.json$/m);
   } finally {
     rmSync(r.dir, { recursive: true, force: true });
   }

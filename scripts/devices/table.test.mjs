@@ -105,6 +105,37 @@ test("the CLI writes the doc, and --check fails when the doc is out of date", ()
   }
 });
 
+for (const flag of ["--help", "-h"]) {
+  test(`the CLI prints the usage for ${flag} and exits 0 without touching the doc`, () => {
+    const out = execFileSync(process.execPath, [SCRIPT, flag], { cwd: ROOT, encoding: "utf8" });
+    assert.match(out, /node scripts\/devices\/table\.mjs \[--data DIR\] \[--doc FILE\]/);
+    assert.match(out, /node scripts\/devices\/table\.mjs --check/);
+  });
+}
+
+for (const args of [["--chek"], ["--help-me"], ["extra"], ["--data"], ["--doc"], ["--data", "--check"]]) {
+  test(`the CLI refuses ${args.join(" ")}: usage, exit 1, doc unchanged`, () => {
+    const dir = mkdtempSync(join(tmpdir(), "hermit-table-args-"));
+    try {
+      const data = join(dir, "data");
+      mkdirSync(data);
+      writeReport(data, 9, GOOD);
+      const doc = join(dir, "devices.md");
+      const before = `# Devices\n\n${START}\n${END}\n`;
+      writeFileSync(doc, before);
+      // --doc and --data point at the temporary files unless the case is about them, so a wrong run can't touch the repo.
+      const rest = args.includes("--doc") ? ["--data", data] : args.includes("--data") ? ["--doc", doc] : ["--data", data, "--doc", doc];
+      assert.throws(
+        () => execFileSync(process.execPath, [SCRIPT, ...rest, ...args], { cwd: dir, stdio: "pipe", encoding: "utf8" }),
+        (err) => err.status === 1 && /usage:/.test(err.stderr),
+      );
+      assert.equal(readFileSync(doc, "utf8"), before);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
 test("docs/devices.md holds the table the repository's data gives", () => {
   execFileSync(process.execPath, [SCRIPT, "--check"], { cwd: ROOT, stdio: "pipe" });
 });

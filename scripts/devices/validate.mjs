@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 
 /** The newest report format. Version 1 reports, Android only and from before the platform was named, stay valid. */
 export const REPORT_SCHEMA = "hermit-device-report/2";
@@ -290,15 +291,49 @@ export function issueComment(errors) {
   ].join("\n");
 }
 
+export const USAGE = [
+  "usage:",
+  "  node scripts/devices/validate.mjs report.json",
+  '  node scripts/devices/validate.mjs --event "$GITHUB_EVENT_PATH" [--github-output FILE] [--comment FILE] [--write DIR]',
+].join("\n");
+
+/**
+ * The command line, or a usage error. Unknown flags, a flag with no value and a wrong number of report files are
+ * refused, so a typo can't turn into a file name. Errors only repeat the command line, never a report's contents.
+ */
+export function parseCli(argv) {
+  if (argv.includes("--help") || argv.includes("-h")) return { help: true };
+  let parsed;
+  try {
+    parsed = parseArgs({
+      args: argv,
+      strict: true,
+      allowPositionals: true,
+      options: { event: { type: "string" }, "github-output": { type: "string" }, comment: { type: "string" }, write: { type: "string" } },
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+  const { values, positionals } = parsed;
+  if (values.event === undefined && positionals.length !== 1) return { error: "give one report file, or --event FILE" };
+  if (values.event !== undefined && positionals.length > 0) return { error: "--event takes no report file" };
+  return { values, file: positionals[0] };
+}
+
 function main(argv) {
-  const flag = (name) => {
-    const i = argv.indexOf(name);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
+  const cli = parseCli(argv);
+  if (cli.help) {
+    console.log(USAGE);
+    return 0;
+  }
+  if (cli.error) {
+    console.error(`${cli.error}\n${USAGE}`);
+    return 1;
+  }
+  const flag = (name) => cli.values[name.slice(2)];
   const eventPath = flag("--event");
   if (!eventPath) {
-    const file = argv[0];
-    if (!file) throw new Error("usage: validate.mjs report.json | --event FILE [--github-output FILE] [--comment FILE] [--write DIR]");
+    const file = cli.file;
     const v = validateReport(JSON.parse(readFileSync(file, "utf8")));
     if (v.ok) console.log(`valid: ${file}`);
     else console.error(v.errors.join("\n"));

@@ -355,6 +355,23 @@ test("the CLI validates a report file given by path", () => {
   }
 });
 
+for (const flag of ["--help", "-h"]) {
+  test(`the CLI prints the usage for ${flag} and exits 0`, () => {
+    const out = execFileSync(process.execPath, [SCRIPT, flag], { encoding: "utf8" });
+    assert.match(out, /node scripts\/devices\/validate\.mjs report\.json/);
+    assert.match(out, /--event "\$GITHUB_EVENT_PATH" \[--github-output FILE\] \[--comment FILE\] \[--write DIR\]/);
+  });
+}
+
+for (const args of [["--chek"], ["--event"], ["a.json", "b.json"], [], ["--event", "e.json", "extra.json"]]) {
+  test(`the CLI refuses ${args.join(" ") || "no arguments"}: usage and exit 1`, () => {
+    assert.throws(
+      () => execFileSync(process.execPath, [SCRIPT, ...args], { stdio: "pipe", encoding: "utf8" }),
+      (err) => err.status === 1 && /usage:/.test(err.stderr) && !/ENOENT/.test(err.stderr),
+    );
+  });
+}
+
 test("an issue that wasn't filed with the report form (the device-lab label marks other issues too) is skipped without a comment", () => {
   const r = runEvent({ issue: { number: 44, body: "The chat freezes on my phone.\n\n### Steps\n\n1. Open it." } });
   try {

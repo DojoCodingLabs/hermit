@@ -7,6 +7,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { loadSchema, reportFileName, validateReport } from "./validate.mjs";
 
 export const START = "<!-- device-table:start -->";
@@ -84,16 +85,43 @@ export function updateDoc(doc, table) {
   return `${doc.slice(0, start + START.length)}\n${table}\n${doc.slice(end)}`;
 }
 
+export const USAGE = [
+  "usage:",
+  "  node scripts/devices/table.mjs [--data DIR] [--doc FILE]    rewrites the table",
+  "  node scripts/devices/table.mjs --check                      exits 1 when the doc's table is out of date",
+].join("\n");
+
+/** The command line, or a usage error: an unknown flag or argument, or --data / --doc with no value, is refused. */
+export function parseCli(argv) {
+  if (argv.includes("--help") || argv.includes("-h")) return { help: true };
+  try {
+    const { values } = parseArgs({
+      args: argv,
+      strict: true,
+      allowPositionals: false,
+      options: { data: { type: "string" }, doc: { type: "string" }, check: { type: "boolean" } },
+    });
+    return { values };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 function main(argv) {
-  const flag = (name, fallback) => {
-    const i = argv.indexOf(name);
-    return i >= 0 ? argv[i + 1] : fallback;
-  };
-  const data = flag("--data", join(ROOT, "data", "devices"));
-  const docPath = flag("--doc", join(ROOT, "docs", "devices.md"));
+  const cli = parseCli(argv);
+  if (cli.help) {
+    console.log(USAGE);
+    return 0;
+  }
+  if (cli.error) {
+    console.error(`${cli.error}\n${USAGE}`);
+    return 1;
+  }
+  const data = cli.values.data ?? join(ROOT, "data", "devices");
+  const docPath = cli.values.doc ?? join(ROOT, "docs", "devices.md");
   const doc = readFileSync(docPath, "utf8");
   const next = updateDoc(doc, renderTable(readEntries(data)));
-  if (argv.includes("--check")) {
+  if (cli.values.check) {
     if (next === doc) return 0;
     console.error(`${docPath}: the device table is out of date. Run node scripts/devices/table.mjs`);
     return 1;

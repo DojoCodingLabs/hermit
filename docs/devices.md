@@ -83,7 +83,8 @@ On an iPhone, Hermit is still missing pieces. Today:
 - Payments and logins are refused, because there is no Secure Enclave approval key yet. The vault and the wallet are
   off.
 - There is no WhatsApp capture and no night shift.
-- **Delete everything** can't finish. Delete the app instead.
+- **Delete everything** before you delete the app: iOS keeps an app's Keychain entries (Hermit's database key and
+  tokens) after the app is gone.
 - A stopped model download starts again from zero.
 - The Device lab report has the Android shape, so on an iPhone you copy or share it; it isn't filed into the device
   table yet.

@@ -7,6 +7,10 @@ import UIKit
  There is no hardware-wrapped vault key on iOS yet, so every key, document and secret call rejects (and
  `hasWrappedKey` never says a key exists). The one call that works is `copyPlain`, for public text such as a Device lab
  report: a plain clip on the general pasteboard, local to this phone (no Handoff), with no timer.
+
+ The two delete calls succeed with nothing to do: no Keystore key or preferences file is ever made on iOS. They must not
+ throw, because Delete everything stops at the first step that fails, and the steps after this one remove the Keychain
+ entries (database key, approval and wallet keys, connector tokens) that iOS keeps even after the app is deleted.
  */
 public class HermitVaultModule: Module {
   private static func unavailable() -> Exception {
@@ -21,11 +25,11 @@ public class HermitVaultModule: Module {
     }
 
     AsyncFunction("deletePreferences") { (_: [String]) in
-      throw HermitVaultModule.unavailable()
+      // Nothing was ever written, so there is nothing to delete.
     }
 
     AsyncFunction("destroyKeystoreKey") { (_: String) in
-      throw HermitVaultModule.unavailable()
+      // Nothing was ever made, so there is nothing to destroy.
     }
 
     AsyncFunction("setSecureScreen") { (_: Bool) -> Bool in

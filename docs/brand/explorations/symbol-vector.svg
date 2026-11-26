@@ -1,0 +1,11 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
+  <g id="hermit-mark">
+    <path id="shell" d="M224 856C167 856 121 810 121 753C121 450 370 205 532 205C734 205 899 355 899 565C899 735 791 856 731 856H224Z" fill="#2B221B" />
+    <path id="spiral" d="M493 543C531 524 570 554 559 594C544 649 467 665 419 625C354 571 382 464 466 431C568 390 681 451 700 565C725 713 591 827 425 790C224 745 144 549 254 390C372 219 637 241 765 394C903 559 827 778 660 807" fill="none" stroke="#4F7C6D" stroke-width="50" stroke-linecap="round" stroke-linejoin="round" />
+    <path id="opening" d="M780 600C838 588 880 635 881 708C881 784 829 842 747 856H674C700 827 714 789 724 748C738 687 752 637 780 600Z" fill="#D5B893" />
+    <path id="eye-stalk" d="M779 668C801 638 821 608 842 588" fill="none" stroke="#D5B893" stroke-width="54" stroke-linecap="round" stroke-linejoin="round" />
+    <circle id="eye-ring" cx="842" cy="588" r="66" fill="#D5B893" />
+    <circle id="eye-ink" cx="842" cy="588" r="50" fill="#2B221B" />
+    <circle id="eye-highlight" cx="862" cy="568" r="15" fill="#FFFFFF" />
+  </g>
+</svg>

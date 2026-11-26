@@ -1,0 +1,2 @@
+App icon for HERMIT, square 1024 by 1024, full-bleed square artwork (the platform applies the rounded mask, so no rounded corners, no device, no shadow outside the art). Image 1 is the approved logo symbol: use it exactly.
+Background: warm paper (#F5EDE1) with an extremely subtle paper grain. The symbol centered, occupying about 62 percent of the width, sitting slightly below center optically. Flat, crisp, no text, no border, no gloss, no 3D.

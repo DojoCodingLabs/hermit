@@ -1,0 +1,30 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "Edit image 1. Change only the third row, the one labeled \"Blocked: send to unknown number\":\n- Replace its small red shield-with-checkmark icon with a coral (#B4483A) shield containing a small bold \"X\" mark instead of a checkmark.\n- Replace that row's mascot with the \"blocked\" pose from image 2: the crab withdrawn inside its shell with the big claw sealing the shell opening like a door.\nKeep everything else in the image exactly as it is: all other rows, text, colors, layout, device frame.",
+  "size": "1024x1536",
+  "quality": "high",
+  "n": 1,
+  "output_format": "png",
+  "complexity": "low",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/ui/ui-activity-light.png",
+    "docs/brand/mascot/expressions-a.png"
+  ],
+  "outputs": [
+    "docs/brand/ui/ui-activity-light.png"
+  ],
+  "usage": {
+    "input_tokens": 3213,
+    "input_tokens_details": {
+      "image_tokens": 3072,
+      "text_tokens": 141
+    },
+    "output_tokens": 1372,
+    "output_tokens_details": {
+      "image_tokens": 1372,
+      "text_tokens": 0
+    },
+    "total_tokens": 4585
+  }
+}

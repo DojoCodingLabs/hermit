@@ -1,0 +1,23 @@
+Character model sheet for HERMIT, the hermit crab mascot of a private AI assistant that lives on your phone. Image 1 is a moodboard: match its style exactly (warm paper background, deep warm ink, sea-glass teal accent, flat matte vector, single confident line weight). Redesign the crab according to the rules below.
+
+CHARACTER (defining traits, keep identical in every view):
+- The spiral shell is the dominant shape, about 70 percent of the character's mass: a smooth logarithmic spiral shell in deep warm ink (#2B221B) with one thin sea-glass teal (#4F7C6D) line following the spiral.
+- The crab is mostly hidden inside the shell, seen from the side or three-quarter view, never front-on.
+- Two tall eye stalks with round dark eyes and a tiny paper-white highlight. No mouth, no blush, no eyebrows.
+- ASYMMETRIC claws, like a real hermit crab: one big, rounded claw (the right one) and one small claw. The big claw is the signature feature.
+- Two or three short walking legs visible at the shell opening.
+- Crab body color: warm sand (#D5B893) with ink outlines. Absolutely no red, orange or coral anywhere.
+- Personality: discreet, capable, wry, a loyal homebody. Calm and grown-up, not a baby, not a pet.
+
+LAYOUT (landscape model sheet on warm paper #F5EDE1, generous margins, strict grid):
+Top row: a turnaround of the same character in four views, evenly spaced: side view facing right, three-quarter view, back view (shell only), and a tiny version showing just the spiral shell with one eye peeking.
+Bottom row: five expressions, evenly spaced, each a small vignette:
+1. Relaxed: half out of the shell, eye stalks upright.
+2. Thinking: eye stalks tilted, small claw tapping the shell rim.
+3. Asking: fully out, facing the viewer, holding a tiny envelope up in the big claw, one eye stalk raised.
+4. Blocked: withdrawn inside the shell, the big claw closing the shell opening like a door.
+5. Sleeping: inside the shell, eye stalks curled down, a small crescent moon above.
+Far right column: a vertical strip of four color swatches (ink, sea-glass teal, sand, paper) as plain rounded rectangles.
+
+TEXT: render only the word "HERMIT" in small letter-spaced capitals at the top left, in a clean sans. No other words, labels, numbers, captions or watermarks.
+STYLE: flat 2D vector illustration, clean geometric construction, matte, no gradients, no 3D, no plush rendering, no pixel art. Consistent line weight across all figures. Do not redesign the character between views.

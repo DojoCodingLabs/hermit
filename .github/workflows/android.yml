@@ -1,0 +1,95 @@
+name: Android
+
+# Builds the debug APK and runs the app's JVM tests, for pull requests that touch the app. It runs only once a pull
+# request is ready for review, never on drafts, and `workflow_dispatch` builds one on demand. The debug APK is a
+# development client that loads JavaScript from Metro on your computer (CONTRIBUTING.md), so JavaScript changes don't
+# need a new build.
+#
+# GitHub-hosted runner only, `pull_request` trigger, read-only token, no secrets: a fork's code never runs anywhere it
+# could reach one.
+on:
+  workflow_dispatch:
+  pull_request:
+    # ready_for_review: a draft marked ready builds its APK then.
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "apps/mobile/**"
+      - "pnpm-lock.yaml"
+      - "packages/core/test/autofill-origin-vectors.json"
+      - "packages/core/test/profile-field-vectors.json"
+      - ".github/workflows/android.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Debug APK and JVM tests
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NDK_VERSION: "29.0.14206865"
+    steps:
+      # The hosted image ships toolchains this build never uses. The NDK, the native modules' CMake builds and
+      # Gradle's caches need the room.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift
+      - name: Runner resources
+        run: |
+          nproc
+          free -h
+          df -h /
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      # setup-java pins the JDK; setup-android then installs the SDK pieces this build needs.
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Android SDK pieces (platform 37, the NDK QVAC pins, CMake)
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: "platforms;android-37.0 build-tools;37.0.0 ndk;${{ env.NDK_VERSION }} cmake;3.22.1"
+          log-accepted-android-sdk-licenses: false
+      - run: pnpm install --frozen-lockfile
+      - name: Expo prebuild (QVAC bundles and links its worker)
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install
+      - name: Rebuild the QVAC worker bundle from the workspace root (pnpm monorepo paths)
+        run: node scripts/qvac-bundle.mjs
+      - name: Wallet worklet bundle and addons again, last before Gradle (it only adds to bare-kit's addon folder)
+        run: node apps/mobile/worklets/wallet/build.mjs
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.json') }}
+      - name: Build debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Autofill exact-origin and form field vectors on the JVM (shared with packages/core)
+        working-directory: apps/mobile/android
+        run: ./gradlew :hermit-autofill:testDebugUnitTest --no-daemon
+      - name: Approval prompt text from the signed payload on the JVM
+        working-directory: apps/mobile/android
+        run: ./gradlew :hermit-approval-key:testDebugUnitTest --no-daemon
+      # The verdict is the build and the JVM tests above. The APK is a convenience for trying the change on a phone,
+      # so a failed upload doesn't fail the job.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        continue-on-error: true
+        with:
+          name: hermit-debug-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7

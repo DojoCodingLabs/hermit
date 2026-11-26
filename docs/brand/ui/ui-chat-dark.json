@@ -1,0 +1,29 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "UI mockup: the HERMIT chat screen, Deep sea dark theme, at night.\nColors: background abyss navy (#06121D), surfaces trench (#0D2233), user bubbles current blue (#1A4A5E), primary text foam (#E7F1F0), secondary text kelp (#8FA9B5), accent bioluminescent mint (#5EF0CF) used sparingly.\nScreen content:\n- Header: the logo symbol in its dark version (deep blue shell, glowing mint spiral), title \"Hermit\", a pill chip \"Airplane mode · on-device\".\n- A user bubble: \"What do I have tomorrow?\"\n- A Hermit reply: \"Two things: dentist at 10 and Sofía's birthday dinner at 8.\"\n- A user bubble: \"Remember I prefer window seats\"\n- A Hermit reply: \"Saved to memory.\" with a tiny pearl icon.\n- Input field \"Message Hermit\" with a mint send button.\n- The mascot in a sleeping pose with a faint mint glow, small, near the header.\nTEXT: render only the quoted strings, spelled exactly. No other text.\nDESIGN SYSTEM (use exactly): Android phone screen, modern Samsung flagship proportions, shown flat and front-on in a thin dark device frame centered on a plain warm paper (#F5EDE1) backdrop. Typography: clean humanist sans for UI, an editorial serif only for large headings. Generous spacing, 16 pt card radius, pill buttons, quiet hierarchy. Describe it as a real shipping product, not concept art. Image 1 is the logo symbol, image 2 is the mascot character sheet: use them exactly when they appear, do not redesign them.",
+  "size": "1024x1536",
+  "quality": "high",
+  "n": 1,
+  "output_format": "png",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/masters/symbol-ref.png",
+    "docs/brand/masters/character-master.png"
+  ],
+  "outputs": [
+    "docs/brand/ui/ui-chat-dark.png"
+  ],
+  "usage": {
+    "input_tokens": 2940,
+    "input_tokens_details": {
+      "image_tokens": 2560,
+      "text_tokens": 380
+    },
+    "output_tokens": 1372,
+    "output_tokens_details": {
+      "image_tokens": 1372,
+      "text_tokens": 0
+    },
+    "total_tokens": 4312
+  }
+}

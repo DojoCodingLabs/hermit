@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="hermit_autofill_dataset">Llenar con tu perfil de Hermit</string>
+  <string name="hermit_autofill_login">Iniciar sesión con Hermit: %1$s</string>
+</resources>

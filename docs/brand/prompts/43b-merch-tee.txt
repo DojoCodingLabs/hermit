@@ -1,0 +1,3 @@
+Product photo-style mockup of a heavyweight t-shirt in deep warm ink (#2B221B), laid flat on warm paper (#F5EDE1), soft natural light. Image 1 is the logo symbol in its reversed (mono) version: use exactly these shapes.
+Front chest print, centered: the reversed logo symbol, printed as a warm paper (#F5EDE1) shell with the spiral and eye cut out as ink, so it stands out clearly against the dark shirt. Beneath it, two lines of small letter-spaced capitals in paper white: "ANTI UI." and "UX CLUB."
+TEXT: render only "ANTI UI." and "UX CLUB.", spelled exactly. No other text, no brand tags.

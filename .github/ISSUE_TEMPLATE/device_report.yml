@@ -1,0 +1,41 @@
+name: Device report
+description: Share what Hermit's Device lab measured on your phone. Device and benchmark facts only.
+title: "Device report: "
+labels: ["device-lab"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for running the Device lab. In Hermit, **File it on GitHub** fills this form in for you. If you're
+        pasting it yourself, use **Copy** on the report screen and paste it below exactly as it is.
+
+        A report holds device and benchmark facts only: the phone's maker and model code, chip, memory, Android
+        version and cores, and the lab's speed and accuracy numbers. It never holds your name, accounts, contacts,
+        messages, location or anything you typed. A check reads it as data, and if it passes, a pull request adds it
+        to the device table in [docs/devices.md](https://github.com/DojoCodingLabs/hermit/blob/HEAD/docs/devices.md).
+        This issue is public.
+
+  - type: textarea
+    id: report
+    attributes:
+      label: Report
+      description: The report's JSON, exactly as the app made it. Don't add to it or change it.
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Optional. Anything about the run, like a phone case or other apps open. Keep personal details out; this issue is public.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This report contains no personal data
+          required: true

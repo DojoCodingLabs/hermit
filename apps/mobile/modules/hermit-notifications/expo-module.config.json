@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["io.dojocoding.hermit.notifications.HermitNotificationsModule"]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@hermit/site",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "brand": "node scripts/copy-brand.mjs",
+    "build": "node scripts/copy-brand.mjs && NEXT_TELEMETRY_DISABLED=1 next build && node scripts/finalize.mjs",
+    "check": "node scripts/check-site.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0"
+  }
+}

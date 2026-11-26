@@ -1,0 +1,43 @@
+name: CI
+
+# The gates from AGENTS.md: the privacy check, typecheck, lint and tests, on every pull request.
+#
+# Every workflow in this repository runs on GitHub-hosted runners only, never on self-hosted ones, because a pull
+# request from a fork runs its own code. The trigger is `pull_request`, never `pull_request_target`, so a fork's run
+# gets a read-only token and no secrets.
+#
+# A maintainer can also run it by hand on a branch (Actions, CI, Run workflow). The device-data pull requests are
+# opened with the workflow token, which starts no workflow, so their checks come from a run started this way.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+# Actions are pinned to commit SHAs (the tag is in the comment), so a moved tag can't change what runs.
+permissions:
+  contents: read
+
+concurrency:
+  # A new push to the pull request cancels the run it replaces.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Privacy, types, lint and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:privacy
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test

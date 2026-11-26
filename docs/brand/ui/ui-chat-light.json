@@ -1,0 +1,29 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "UI mockup: the HERMIT app chat screen, light theme.\nScreen content top to bottom:\n- Status bar with an airplane-mode icon.\n- Header: the small logo symbol on the left, the title \"Hermit\" in the UI sans, and on the right a small pill chip with a phone icon reading \"On this phone\".\n- Conversation on warm paper (#F5EDE1): a user bubble right-aligned in shell beige (#EBDDCB) reading \"Remind me to call Mom at 9\". A Hermit reply left-aligned in deep sea-glass (#3B6456) with paper-white text reading \"Done. I'll remind you at 9.\" Below it a small quiet system row with a tiny bell icon reading \"Reminder set · 9:00 PM\".\n- A user bubble reading \"What's my passport expiry?\" and a Hermit reply reading \"March 2027. You told me on Oct 3.\"\n- Bottom: a rounded input field with placeholder \"Message Hermit\", a microphone icon and a round send button in deep sea-glass.\n- Small mascot avatar (idle pose) next to Hermit's latest reply.\nTEXT: render only the quoted strings, spelled exactly. No other text.\nDESIGN SYSTEM (use exactly): Android phone screen, modern Samsung flagship proportions, shown flat and front-on in a thin dark device frame centered on a plain warm paper (#F5EDE1) backdrop. Typography: clean humanist sans for UI, an editorial serif only for large headings. Generous spacing, 16 pt card radius, pill buttons, quiet hierarchy. Describe it as a real shipping product, not concept art. Image 1 is the logo symbol, image 2 is the mascot character sheet: use them exactly when they appear, do not redesign them.",
+  "size": "1024x1536",
+  "quality": "high",
+  "n": 1,
+  "output_format": "png",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/masters/symbol-ref.png",
+    "docs/brand/masters/character-master.png"
+  ],
+  "outputs": [
+    "docs/brand/ui/ui-chat-light.png"
+  ],
+  "usage": {
+    "input_tokens": 2955,
+    "input_tokens_details": {
+      "image_tokens": 2560,
+      "text_tokens": 395
+    },
+    "output_tokens": 1372,
+    "output_tokens_details": {
+      "image_tokens": 1372,
+      "text_tokens": 0
+    },
+    "total_tokens": 4327
+  }
+}

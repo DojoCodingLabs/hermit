@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.expo/
+.superpowers/
+.playwright-mcp/
+.DS_Store
+*.log
+apps/mobile/android/
+apps/mobile/ios/
+.env
+.env.*
+apps/mobile/qvac/
+apps/mobile/modules/*/android/build/
+apps/site/.next/
+apps/site/out/
+apps/site/public/brand/
+apps/site/next-env.d.ts
+*.tsbuildinfo
+
+# Third-party reference screenshots for the design benchmark (not committed)
+docs/research/design-benchmark/refs/
+
+# The preview harness's renders and bundle (apps/mobile/preview): generated locally, never committed
+apps/mobile/preview/out/
+apps/mobile/preview/dist/
+
+# Polish round renders and clips (docs/design/polish): generated locally, never committed
+docs/design/polish/shots/
+docs/design/polish/clips/

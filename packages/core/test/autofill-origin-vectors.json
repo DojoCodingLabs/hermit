@@ -1,0 +1,1347 @@
+{
+  "about": "SL-20 exact-origin vectors (FR-VAULT-04), shared by packages/core/test/autofill-origin.test.ts and OriginMatchTest.kt in apps/mobile/modules/hermit-autofill. 'logins' (SL-36) are the vault logins offered for a request: the index holds each item's id hash ('ref'), name and origins, never a secret. Digests are SHA-256 of the signing certificate, base64url without padding. The digests in 'browsers' and 'cases' are placeholders, not real keys; 'productionBrowsers' is the shipped allowlist, which both implementations must equal.",
+  "productionBrowsers": {
+    "com.android.chrome": [
+      "8P1sW0EPJcslw7UzRsiXL64w-O50Ed-RBICtay1g24M"
+    ],
+    "com.sec.android.app.sbrowser": [
+      "NN8Oep8c8YkuRcBWtJc82BzPFIpAUNEa6krFpl-QCkI"
+    ],
+    "org.mozilla.firefox": [
+      "p4tipRZbRJSy_q2edqKA0i2Tf-5iUa7OWZRGsuoxmwQ"
+    ]
+  },
+  "browsers": {
+    "com.android.chrome": [
+      "chromeTestCertDigest_0000000000000000000000"
+    ],
+    "com.sec.android.app.sbrowser": [
+      "samsungTestCertDigest_000000000000000000000"
+    ]
+  },
+  "cases": [
+    {
+      "name": "a web login in Chrome matches its stored https origin",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": true,
+        "origin": "https://accounts.example.com"
+      }
+    },
+    {
+      "name": "host case, a trailing dot and the default port are the same origin",
+      "request": {
+        "packageName": "com.sec.android.app.sbrowser",
+        "certDigests": [
+          "samsungTestCertDigest_000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "Accounts.Example.COM.",
+            "scheme": "HTTPS"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com:443/"
+      ],
+      "expect": {
+        "match": true,
+        "origin": "https://accounts.example.com"
+      }
+    },
+    {
+      "name": "a lookalike domain gets nothing",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.examp1e.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "https://accounts.examp1e.com",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a parent domain does not match a subdomain",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "evil.accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "https://evil.accounts.example.com",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a subdomain does not match its parent",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "https://example.com",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a suffix trick does not match",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com.evil.net",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "https://accounts.example.com.evil.net",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "http is a different origin from https",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "http"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "http://accounts.example.com",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a stored origin on another port never matches (Android reports no port)",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com:8443"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "https://accounts.example.com",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a web page without a scheme is refused, not guessed",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "no_web_scheme"
+      }
+    },
+    {
+      "name": "a scheme other than http or https is refused",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "javascript"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "bad_web_origin"
+      }
+    },
+    {
+      "name": "a domain with characters outside ASCII host syntax is refused",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.еxample.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "bad_web_origin"
+      }
+    },
+    {
+      "name": "a domain with user info is refused",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com@evil.net",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "bad_web_origin"
+      }
+    },
+    {
+      "name": "fields from two different web origins are refused",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          },
+          {
+            "domain": "ads.evil.net",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "mixed_web_origins"
+      }
+    },
+    {
+      "name": "the same origin reported twice is one origin",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          },
+          {
+            "domain": "ACCOUNTS.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": true,
+        "origin": "https://accounts.example.com"
+      }
+    },
+    {
+      "name": "a browser package signed by an unknown certificate is not a browser: its web domain is not believed",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "evilTestCertDigest_000000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "android://evilTestCertDigest_000000000000000000000000@com.android.chrome",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "one browser's certificate does not make another package a browser",
+      "request": {
+        "packageName": "com.sec.android.app.sbrowser",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "android://chromeTestCertDigest_0000000000000000000000@com.sec.android.app.sbrowser",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a native app matches its stored certificate and package",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [
+        "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      ],
+      "expect": {
+        "match": true,
+        "origin": "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      }
+    },
+    {
+      "name": "the same package signed by a different certificate is refused (a sideloaded copy)",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "evilTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [
+        "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "android://evilTestCertDigest_000000000000000000000000@com.example.bank",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "the right certificate on a different package is refused",
+      "request": {
+        "packageName": "com.example.bank.fake",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [
+        "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "android://bankTestCertDigest_000000000000000000000000@com.example.bank.fake",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a stored app origin without a certificate never matches",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [
+        "android://com.example.bank"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "android://bankTestCertDigest_000000000000000000000000@com.example.bank",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "missing signing certificates are refused",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [],
+        "web": []
+      },
+      "stored": [
+        "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "no_signing_cert"
+      }
+    },
+    {
+      "name": "a malformed certificate digest is refused",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "not-a-digest"
+        ],
+        "web": []
+      },
+      "stored": [
+        "android://not-a-digest@com.example.bank"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "no_signing_cert"
+      }
+    },
+    {
+      "name": "an app with several signers is refused (no single identity to bind)",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000",
+          "evilTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [
+        "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "multiple_signers"
+      }
+    },
+    {
+      "name": "a web domain inside an app that is not a trusted browser counts as the app, never the site",
+      "request": {
+        "packageName": "com.evil.viewer",
+        "certDigests": [
+          "evilTestCertDigest_000000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "android://evilTestCertDigest_000000000000000000000000@com.evil.viewer",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "an app's own web view matches the app's stored origin",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "login.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      ],
+      "expect": {
+        "match": true,
+        "origin": "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+      }
+    },
+    {
+      "name": "a browser's own fields without a web page count as the browser app",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [
+        "https://accounts.example.com"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "android://chromeTestCertDigest_0000000000000000000000@com.android.chrome",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "a malformed package name is refused",
+      "request": {
+        "packageName": "com example",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [
+        "android://bankTestCertDigest_000000000000000000000000@com example"
+      ],
+      "expect": {
+        "match": false,
+        "reason": "bad_package"
+      }
+    },
+    {
+      "name": "malformed stored origins are skipped, never matched loosely",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "stored": [
+        "accounts.example.com",
+        "https://accounts.example.com/login",
+        "https://*.example.com",
+        "https://accounts.example.com:0"
+      ],
+      "expect": {
+        "match": false,
+        "origin": "https://accounts.example.com",
+        "reason": "no_match"
+      }
+    },
+    {
+      "name": "nothing stored, nothing offered",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "stored": [],
+      "expect": {
+        "match": false,
+        "origin": "android://bankTestCertDigest_000000000000000000000000@com.example.bank",
+        "reason": "no_match"
+      }
+    }
+  ],
+  "logins": [
+    {
+      "name": "every login stored for the exact web origin is offered, in index order",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://accounts.example.com",
+        "refs": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ]
+      }
+    },
+    {
+      "name": "host case and a trailing dot are the same origin",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "Accounts.Example.COM.",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://accounts.example.com",
+        "refs": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ]
+      }
+    },
+    {
+      "name": "a subdomain of a stored origin gets nothing",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "evil.accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://evil.accounts.example.com",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "a parent of a stored origin gets nothing",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "www.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://www.example.com",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "a lookalike gets nothing",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.examp1e.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://accounts.examp1e.com",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "a suffix trick gets nothing",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com.evil.net",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://accounts.example.com.evil.net",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "an http page never gets an https login",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "http"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "http://accounts.example.com",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "a login stored for another port is never offered (Android reports no port)",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "shop.example",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://shop.example",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "an item with several origins is offered where one of them is exact",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://example.com",
+        "refs": [
+          "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        ]
+      }
+    },
+    {
+      "name": "a native app gets the login stored for its certificate and package",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "android://bankTestCertDigest_000000000000000000000000@com.example.bank",
+        "refs": [
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ]
+      }
+    },
+    {
+      "name": "a sideloaded copy (same package, another certificate) gets nothing",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "evilTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "android://evilTestCertDigest_000000000000000000000000@com.example.bank",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "an app that is not a trusted browser showing the stored site counts as the app, and gets nothing",
+      "request": {
+        "packageName": "com.evil.viewer",
+        "certDigests": [
+          "evilTestCertDigest_000000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "android://evilTestCertDigest_000000000000000000000000@com.evil.viewer",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "a web login is never offered to the bank's app (no Digital Asset Links in V1)",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [
+          "bankTestCertDigest_000000000000000000000000"
+        ],
+        "web": []
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "android://bankTestCertDigest_000000000000000000000000@com.example.bank",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "a request with no single identity is refused",
+      "request": {
+        "packageName": "com.example.bank",
+        "certDigests": [],
+        "web": []
+      },
+      "index": [
+        {
+          "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bank (Ana)",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Bank (Luis)",
+          "origins": [
+            "https://accounts.example.com",
+            "android://bankTestCertDigest_000000000000000000000000@com.example.bank"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Shop",
+          "origins": [
+            "https://shop.example:8443",
+            "https://example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "reason": "no_signing_cert",
+        "refs": []
+      }
+    },
+    {
+      "name": "malformed stored origins and refs are skipped, never matched loosely",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "not-a-hash",
+          "name": "Bad ref",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "name": "Loose",
+          "origins": [
+            "accounts.example.com",
+            "https://*.example.com",
+            "https://accounts.example.com/login"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://accounts.example.com",
+        "reason": "no_match",
+        "refs": []
+      }
+    },
+    {
+      "name": "at most five logins are offered for one origin",
+      "request": {
+        "packageName": "com.android.chrome",
+        "certDigests": [
+          "chromeTestCertDigest_0000000000000000000000"
+        ],
+        "web": [
+          {
+            "domain": "accounts.example.com",
+            "scheme": "https"
+          }
+        ]
+      },
+      "index": [
+        {
+          "ref": "1111111111111111111111111111111111111111111111111111111111111111",
+          "name": "Login 1",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "2222222222222222222222222222222222222222222222222222222222222222",
+          "name": "Login 2",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "3333333333333333333333333333333333333333333333333333333333333333",
+          "name": "Login 3",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "4444444444444444444444444444444444444444444444444444444444444444",
+          "name": "Login 4",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "5555555555555555555555555555555555555555555555555555555555555555",
+          "name": "Login 5",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "6666666666666666666666666666666666666666666666666666666666666666",
+          "name": "Login 6",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        },
+        {
+          "ref": "7777777777777777777777777777777777777777777777777777777777777777",
+          "name": "Login 7",
+          "origins": [
+            "https://accounts.example.com"
+          ]
+        }
+      ],
+      "expect": {
+        "origin": "https://accounts.example.com",
+        "refs": [
+          "1111111111111111111111111111111111111111111111111111111111111111",
+          "2222222222222222222222222222222222222222222222222222222222222222",
+          "3333333333333333333333333333333333333333333333333333333333333333",
+          "4444444444444444444444444444444444444444444444444444444444444444",
+          "5555555555555555555555555555555555555555555555555555555555555555"
+        ]
+      }
+    }
+  ]
+}

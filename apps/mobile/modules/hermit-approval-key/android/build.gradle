@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.dojocoding.hermit.approvalkey'
+version = '0.1.0'
+
+android {
+  namespace "io.dojocoding.hermit.approvalkey"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // SL-37: BiometricPrompt with a CryptoObject, so the strong biometric unlocks exactly one signature.
+  implementation "androidx.biometric:biometric:1.1.0"
+  // The prompt text is built from the signed payload itself; its parsing and formatting run on the JVM (ApprovalTextTest).
+  testImplementation "junit:junit:4.13.2"
+  testImplementation "org.json:json:20240303"
+}

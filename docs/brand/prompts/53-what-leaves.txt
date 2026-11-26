@@ -1,0 +1,8 @@
+A wide calm illustration for the README section "What leaves your phone". Image 1 is the mascot sheet: use the character exactly. Flat 2D vector on warm paper (#F5EDE1), deep ink (#2B221B) lines, sea-glass teal (#4F7C6D) accents.
+Center: a large phone drawn as the crab's home: the hermit crab sits inside a spiral shell that is inside the phone outline, relaxed, eye stalks up. Everything else stays inside the phone: small icons of a pearl (memories), a key and a notebook rest inside, with a tiny padlock.
+Three thin dashed teal lines leave the phone to the right, each ending in a small labeled icon:
+- a download arrow, label "Model download, once"
+- a paper airplane, label "WhatsApp reply, after your OK"
+- a calendar, label "Calendar sync, your provider"
+On the left, a small crossed-out cloud with the label "No servers, no analytics".
+TEXT: render only the quoted strings, spelled exactly, in a clean humanist sans. No other text.

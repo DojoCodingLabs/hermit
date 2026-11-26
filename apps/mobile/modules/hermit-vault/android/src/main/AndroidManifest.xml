@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- SL-33: no permission. The Keystore, the window's secure flag and the clipboard need none.
+       SL-34: none for the import either: the system document picker grants the one file the user picks. -->
+</manifest>

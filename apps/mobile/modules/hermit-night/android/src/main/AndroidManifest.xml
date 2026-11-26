@@ -1,0 +1,29 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Q69: the night shift runs in a foreground service woken by WorkManager while the phone charges. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application>
+    <!--
+      dataSync: the night pass reads the phone's own data and, when email is on, syncs unread mail over Wi-Fi
+      to build the morning briefing. Short runs, well under Android 15's six hours a day for this type.
+    -->
+    <service
+      android:name=".NightService"
+      android:exported="false"
+      android:foregroundServiceType="dataSync" />
+
+    <!-- WorkManager keeps periodic work across reboots; this re-enqueues the stored plan as a safety net. -->
+    <receiver
+      android:name=".NightBootReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>

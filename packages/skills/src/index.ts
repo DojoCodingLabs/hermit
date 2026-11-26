@@ -1,0 +1,9 @@
+export * from "./catalog.ts";
+export * from "./intents.ts";
+export * from "./connect.ts";
+export * from "./mail-address.ts";
+export { normalizeReadWeb, normalizeSearchWeb } from "./web.ts";
+export * from "./web-task.ts";
+export * from "./pay.ts";
+export * from "./pay-merchant.ts";
+export * from "./values.ts";

@@ -1,0 +1,9 @@
+Logo symbol for HERMIT, a private AI assistant that lives on your phone. Image 1 is the official character sheet: use exactly this character, do not redesign it.
+
+The symbol: the tiny version from the character sheet (top row, far right): a round spiral shell in deep warm ink (#2B221B) with one sea-glass teal (#4F7C6D) spiral line that flows into the shell opening, and the hermit crab peeking out of the opening with ONE eye on a short stalk. Nothing else.
+
+Rules for the mark:
+- One single centered mark with generous padding on all sides.
+- Strong, simple silhouette that still reads at 16 pixels: favor simplicity over detail. Flat vector shapes only, two colors (ink and sea-glass teal) plus the paper-white eye highlight.
+- Geometric construction: the spiral is a clean logarithmic spiral with an even stroke width; the shell outline is a smooth circle-based form.
+- Fully transparent background. No text, no letters, no frame, no shadow, no watermark, no mockup, no backdrop.

@@ -1,0 +1,15 @@
+Expression sheet B for the HERMIT mascot. Image 1 is the official expression sheet A: copy its exact layout, header style, cell grid, label style, colors and character construction. Do not redesign the character.
+
+Header at top left exactly like sheet A: "HERMIT" then a thin divider then "EXPRESSION SHEET B".
+Eight cells (2 rows of 4). Each cell: the pose, then a numbered bold label, then one short description line, exactly in sheet A's style:
+"8. OFFLINE" / "Fully inside, opening closed, a paper airplane above." Pose: fully inside the shell, opening closed, a tiny paper airplane above.
+"9. SLEEPING" / "Curled up inside under a crescent moon." Pose: inside the shell, eye stalks curled down, small teal crescent moon above.
+"10. BOOST" / "Moving into a bigger shell beside a laptop." Pose: walking from its small shell toward a noticeably larger empty spiral shell next to a closed laptop.
+"11. NEW PHONE" / "Carrying its things to a new shell." Pose: carrying a small bundle from an old empty shell to a new shell.
+"12. REMEMBER" / "Tucking a pearl into its shell." Pose: the big claw placing a small pearl into a chamber of the spiral shell.
+"13. FORGET" / "Letting the pearl dissolve, as asked." Pose: holding a pearl over calm water as it dissolves into small bubbles.
+"14. LISTENING" / "Eye stalks leaning toward the mic." Pose: eye stalks leaning gently toward a small microphone.
+"15. QUIET MODE" / "Just the shell. Hermit stays out of sight." Pose: the shell alone, no crab visible.
+
+Absolutely no hearts, lightbulbs, question marks, sweat drops or other emoji symbols. No red, orange or coral anywhere. Same palette swatch column on the right as sheet A.
+TEXT: render only the quoted strings, spelled exactly. No other text.

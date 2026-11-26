@@ -1,0 +1,90 @@
+name: Feature proposal
+description: Propose something new. A maintainer accepts it before anyone writes code.
+title: "Proposal: "
+labels: ["proposal", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hermit is an agent that lives on your phone and tells no one. Read [VISION.md](https://github.com/DojoCodingLabs/hermit/blob/HEAD/VISION.md) and the non-negotiables in [AGENTS.md](https://github.com/DojoCodingLabs/hermit/blob/HEAD/AGENTS.md) first: a proposal that needs people's data to leave the phone is out of scope, however useful it is.
+
+        Want to change one of the non-negotiables? Use the RFC form instead. Still shaping the idea? Start in [Discussions](https://github.com/DojoCodingLabs/hermit/discussions).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Who has the problem, and when. A real situation, told with made-up names.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What do you propose?
+      description: What the person would do and see. Leave the implementation for later.
+    validations:
+      required: true
+
+  - type: textarea
+    id: principle
+    attributes:
+      label: Which principle in VISION.md does this serve?
+      description: Name the principle, and say how this proposal serves it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data-leaves
+    attributes:
+      label: Does it need any data to leave the phone?
+      description: If it needs a server, a cloud model, sync or telemetry, it's out of scope and will be closed.
+      options:
+        - "No. Everything stays on the phone."
+        - "Only to carry out an action the person asks for, sent to a service they already use (like sending an email they asked Hermit to write)."
+        - "Yes: it needs a server, a cloud model, sync or telemetry. (Out of scope.)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-detail
+    attributes:
+      label: If anything leaves the phone, what exactly, to where, and when?
+      description: The data, the host, and what the person approves first.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What alternatives did you consider?
+      description: Include doing nothing, and how other tools solve it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: invariants
+    attributes:
+      label: Does it change a non-negotiable in AGENTS.md?
+      options:
+        - "No."
+        - "Yes. I'll open an RFC instead, because a proposal can't change one."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Would you build it?
+      options:
+        - "Yes."
+        - "Yes, with some guidance."
+        - "No, I'm proposing it for someone else to build."
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send it
+      options:
+        - label: I read VISION.md and the non-negotiables in AGENTS.md.
+          required: true
+        - label: I searched issues and discussions, and this isn't already there.
+          required: true

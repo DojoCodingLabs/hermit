@@ -1,0 +1,26 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "A single landscape brand moodboard for HERMIT, a private AI assistant that lives entirely on your phone and never sends your data anywhere. The brand metaphor: a hermit crab that carries its home on its back and keeps to itself; its shell is a safe, private home; when it needs more power it moves to a bigger shell.\n\nLAYOUT (a clean editorial grid of 6 panels on one board, equal gutters):\n1. Top left, largest panel: the logo concept, a simple hermit crab peeking out of a spiral shell, drawn as a bold, simple symbol, next to the wordmark \"HERMIT\".\n2. Top right: a phone showing a calm chat screen with one message bubble that reads \"Recuérdame llamar a mamá a las 9\" and a reply bubble that reads \"Listo. Te aviso a las 9.\"\n3. Middle left: a color palette of 5 swatches as rounded rectangles, no hex codes or labels.\n4. Middle right: the tagline set large in the brand typeface: \"Does everything. Tells no one.\"\n5. Bottom left: a texture or material sample that captures the brand's feel.\n6. Bottom right: a small illustration of the crab moving into a bigger shell.\n\nTEXT: render only these exact strings, spelled exactly: \"HERMIT\", \"Recuérdame llamar a mamá a las 9\", \"Listo. Te aviso a las 9.\", \"Does everything. Tells no one.\" No other words, numbers, labels, captions or watermarks anywhere.\n\nSTYLE DIRECTION, \"Friendly mascot\": bright, warm and approachable. The crab is a lovable rounded character with big expressive eyes and a cheerful pose, peeking from a coral-orange shell; flat vector illustration with soft rounded shapes. Palette: warm coral, sunny yellow, fresh mint, soft cream, and a deep navy for text. Rounded friendly sans typeface. Playful but tidy, like Duolingo or Headspace brand worlds. Texture panel: a pattern of tiny shells and bubbles. No 3D, no gradients overload.",
+  "size": "1536x1024",
+  "quality": "medium",
+  "n": 1,
+  "output_format": "png",
+  "mode": "generate",
+  "refs": [],
+  "outputs": [
+    "docs/brand/explorations/moodboard-friendly-mascot.png"
+  ],
+  "usage": {
+    "input_tokens": 435,
+    "input_tokens_details": {
+      "image_tokens": 0,
+      "text_tokens": 435
+    },
+    "output_tokens": 1132,
+    "output_tokens_details": {
+      "image_tokens": 1132,
+      "text_tokens": 0
+    },
+    "total_tokens": 1567
+  }
+}

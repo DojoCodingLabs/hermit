@@ -1,0 +1,14 @@
+# Keeps the actions the workflows pin by commit SHA up to date. Updates come as one grouped pull request a month,
+# which runs the same checks as any other. Major versions are left for a maintainer to review by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

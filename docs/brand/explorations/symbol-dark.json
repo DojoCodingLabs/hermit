@@ -1,0 +1,30 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "Dark-mode version of the HERMIT logo symbol. Image 1 is the approved symbol: keep the exact same shapes, proportions and composition, change only the colors.\n- The shell becomes deep ocean blue (#1A4A5E) with a soft inner luminance, and the spiral line becomes bioluminescent mint (#5EF0CF), glowing very slightly as if lit from inside the shell.\n- The crab's eye stalk stays warm sand (#D5B893); the eye stays dark with a bright highlight.\n- Keep it flat and crisp: a subtle glow only on the spiral line, no 3D, no gradients on the shell beyond a faint inner light.\n- Fully transparent background. One centered mark, generous padding. No text, no frame, no shadow, no watermark.",
+  "size": "1024x1024",
+  "quality": "high",
+  "n": 2,
+  "output_format": "png",
+  "background": "transparent",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/masters/symbol-light.png"
+  ],
+  "outputs": [
+    "docs/brand/explorations/symbol-dark-1.png",
+    "docs/brand/explorations/symbol-dark-2.png"
+  ],
+  "usage": {
+    "input_tokens": 2276,
+    "input_tokens_details": {
+      "image_tokens": 2048,
+      "text_tokens": 228
+    },
+    "output_tokens": 3512,
+    "output_tokens_details": {
+      "image_tokens": 3512,
+      "text_tokens": 0
+    },
+    "total_tokens": 5788
+  }
+}

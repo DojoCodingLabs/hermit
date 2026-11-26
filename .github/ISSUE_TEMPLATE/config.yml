@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/DojoCodingLabs/hermit/discussions
+    about: Ask a question or talk an idea through in Discussions before you open an issue.
+  - name: Report a security problem privately
+    url: https://github.com/DojoCodingLabs/hermit/security/advisories/new
+    about: Vulnerabilities go through private reporting, never a public issue. See SECURITY.md.

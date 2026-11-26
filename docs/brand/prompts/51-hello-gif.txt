@@ -1,0 +1,3 @@
+A short looping animation of HERMIT, the hermit crab mascot from image 1. Do not redesign the character: round deep-ink (#2B221B) spiral shell with a sea-glass teal (#4F7C6D) spiral line, sand-colored (#D5B893) crab with ink outlines, two eye stalks with round dark eyes, one big claw and one small claw, no mouth.
+Warm paper background (#F5EDE1), the character centered and identical in scale in every frame, flat 2D vector style.
+Animation: the crab starts fully inside the shell, slowly peeks out, its eye stalks rise and blink once, it raises its small claw in a polite wave, then settles half out of the shell, calm. Smooth, small, slow motions. No text.

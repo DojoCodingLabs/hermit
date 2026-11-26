@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hermit mascot v2: the proof</title>
+<link rel="stylesheet" href="../../brand/fonts/fonts.css">
+<style>
+  :root { --paper: #F5EDE1; --shell: #EBDDCB; --stone: #D3C2AE; --ink: #2B221B; --soft: #6B5E52; --sea: #3B6456; --abyss: #06121D; --coral: #B4483A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 "Instrument Sans", system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 48px 28px 96px; }
+  h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 500; letter-spacing: -0.01em; }
+  h1 { font-size: 44px; line-height: 1.1; margin: 0 0 12px; }
+  h2 { font-size: 28px; margin: 64px 0 8px; }
+  p { max-width: 760px; color: var(--soft); margin: 8px 0; }
+  p strong { color: var(--ink); }
+  code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; }
+  .lede { font-size: 18px; color: var(--ink); }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; }
+  figure { margin: 0; }
+  figcaption { font-size: 13px; color: var(--soft); margin-top: 6px; }
+  .tile { border-radius: 14px; display: block; }
+  .light { background: var(--paper); box-shadow: inset 0 0 0 1px var(--stone); }
+  .dark { background: var(--abyss); }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 24px 0 8px; }
+  .stat { background: var(--shell); border-radius: 16px; padding: 16px 18px; }
+  .stat b { display: block; font-family: "Newsreader", Georgia, serif; font-size: 30px; font-weight: 500; }
+  .stat span { font-size: 13px; color: var(--soft); }
+  table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 13px; }
+  th { text-align: left; font-weight: 600; color: var(--soft); border-bottom: 1px solid var(--stone); padding: 8px 10px; vertical-align: bottom; }
+  td { border-bottom: 1px solid var(--stone); padding: 8px 10px; vertical-align: middle; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  td img { width: 150px; height: auto; }
+  .ok { color: var(--sea); font-weight: 600; }
+  .bad { color: var(--coral); font-weight: 600; }
+  .clips { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 22px; margin-top: 18px; }
+  .clip video, .clip img { width: 100%; border-radius: 14px; display: block; }
+  .clip video:first-child { outline: 1px solid var(--stone); outline-offset: -1px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .clip h3 { font-size: 15px; margin: 10px 0 2px; }
+  .missing { background: var(--shell); border-radius: 16px; padding: 18px 20px; color: var(--ink); }
+  footer { margin-top: 64px; font-size: 13px; color: var(--soft); }
+</style>
+</head>
+<body>
+<main>
+  <h1>The crab, in vector and alive</h1>
+  <p class="lede">Hermit's mascot is the reference drawing. The app now draws it from the rig's own traced pieces as vectors, and moves it only by moving, turning and scaling those pieces. This page is the proof that nothing was redrawn.</p>
+  <p>Every picture here is produced by <code>node apps/mobile/preview/mascot/proof.mjs</code> from the real component (<code>apps/mobile/src/components/Mascot.tsx</code>), in Chrome with GPU rasterization, the way <code>docs/brand/mascot/png</code> was made. The renders and clips sit in <code>out/</code>, which is not committed; run the script to fill or refresh this page.</p>
+  <div id="app"></div>
+  <footer id="foot"></footer>
+</main>
+<script src="out/results.js"></script>
+<script>
+const R = window.MASCOT_PROOF;
+const app = document.getElementById("app");
+const PNG = "../../brand/mascot/png/";
+const REF = "../../brand/logo/source/reference-drawing.png";
+const html = (s) => { const t = document.createElement("template"); t.innerHTML = s.trim(); return t.content; };
+const fmt = (n, d = 4) => Number(n).toFixed(d);
+const cls = (ok) => (ok ? "ok" : "bad");
+
+if (!R) {
+  app.append(html(`<p class="missing">No results yet. From the repository: <code>cd apps/mobile/preview && pnpm install --frozen-lockfile --prefer-offline --ignore-workspace && node mascot/proof.mjs</code>, then reload.</p>`));
+} else {
+  const stills = R.stills;
+  const worst = (key) => Math.max(...stills.map((s) => s[key].max));
+  const sum = (rows, key, f) => rows.reduce((t, s) => t + s[key][f], 0);
+  const markupDiffer = sum(stills, "markupVsRig", "differ");
+  const beyond = sum(stills, "vsPng", "beyondAA");
+  const restWorst = Math.max(...R.rest.map((r) => r.vsStill.max));
+
+  app.append(html(`
+    <div class="summary">
+      <div class="stat"><b class="${cls(markupDiffer === 0)}">${markupDiffer}</b><span>pixels differ between the component's SVG and the rig's SVG, drawn the same way, over ${stills.length} renders (19 poses, light and dark)</span></div>
+      <div class="stat"><b class="${cls(beyond === 0)}">${beyond}</b><span>pixels differ from the PNGs beyond antialiasing, on screen</span></div>
+      <div class="stat"><b>${worst("vsPng")} / 255</b><span>largest single-pixel difference from a PNG on screen: two of the four coverage samples on an outline</span></div>
+      <div class="stat"><b class="${cls(restWorst === 0)}">${restWorst}</b><span>largest difference between a pose reached by a real transition and the still pose</span></div>
+    </div>`));
+
+  // The drawing next to the rest pose.
+  app.append(html(`
+    <h2>The reference drawing, and the rest pose</h2>
+    <p>The source of truth is the reference on the left. The rig traced it once into seven pieces (<code>docs/brand/mascot/parts.json</code>); the app's rest pose, drawn by the component, sits next to it, then the rig's PNG of the same pose.</p>
+    <div class="row">
+      <figure><img class="tile light" src="${REF}" style="height:240px;width:auto"><figcaption>docs/brand/logo/source/reference-drawing.png</figcaption></figure>
+      <figure><img class="tile light" src="out/renders/01-idle.png" style="height:240px"><figcaption>The component, idle (on screen)</figcaption></figure>
+      <figure><img class="tile light" src="${PNG}01-idle.png" style="height:240px"><figcaption>docs/brand/mascot/png/01-idle.png</figcaption></figure>
+      <figure><img class="tile dark" src="out/renders/01-idle-dark.png" style="height:240px"><figcaption>The component, idle, dark</figcaption></figure>
+    </div>`));
+
+  // Every pose.
+  const rows = stills.map((s) => `
+    <tr>
+      <td><b>${s.pose}</b><br>${s.theme}</td>
+      <td><img class="tile ${s.theme}" src="out/renders/${s.file}"></td>
+      <td><img class="tile ${s.theme}" src="${PNG}${s.file}"></td>
+      <td><img class="tile" src="out/diff/${s.file}"></td>
+      <td class="num">${s.vsPng.max}<br>${fmt(s.vsPng.mean)}</td>
+      <td class="num">${s.vsPng.oneSample} / ${s.vsPng.twoSamples}<br><span class="${cls(s.vsPng.beyondAA === 0)}">${s.vsPng.beyondAA}</span></td>
+      <td class="num"><span class="${cls(s.markupVsRig.differ === 0)}">${s.markupVsRig.differ}</span><br>${s.markupVsPng.max} / ${fmt(s.markupVsPng.mean)}</td>
+      <td class="num">${s.rigVsPng.max}<br>${fmt(s.rigVsPng.mean)}</td>
+    </tr>`).join("");
+  app.append(html(`
+    <h2>Every pose, light and dark</h2>
+    <p>Each row is the component's rest frame of a rig pose at 512 by 444, its PNG, and where they differ (red, on the PNG drawn faintly). Differences are the largest channel difference per pixel, 0 to 255, with each picture on the ground it is made for (paper, or Deep sea's abyss). Chrome draws paths with 4x multisampling, so an outline pixel moves in quarter steps of about 64; <strong>beyond antialiasing</strong> counts any difference off an outline, and any outline difference over two samples.</p>
+    <p>The component draws inline SVG; the PNGs were drawn from an SVG image. Drawn the same way (its own SVG markup, rendered as an image), the component equals the rig's SVG exactly, so what remains on screen is the browser placing coverage samples differently on outlines, not the drawing.</p>
+    <table>
+      <thead><tr>
+        <th>Pose</th><th>Component (on screen)</th><th>PNG</th><th>Difference</th>
+        <th class="num">On screen vs PNG<br>max / mean</th>
+        <th class="num">Outline flips<br>1 / 2 samples; beyond AA</th>
+        <th class="num">Component SVG as an image<br>px differing from the rig; vs PNG max / mean</th>
+        <th class="num">The rig today vs its PNG<br>max / mean</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`));
+
+  // Rest after a transition.
+  const rest = R.rest.map((r) => `
+    <tr><td><b>${r.pose}</b> (${r.rig})<br>${r.theme}, from ${r.from}</td><td><img class="tile ${r.theme}" src="out/rest/${r.file}"></td>
+    <td class="num">${r.vsPng.max} / ${fmt(r.vsPng.mean)}</td><td class="num"><span class="${cls(r.vsPng.beyondAA === 0)}">${r.vsPng.beyondAA}</span></td>
+    <td class="num"><span class="${cls(r.vsStill.max === 0)}">${r.vsStill.max}</span></td></tr>`).join("");
+  app.append(html(`
+    <h2>Each app pose at rest, after a real transition</h2>
+    <p>The moving crab keeps one tree of layers for its whole life and only turns cuts on and off. Each app pose here was reached by a spring from another pose, then captured once it settled.</p>
+    <table>
+      <thead><tr><th>Pose</th><th>At rest</th><th class="num">vs PNG<br>max / mean</th><th class="num">beyond AA</th><th class="num">vs the still pose<br>max</th></tr></thead>
+      <tbody>${rest}</tbody>
+    </table>`));
+
+  // Clips.
+  const NOTES = {
+    idle: "Idle: a breath (1.2% taller, 3.4 s, sine in and out) every few seconds, blinks at irregular 2.8 to 6.2 s intervals with the rig's own closed eyes, one in eight a double blink. Breaths stop 45 s after the last change; blinks go on.",
+    hello: "Hello: the left claw springs up to WAVE_L, cutting its paper gap as it crosses the shell, swings twice (16 degrees about its wrist, 620 ms each), then rests exactly on the rig's hello.",
+    flow: "Idle, thinking, working, done: each change is one calm spring (response 0.52 s, damping 0.86, about 1% overshoot). Thinking and working bob by about 1.6 dp; done closes its eyes, sets the envelope down and settles.",
+    "asking-error": "Asking leans in (2.2 degrees, then back) and holds still with the envelope up; error recoils once, the claw droops and the envelope falls to the ground.",
+    tuck: "Blocked: the head slides into the shell as it fades while the claws close the door (a quicker spring, 0.38 s), one recoil. Offline adds the plane. Back to idle, it comes out the same way.",
+    "reduced-motion": "Reduced motion: the full component with the phone's remove animations on. Poses swap; nothing moves.",
+  };
+  const byName = {};
+  for (const c of R.clips) (byName[c.name] ??= {})[c.theme] = c;
+  const clips = Object.entries(byName).map(([name, t]) => `
+    <div class="clip">
+      <div class="pair">${["light", "dark"].filter((k) => t[k]).map((k) => `<video src="out/${t[k].video}" poster="out/${t[k].poster}" autoplay loop muted playsinline></video>`).join("")}</div>
+      <h3>${name}</h3><p>${NOTES[name] ?? ""}</p>
+    </div>`).join("");
+  app.append(html(`
+    <h2>Motion</h2>
+    <p>Recorded with Playwright from the same component, driven by the same engine the phone runs on its UI thread (<code>apps/mobile/src/mascot-motion.ts</code>). Durations, springs and amplitudes are in <code>decisions.md</code>.</p>
+    ${R.clips.length ? `<div class="clips">${clips}</div>` : `<p class="missing">Clips were not recorded in the last run (it used --no-clips).</p>`}`));
+
+  if (R.quiet.light) {
+    app.append(html(`
+      <h2>Quiet mode</h2>
+      <p>With Quiet mode on (HM-SET-06), the full component draws nothing, everywhere. The words beside it stay, so the state is never shown by the picture alone.</p>
+      <div class="row"><figure><img class="tile" src="out/${R.quiet.light}" style="width:340px"></figure><figure><img class="tile" src="out/${R.quiet.dark}" style="width:340px"></figure></div>`));
+  }
+  document.getElementById("foot").textContent = `Generated ${R.generated} in Chrome ${R.browser.version} (${R.browser.flags.join(" ")}). Page errors: ${R.errors.length}.`;
+}
+</script>
+</body>
+</html>

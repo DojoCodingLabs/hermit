@@ -1,0 +1,12 @@
+UI mockup: the HERMIT Activity screen, light theme, showing the signed audit log.
+Screen content:
+- Header in the editorial serif: "Activity". Below it a sea-glass pill badge with a check-shield icon: "Chain verified".
+- A vertical timeline list, each row with a small icon, a title, a time, and a short monospace hash on the right:
+  "Reminder set" · "9:02 PM" · "a41f…9c0e"
+  "Message sent to Ana" · "8:57 PM" · "7be2…11d4"
+  "Blocked: send to unknown number" with a coral (#B4483A) shield icon · "8:40 PM" · "c09a…e7f1"
+  "Memory saved" · "8:31 PM" · "52dd…0a3b"
+- At the bottom, a quiet note: "Nothing here ever leaves your phone."
+- Small mascot in the "blocked" pose next to the blocked row.
+TEXT: render only the quoted strings, spelled exactly. No other text.
+DESIGN SYSTEM (use exactly): Android phone screen, modern Samsung flagship proportions, shown flat and front-on in a thin dark device frame centered on a plain warm paper (#F5EDE1) backdrop. Typography: clean humanist sans for UI, an editorial serif only for large headings. Generous spacing, 16 pt card radius, pill buttons, quiet hierarchy. Describe it as a real shipping product, not concept art. Image 1 is the logo symbol, image 2 is the mascot character sheet: use them exactly when they appear, do not redesign them.

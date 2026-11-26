@@ -1,0 +1,11 @@
+A single landscape brand moodboard for HERMIT, a private AI assistant that lives entirely on your phone and never sends your data anywhere. The brand metaphor: a hermit crab that carries its home on its back and keeps to itself; its shell is a safe, private home; when it needs more power it moves to a bigger shell.
+
+LAYOUT (a clean editorial grid of 6 panels on one board, equal gutters):
+1. Top left, largest panel: the logo concept, a simple hermit crab peeking out of a spiral shell, drawn as a bold, simple symbol, next to the wordmark "HERMIT".
+2. Top right: a phone showing a calm chat screen with one message bubble that reads "Recuérdame llamar a mamá a las 9" and a reply bubble that reads "Listo. Te aviso a las 9."
+3. Middle left: a color palette of 5 swatches as rounded rectangles, no hex codes or labels.
+4. Middle right: the tagline set large in the brand typeface: "Does everything. Tells no one."
+5. Bottom left: a texture or material sample that captures the brand's feel.
+6. Bottom right: a small illustration of the crab moving into a bigger shell.
+
+TEXT: render only these exact strings, spelled exactly: "HERMIT", "Recuérdame llamar a mamá a las 9", "Listo. Te aviso a las 9.", "Does everything. Tells no one." No other words, numbers, labels, captions or watermarks anywhere.

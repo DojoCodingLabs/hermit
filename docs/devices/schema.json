@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hermit device report",
+  "description": "What Hermit's Device lab measured on one phone: device and benchmark facts only. No names, accounts, identifiers (serial, IMEI, Android ID), locations, contacts, messages or anything a person typed. Every object is closed: a field not listed here is an error.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "app", "model", "device", "runtime", "speed", "eval", "run"],
+  "properties": {
+    "schema": { "const": "hermit-device-report/1" },
+    "app": {
+      "description": "The Hermit app version that ran the lab.",
+      "type": "string",
+      "pattern": "^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,4}(-[0-9A-Za-z.]{1,24})?$"
+    },
+    "model": {
+      "description": "The model profile the lab ran, for example botpsy-q4-native-think256.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]{0,63}$"
+    },
+    "device": {
+      "description": "What the phone is, as Android reports it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "model", "chip", "chipSource", "ramGB", "android", "api", "abi", "cores", "cpuFeatures"],
+      "properties": {
+        "manufacturer": { "description": "Android's Build.MANUFACTURER.", "$ref": "#/$defs/name" },
+        "model": { "description": "Android's Build.MODEL, the maker's model code (never the device name a person sets).", "$ref": "#/$defs/name" },
+        "chip": { "description": "The system on chip: Build.SOC_MODEL on Android 12 and later, else the Hardware line of /proc/cpuinfo, else Build.HARDWARE.", "$ref": "#/$defs/name" },
+        "chipVendor": { "description": "Build.SOC_MANUFACTURER, when Android 12 or later reports it.", "$ref": "#/$defs/name" },
+        "chipSource": { "description": "Where chip came from.", "enum": ["soc", "cpuinfo", "build", "unknown"] },
+        "ramGB": { "description": "Total memory in GB (1024^3 bytes), one decimal.", "type": "number", "minimum": 0.5, "maximum": 64 },
+        "lowRam": { "description": "Android counts the phone as a low-memory device.", "type": "boolean" },
+        "android": { "description": "The Android version, for example 15.", "type": "string", "pattern": "^[0-9]{1,2}(\\.[0-9]{1,2}){0,2}$" },
+        "api": { "description": "The Android API level.", "type": "integer", "minimum": 21, "maximum": 60 },
+        "abi": { "description": "The primary ABI.", "enum": ["arm64-v8a", "armeabi-v7a", "x86_64", "x86", "unknown"] },
+        "cores": { "description": "Every online CPU core.", "type": "integer", "minimum": 1, "maximum": 64 },
+        "coreMaxMHz": {
+          "description": "Each core's top clock in MHz, by core number; 0 where it couldn't be read.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "type": "integer", "minimum": 0, "maximum": 6000 }
+        },
+        "cpuFeatures": {
+          "description": "The CPU features llama.cpp's fast paths use.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dotprod", "i8mm", "sve2", "sme2"],
+          "properties": {
+            "dotprod": { "type": "boolean" },
+            "i8mm": { "type": "boolean" },
+            "sve2": { "type": "boolean" },
+            "sme2": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "runtime": {
+      "description": "How Hermit planned to run the model on this phone, and the conditions when the lab started.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier", "threads", "threadsBatch", "ctxSize", "ubatch", "thinkingBudget", "fastRoute", "allowedCpus", "thermalStart", "thermalMax", "batterySaver"],
+      "properties": {
+        "tier": { "enum": ["unsupported", "floor", "low", "mid", "high"] },
+        "threads": { "$ref": "#/$defs/threads" },
+        "threadsBatch": { "$ref": "#/$defs/threads" },
+        "cpuMask": { "description": "Hex mask of the cores the model was pinned to, when the plan pins them.", "type": "string", "pattern": "^[0-9a-f]{1,8}$" },
+        "ctxSize": { "type": "integer", "minimum": 256, "maximum": 131072 },
+        "ubatch": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "thinkingBudget": { "type": "integer", "minimum": 0, "maximum": 4096 },
+        "fastRoute": { "type": "boolean" },
+        "allowedCpus": {
+          "description": "The cores Android let the app use while the lab ran on screen, the way the kernel writes them (0-5).",
+          "type": "string",
+          "pattern": "^(unknown|[0-9]{1,2}(-[0-9]{1,2})?(,[0-9]{1,2}(-[0-9]{1,2})?){0,31})$"
+        },
+        "cpuset": { "description": "The cpuset the app was in, for example foreground or top-app.", "type": "string", "pattern": "^[a-z][a-z0-9-]{0,23}$" },
+        "thermalStart": { "$ref": "#/$defs/thermal" },
+        "thermalMax": { "$ref": "#/$defs/thermal" },
+        "batterySaver": { "type": "boolean" }
+      }
+    },
+    "speed": {
+      "description": "The speed probe: the same fixed prompt at the plan's thread count, then at a few others.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["threads", "tokensPerSecond", "firstTokenMs", "loadMs", "sweep"],
+      "properties": {
+        "threads": { "$ref": "#/$defs/threads" },
+        "tokensPerSecond": { "$ref": "#/$defs/rate" },
+        "prefillTokensPerSecond": { "$ref": "#/$defs/rate" },
+        "firstTokenMs": { "$ref": "#/$defs/ms" },
+        "loadMs": { "$ref": "#/$defs/ms" },
+        "sweep": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["threads", "tokensPerSecond", "loadMs"],
+            "properties": {
+              "threads": { "$ref": "#/$defs/threads" },
+              "tokensPerSecond": { "$ref": "#/$defs/rate" },
+              "prefillTokensPerSecond": { "$ref": "#/$defs/rate" },
+              "firstTokenMs": { "$ref": "#/$defs/ms" },
+              "loadMs": { "$ref": "#/$defs/ms" }
+            }
+          }
+        }
+      }
+    },
+    "eval": {
+      "description": "The accuracy and latency pass: Hermit's public first-win cases on the lab's fixed clock. Case text is never included, only case ids.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "n", "firstActionMedianMs", "p90Ms"],
+      "properties": {
+        "score": { "description": "Cases whose first action was right.", "type": "integer", "minimum": 0, "maximum": 100 },
+        "n": { "description": "Cases run.", "type": "integer", "minimum": 1, "maximum": 100 },
+        "firstActionMedianMs": { "$ref": "#/$defs/ms" },
+        "p90Ms": { "$ref": "#/$defs/ms" },
+        "perCase": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "pass", "ms", "choice"],
+            "properties": {
+              "id": {
+                "enum": [
+                  "es-remind-1", "es-remember-2", "es-recall-1", "es-forget-1", "es-cal-read-1", "es-read-1",
+                  "en-remind-1", "en-remember-2", "en-cal-add-1", "en-reply-1", "en-ask-1", "en-none-1"
+                ]
+              },
+              "pass": { "type": "boolean" },
+              "ms": { "$ref": "#/$defs/ms" },
+              "choice": {
+                "description": "The first action the model picked: a skill id, respond, ask_user, or other.",
+                "enum": [
+                  "remember", "recall", "forget", "remind", "reminders_list", "reminder_cancel", "calendar_read", "calendar_add",
+                  "read_messages", "reply_message", "mail_list", "mail_search", "mail_read", "mail_send", "mail_reply", "mail_forward",
+                  "mail_draft", "mail_modify", "respond", "ask_user", "other"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["durationMs", "thermalPauses", "pausedMs", "date"],
+      "properties": {
+        "durationMs": { "description": "The whole run, pauses included.", "type": "integer", "minimum": 1, "maximum": 14400000 },
+        "thermalPauses": { "description": "Times the lab paused because the phone was hot.", "type": "integer", "minimum": 0, "maximum": 100 },
+        "pausedMs": { "description": "Time spent in those pauses.", "type": "integer", "minimum": 0, "maximum": 14400000 },
+        "date": { "description": "The day the lab ran (UTC), never the time.", "type": "string", "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$" }
+      }
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 48,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.,()+/-]{0,47}$"
+    },
+    "threads": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "ms": { "type": "integer", "minimum": 0, "maximum": 3600000 },
+    "rate": { "description": "Tokens per second.", "type": "number", "minimum": 0, "maximum": 5000 },
+    "thermal": {
+      "description": "Android's thermal status: none, light, moderate, severe, critical, emergency, shutdown.",
+      "enum": ["none", "light", "moderate", "severe", "critical", "emergency", "shutdown", "unknown"]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+Expression sheet B for the HERMIT mascot. Image 1 is the official character sheet.
+
+A landscape grid of 8 equal cells (2 rows of 4) on warm paper (#F5EDE1), thin stone (#D3C2AE) dividers, each cell one pose of the same character, consistent scale:
+1. Sleeping (night shift): inside the shell, eye stalks curled down, a small crescent moon above.
+2. Boost: walking from its small shell toward a noticeably larger empty spiral shell beside a closed laptop, peeking into the big shell.
+3. Changing phones: carrying a small bundle from an old empty shell to a new shell; the old shell left clean and empty.
+4. Remembering: tucking a small pearl into a spiral chamber of its shell with the big claw.
+5. Forgetting: holding a pearl out over calm water as it dissolves into small bubbles; the chamber visibly empty.
+6. Listening: eye stalks leaning gently toward a small microphone.
+7. Waving hello: half out, the small claw raised in a polite greeting.
+8. Quiet mode: the shell alone, no crab visible, opening dark.
+
+CHARACTER RULES (do not redesign the character; match image 1 exactly): HERMIT is a hermit crab living in a round spiral shell. The shell is deep warm ink (#2B221B) with one sea-glass teal (#4F7C6D) spiral line, and it is the dominant shape. The crab is warm sand (#D5B893) with ink outlines, seen from the side or three-quarter view, with two eye stalks topped by round dark eyes with a tiny highlight, ONE big rounded claw on its right and one small claw, and short legs. No mouth, no eyebrows, no blush. Never red, orange or coral. Flat 2D vector, single confident line weight, matte, no gradients, no 3D. Emotion is shown only through the eye stalks, the claw, and how far the crab is out of its shell.
+TEXT: none. No words, labels, numbers or watermarks anywhere.

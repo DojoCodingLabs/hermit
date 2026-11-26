@@ -1,0 +1,29 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "prompt": "UI mockup: the HERMIT approval sheet, light theme. A bottom sheet slides over a dimmed chat.\nSheet content (warm paper #F5EDE1, 28 pt top radius):\n- At the top of the sheet, the mascot in the \"asking for approval\" pose holding a tiny envelope, small.\n- Heading in the editorial serif: \"Send this message?\"\n- A card in shell beige (#EBDDCB) with two labeled rows: label \"To\" with value \"Ana · WhatsApp\", label \"Message\" with value \"Running 10 minutes late, see you soon\".\n- A small amber (#8A5912) note with a caution icon: \"Suggested after reading a message from Ana\".\n- A large pill button in deep sea-glass (#3B6456) with a fingerprint icon and paper-white text \"Approve with fingerprint\".\n- A text button below it: \"Don't send\".\nTEXT: render only the quoted strings, spelled exactly. No other text.\nDESIGN SYSTEM (use exactly): Android phone screen, modern Samsung flagship proportions, shown flat and front-on in a thin dark device frame centered on a plain warm paper (#F5EDE1) backdrop. Typography: clean humanist sans for UI, an editorial serif only for large headings. Generous spacing, 16 pt card radius, pill buttons, quiet hierarchy. Describe it as a real shipping product, not concept art. Image 1 is the logo symbol, image 2 is the mascot character sheet: use them exactly when they appear, do not redesign them.",
+  "size": "1024x1536",
+  "quality": "high",
+  "n": 1,
+  "output_format": "png",
+  "mode": "edit",
+  "refs": [
+    "docs/brand/masters/symbol-ref.png",
+    "docs/brand/masters/character-master.png"
+  ],
+  "outputs": [
+    "docs/brand/ui/ui-approval-light.png"
+  ],
+  "usage": {
+    "input_tokens": 2906,
+    "input_tokens_details": {
+      "image_tokens": 2560,
+      "text_tokens": 346
+    },
+    "output_tokens": 1372,
+    "output_tokens_details": {
+      "image_tokens": 1372,
+      "text_tokens": 0
+    },
+    "total_tokens": 4278
+  }
+}

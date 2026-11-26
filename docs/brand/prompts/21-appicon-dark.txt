@@ -1,0 +1,2 @@
+Dark app icon for HERMIT, square 1024 by 1024, full-bleed (no rounded corners, no device). Image 1 is the approved logo symbol: keep the exact same shapes and composition, recolor only.
+Background: deep abyss navy (#06121D). The shell becomes deep ocean blue (#1A4A5E), the spiral line becomes bioluminescent mint (#5EF0CF) with a faint inner glow contained inside the shell, the eye stalk stays sand (#D5B893). Centered, about 62 percent of the width. No text, no border, no halo outside the shell.

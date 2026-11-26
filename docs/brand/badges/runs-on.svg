@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="22" role="img" aria-label="runs on: your phone">
+  <title>runs on: your phone</title>
+  <clipPath id="r"><rect width="144" height="22" rx="11"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="62" height="22" fill="#2B221B"/>
+    <rect x="62" width="82" height="22" fill="#3B6456"/>
+  </g>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600">
+    <text x="31.0" y="15" text-anchor="middle" fill="#D5B893">runs on</text>
+    <text x="103.0" y="15" text-anchor="middle" fill="#F5EDE1">your phone</text>
+  </g>
+</svg>

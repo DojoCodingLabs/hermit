@@ -1,0 +1,7 @@
+A wide illustrated explainer strip for the HERMIT README, five equal panels left to right, separated by thin stone (#D3C2AE) arrows, on warm paper (#F5EDE1). Image 1 is the mascot sheet: use the character exactly, do not redesign it. Flat 2D vector, the same single line weight everywhere, deep ink (#2B221B), sea-glass teal (#4F7C6D) accents, sand (#D5B893) crab. Each panel has a small illustration on top and a bold caption below in a clean humanist sans in deep ink, and a smaller second line in soft brown (#6B5E52).
+1. A phone with a chat bubble. Caption "You ask" / "Tell Ana I'm 10 minutes late"
+2. The crab half out of its shell holding a small menu card with a few lines and one line highlighted in teal. Caption "Hermit picks a skill" / "From a menu, not a computer"
+3. The crab inside its shell behind a small arched gate with a teal padlock. Caption "The cage checks it" / "Sending always asks"
+4. A fingerprint inside a teal circle next to a small card showing a message. Caption "You approve" / "The exact message, nothing else"
+5. A paper airplane leaving and a small chain of linked tiles with a check. Caption "Done and logged" / "Signed on your phone"
+TEXT: render only the quoted strings, spelled exactly. No other text, no numbers.

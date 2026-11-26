@@ -1,0 +1,12 @@
+A single mascot character on a plain warm paper background (#F5EDE1): an anatomically accurate but simple HERMIT CRAB, drawn as a clean flat 2D vector icon, three-quarter view facing right, standing on a short ground line.
+
+Anatomy, exactly (this must read instantly as a crab, never as a snail):
+- A spiral snail shell carried on its back, ABOVE and BEHIND the crab, tilted so the shell's opening faces forward and down. Shell: deep warm ink (#2B221B) with one sea-glass teal (#4F7C6D) spiral line.
+- The crab's front half comes out of the shell opening: a rounded head/carapace in warm sand (#D5B893).
+- Exactly TWO eye stalks rising from the front of the head, each topped by one glossy black eye. Exactly two eyes in total.
+- Exactly TWO long thin antennae sweeping up and back from between the eye stalks.
+- Exactly TWO claws held in front of the face: the RIGHT claw is clearly larger (a real pincer with two fingers and a visible gap), the left claw is small.
+- Exactly FOUR walking legs visible (two pairs), each with jointed segments and pointed tips touching the ground, spread like a real crab.
+- No mouth, no smile, no eyebrows, no blush. Calm, capable expression from posture only.
+
+Style: bold simple geometric shapes, one consistent ink outline weight, flat fills, no gradients, no texture, no shadows except a tiny flat ground shadow. Palette only: ink #2B221B, sea-glass #4F7C6D, sand #D5B893, paper #F5EDE1. No red, no orange, no coral. Centered with generous padding. No text.

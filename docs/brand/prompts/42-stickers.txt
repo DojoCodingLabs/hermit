@@ -1,0 +1,16 @@
+Sticker sheet for the HERMIT mascot: a 4 by 3 grid of 12 die-cut stickers on a warm paper (#F5EDE1) background, each sticker with a thick white die-cut border and a soft shadow. Image 1 is the mascot sheet: use the character exactly, do not redesign it.
+Stickers, each a pose plus a short caption in a bold rounded sans in deep ink:
+1. finger-to-lips gesture with the small claw: "Tells no one"
+2. setting down an envelope: "Done"
+3. holding an envelope up, one eye raised: "You sure?"
+4. fully inside the shell: "Not going out today"
+5. walking toward a bigger shell: "Moving up"
+6. pearl dissolving into bubbles: "Forgotten, as asked"
+7. paper airplane above the closed shell: "Airplane mode"
+8. eye stalks wide: "Seen"
+9. moon above, sleeping: "Good night"
+10. claw sealing the shell opening: "Nope"
+11. small claw waving: "Hi"
+12. big claw thumbs-up shape: "On it"
+CHARACTER RULES (do not redesign the character; match image 1 exactly): HERMIT is a hermit crab living in a round spiral shell. The shell is deep warm ink (#2B221B) with one sea-glass teal (#4F7C6D) spiral line, and it is the dominant shape. The crab is warm sand (#D5B893) with ink outlines, seen from the side or three-quarter view, with two eye stalks topped by round dark eyes with a tiny highlight, ONE big rounded claw on its right and one small claw, and short legs. No mouth, no eyebrows, no blush. Never red, orange or coral. Flat 2D vector, single confident line weight, matte, no gradients, no 3D. Emotion is shown only through the eye stalks, the claw, and how far the crab is out of its shell.
+TEXT: render only the 12 quoted captions, spelled exactly, one per sticker. No other text.

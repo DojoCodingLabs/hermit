@@ -1,0 +1,20 @@
+{
+  "name": "@hermit/relay",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Hermit's open-source sign-in relay: swaps an authorization code for tokens with a client secret, returns them encrypted to the phone, stores nothing.",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node src/main.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hermit/connectors": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2"
+  }
+}

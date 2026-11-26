@@ -1,0 +1,26 @@
+{
+  "name": "@hermit/night",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hermit/agent": "workspace:*",
+    "@hermit/cage": "workspace:*",
+    "@hermit/core": "workspace:*",
+    "@hermit/model": "workspace:*",
+    "@hermit/skills": "workspace:*"
+  },
+  "devDependencies": {
+    "@hermit/mail": "workspace:*",
+    "@hermit/sql-node": "workspace:*",
+    "@types/node": "24.19.2"
+  }
+}

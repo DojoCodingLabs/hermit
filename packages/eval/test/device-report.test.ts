@@ -8,7 +8,9 @@ import { buildDeviceReport, median, p90, REPORT_SCHEMA, type PhoneFacts } from "
 // The report format and its checker live with the device table (docs/devices, scripts/devices): the report built here
 // must pass that exact checker, field for field.
 const schema = JSON.parse(readFileSync(new URL("../../../docs/devices/schema.json", import.meta.url), "utf8"));
-const goodReport = JSON.parse(readFileSync(new URL("../../../scripts/devices/fixtures/good-report.json", import.meta.url), "utf8"));
+const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../../scripts/devices/fixtures/${name}`, import.meta.url), "utf8"));
+const goodReport = fixture("good-report-android.json");
+const iphoneReport = fixture("good-report-iphone.json");
 const validatorUrl = new URL("../../../scripts/devices/validate.mjs", import.meta.url).href;
 const { validateReport } = (await import(validatorUrl)) as { validateReport(report: unknown, schema?: unknown, o?: { today?: Date }): { ok: boolean; errors: string[] } };
 const check = (report: unknown) => validateReport(report, schema, { today: new Date("2026-11-26T12:00:00Z") });
@@ -52,6 +54,22 @@ const lab: LabRun = {
 };
 const build = (over: { facts?: PhoneFacts; lab?: LabRun; app?: string } = {}) => buildDeviceReport({ app: over.app ?? "0.1.0", profile, facts: over.facts ?? facts, lab: over.lab ?? lab });
 
+// A made-up iPhone (iPhone 99 Example, iPhone99,1): 6 cores, 7.5 GB, iOS 27.0. iOS has no cpusets and no core mask, and
+// its thermal states were mapped onto Android's scale (serious is 3) before the lab saw them.
+const iosFacts: PhoneFacts = {
+  platform: "ios",
+  manufacturer: "Apple",
+  model: "iPhone 99 Example",
+  modelId: "iPhone99,1",
+  iosVersion: "27.0",
+  totalRamBytes: 7.5 * GB,
+  logicalCores: 6,
+  cpuFeatures: { dotprod: true, i8mm: true, sve2: false, sme2: false },
+  batterySaver: false,
+};
+const iosLab: LabRun = { ...lab, plan: { ...plan, cpuMask: undefined } as RuntimePlan, thermal: { start: 0, max: 3, pauses: 1, pausedMs: 45_000 } };
+const buildIos = (over: { facts?: Partial<PhoneFacts>; lab?: Partial<LabRun> } = {}) => build({ facts: { ...iosFacts, ...over.facts } as PhoneFacts, lab: { ...iosLab, ...over.lab } });
+
 /** Every key path in a value, lists as [] ("device.coreMaxMHz[]", "eval.perCase[].id"). */
 function valuePaths(v: unknown, path = ""): string[] {
   if (Array.isArray(v)) return v.flatMap((x) => valuePaths(x, `${path}[]`)).concat(path ? [path] : []);
@@ -59,29 +77,90 @@ function valuePaths(v: unknown, path = ""): string[] {
   return [];
 }
 
+type Node = Record<string, unknown>;
+const deref = (s: Node): Node => (typeof s.$ref === "string" ? deref((schema.$defs as Record<string, Node>)[s.$ref.split("/").pop()!]!) : s);
+
 /** Every property path the schema allows, the same way. */
-function schemaPaths(s: Record<string, unknown>, path = ""): string[] {
-  const node = typeof s.$ref === "string" ? (schema.$defs as Record<string, Record<string, unknown>>)[s.$ref.split("/").pop()!]! : s;
-  if (node.items) return [...(path ? [path] : []), ...schemaPaths(node.items as Record<string, unknown>, `${path}[]`)].filter((p, i, a) => a.indexOf(p) === i);
-  const props = (node.properties ?? {}) as Record<string, Record<string, unknown>>;
+function schemaPaths(s: Node, path = ""): string[] {
+  const node = deref(s);
+  if (node.items) return [...(path ? [path] : []), ...schemaPaths(node.items as Node, `${path}[]`)].filter((p, i, a) => a.indexOf(p) === i);
+  const props = (node.properties ?? {}) as Record<string, Node>;
   return Object.entries(props).flatMap(([k, x]) => {
     const p = path ? `${path}.${k}` : k;
     return [p, ...schemaPaths(x, p).filter((q) => q !== p)];
   });
 }
 
+/** The report with one platform's device in place of the choice between them. */
+const withDevice = (device: string): Node => ({ ...schema, properties: { ...schema.properties, device: { $ref: `#/$defs/${device}` } } });
+
 const sorted = (xs: string[]) => [...new Set(xs)].sort();
+const without = (xs: string[], drop: string[]) => sorted(xs).filter((x) => !drop.includes(x));
+/** The platform's own thermal state is an iPhone's only; cpusets and core masks are Android's only. */
+const IOS_ONLY = ["runtime.osThermalStart", "runtime.osThermalMax"];
+const ANDROID_ONLY = ["runtime.cpuMask", "runtime.cpuset"];
 
 describe("buildDeviceReport", () => {
   test("made from fixture facts it is exactly the report the device table's checker accepts", () => {
     const report = build();
     expect(report).toEqual(goodReport);
+    expect(report.schema).toBe("hermit-device-report/2");
+    expect(report.device.platform).toBe("android");
     expect(check(report)).toEqual({ ok: true, errors: [] });
   });
 
   test("redaction: the report has exactly the schema's fields, no more and no fewer (a new field needs a schema change)", () => {
-    expect(sorted(valuePaths(build()))).toEqual(sorted(schemaPaths(schema)));
+    expect(sorted(valuePaths(build()))).toEqual(without(schemaPaths(withDevice("androidDevice")), IOS_ONLY));
   });
+
+  test("facts that name no platform are Android's, as before", () => {
+    expect(build({ facts: { ...facts, platform: undefined } })).toEqual(goodReport);
+  });
+});
+
+describe("buildDeviceReport on an iPhone", () => {
+  test("made from fixture facts it is exactly the iPhone report the device table's checker accepts", () => {
+    const report = buildIos();
+    expect(report).toEqual(iphoneReport);
+    expect(check(report)).toEqual({ ok: true, errors: [] });
+  });
+
+  test("redaction: the iPhone report has exactly the schema's iPhone fields", () => {
+    expect(sorted(valuePaths(buildIos()))).toEqual(without(schemaPaths(withDevice("iosDevice")), ANDROID_ONLY));
+  });
+
+  test("Android's facts never reach an iPhone report: no API level, ABI, chip, low-memory flag, clocks or cpuset", () => {
+    const report = buildIos({
+      facts: {
+        apiLevel: 35, androidRelease: "15", abis: ["arm64-v8a"], socModel: "XC9000", buildHardware: "iPhone99,1", lowRam: false,
+        clusters: [{ cpus: [0, 1], maxFreqKHz: 3_000_000 }], allowedCpus: [0, 1, 2], cpuset: "/top-app",
+      },
+    });
+    expect(report).toEqual(iphoneReport);
+  });
+
+  test("the version and the model identifier are checked like any other fact", () => {
+    const report = buildIos({ facts: { iosVersion: "27 beta", modelId: "arm64", model: "someone@example.org" } });
+    expect(report.device).toMatchObject({ ios: "0", modelId: "unknown", model: "unknown" });
+    expect(JSON.stringify(report)).not.toContain("example.org");
+    expect(check(report)).toEqual({ ok: true, errors: [] });
+  });
+
+  test("heat: the mapped state stays, and iOS's own name for it is recorded next to it", () => {
+    const at = (start: number, max: number) => buildIos({ lab: { thermal: { start, max, pauses: 1, pausedMs: 45_000 } } }).runtime;
+    expect(at(0, 3)).toMatchObject({ thermalStart: "none", thermalMax: "severe", osThermalStart: "nominal", osThermalMax: "serious" });
+    expect(at(1, 4)).toMatchObject({ thermalStart: "light", thermalMax: "critical", osThermalStart: "fair", osThermalMax: "critical" });
+    // A number iOS never maps to, or no reading at all, is unknown in iOS's words.
+    expect(at(2, 5)).toMatchObject({ thermalStart: "moderate", thermalMax: "emergency", osThermalStart: "unknown", osThermalMax: "unknown" });
+    const unread = buildIos({ lab: { thermal: { pauses: 0, pausedMs: 0 } } });
+    expect(unread.runtime).toMatchObject({ thermalStart: "unknown", thermalMax: "unknown", osThermalStart: "unknown", osThermalMax: "unknown" });
+    expect(check(unread)).toEqual({ ok: true, errors: [] });
+    // An Android report has no second name: Android's are the mapped ones.
+    expect(build().runtime).not.toHaveProperty("osThermalMax");
+  });
+});
+
+describe("buildDeviceReport, the rest", () => {
 
   test("redaction: whatever else the facts carry never reaches the report", () => {
     const poisoned = {
@@ -111,7 +190,7 @@ describe("buildDeviceReport", () => {
     const text = JSON.stringify(report);
     for (const secret of ["someone", "example.org", "phone.example", "356938035643809", "shop.example"]) expect(text).not.toContain(secret);
     expect(report.device).toMatchObject({ manufacturer: "unknown", model: "unknown", chip: "unknown", chipSource: "unknown", android: "15" });
-    expect(report.device.chipVendor).toBeUndefined();
+    expect(report.device).not.toHaveProperty("chipVendor");
     expect(check(report)).toEqual({ ok: true, errors: [] });
   });
 
@@ -119,7 +198,7 @@ describe("buildDeviceReport", () => {
     const bare: PhoneFacts = { totalRamBytes: 3.2 * GB, apiLevel: 33, logicalCores: 4 };
     const report = build({ facts: bare, lab: { ...lab, plan: { ...plan, cpuMask: undefined } as RuntimePlan, thermal: { pauses: 0, pausedMs: 0 } } });
     expect(report.device).toEqual({
-      manufacturer: "unknown", model: "unknown", chip: "unknown", chipSource: "unknown", ramGB: 3.2, android: "13", api: 33, abi: "unknown", cores: 4,
+      platform: "android", manufacturer: "unknown", model: "unknown", chip: "unknown", chipSource: "unknown", ramGB: 3.2, android: "13", api: 33, abi: "unknown", cores: 4,
       cpuFeatures: { dotprod: false, i8mm: false, sve2: false, sme2: false },
     });
     expect(report.runtime).toMatchObject({ allowedCpus: "unknown", thermalStart: "unknown", thermalMax: "unknown", batterySaver: false });
@@ -131,7 +210,7 @@ describe("buildDeviceReport", () => {
   test("the chip comes from Android's SoC model, else the cpuinfo Hardware line, else the build's hardware", () => {
     expect(build({ facts: { ...facts, socModel: undefined } }).device).toMatchObject({ chip: "exm", chipSource: "build" });
     expect(build({ facts: { ...facts, socModel: "unknown", cpuinfoHardware: "Qualcomm Technologies, Inc SM6225" } }).device).toMatchObject({ chip: "Qualcomm Technologies, Inc SM6225", chipSource: "cpuinfo" });
-    expect(build({ facts: { ...facts, socModel: "unknown", cpuinfoHardware: "Qualcomm Technologies, Inc SM6225" } }).device.chipVendor).toBeUndefined();
+    expect(build({ facts: { ...facts, socModel: "unknown", cpuinfoHardware: "Qualcomm Technologies, Inc SM6225" } }).device).not.toHaveProperty("chipVendor");
   });
 
   test("numbers are rounded and clamped to what the schema allows", () => {
@@ -157,7 +236,8 @@ describe("buildDeviceReport", () => {
 
 describe("the schema and the lab agree", () => {
   test("the report's schema id", () => {
-    expect(schema.properties.schema.const).toBe(REPORT_SCHEMA);
+    // Reports filed before the platform was named stay valid.
+    expect(schema.properties.schema.enum).toEqual(["hermit-device-report/1", REPORT_SCHEMA]);
   });
 
   test("perCase ids are exactly the lab's cases", () => {

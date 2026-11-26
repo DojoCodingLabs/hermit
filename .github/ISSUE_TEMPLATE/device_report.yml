@@ -6,11 +6,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for running the Device lab. In Hermit, **File it on GitHub** fills this form in for you. If you're
-        pasting it yourself, use **Copy** on the report screen and paste it below exactly as it is.
+        Thanks for running the Device lab. In Hermit, on an Android phone or an iPhone, **File it on GitHub** fills
+        this form in for you. If you're pasting it yourself, use **Copy** on the report screen and paste it below
+        exactly as it is.
 
-        A report holds device and benchmark facts only: the phone's maker and model code, chip, memory, Android
-        version and cores, and the lab's speed and accuracy numbers. It never holds your name, accounts, contacts,
+        A report holds device and benchmark facts only: the phone's maker and model (on an iPhone, also its model
+        identifier, like iPhone16,2), chip (Android only), memory, Android or iOS version and cores, and the lab's
+        speed and accuracy numbers. It never holds your name, accounts, contacts,
         messages, location or anything you typed. A check reads it as data. If it passes, it goes on the device-data
         branch, and a maintainer adds it to the device table in
         [docs/devices.md](https://github.com/DojoCodingLabs/hermit/blob/HEAD/docs/devices.md). This issue is public.

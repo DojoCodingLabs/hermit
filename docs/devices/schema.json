@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Hermit device report",
-  "description": "What Hermit's Device lab measured on one phone: device and benchmark facts only. No names, accounts, identifiers (serial, IMEI, Android ID), locations, contacts, messages or anything a person typed. Every object is closed: a field not listed here is an error.",
+  "description": "What Hermit's Device lab measured on one phone: device and benchmark facts only. No names, accounts, identifiers (serial, IMEI, Android ID), locations, contacts, messages or anything a person typed. Every object is closed: a field not listed here is an error. Version 1 came from Android phones only and has no device.platform; version 2 always names the platform, android or ios. Both stay valid.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "app", "model", "device", "runtime", "speed", "eval", "run"],
   "properties": {
-    "schema": { "const": "hermit-device-report/1" },
+    "schema": { "enum": ["hermit-device-report/1", "hermit-device-report/2"] },
     "app": {
       "description": "The Hermit app version that ran the lab.",
       "type": "string",
@@ -18,42 +18,8 @@
       "pattern": "^[a-z0-9][a-z0-9.-]{0,63}$"
     },
     "device": {
-      "description": "What the phone is, as Android reports it.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["manufacturer", "model", "chip", "chipSource", "ramGB", "android", "api", "abi", "cores", "cpuFeatures"],
-      "properties": {
-        "manufacturer": { "description": "Android's Build.MANUFACTURER.", "$ref": "#/$defs/name" },
-        "model": { "description": "Android's Build.MODEL, the maker's model code (never the device name a person sets).", "$ref": "#/$defs/name" },
-        "chip": { "description": "The system on chip: Build.SOC_MODEL on Android 12 and later, else the Hardware line of /proc/cpuinfo, else Build.HARDWARE.", "$ref": "#/$defs/name" },
-        "chipVendor": { "description": "Build.SOC_MANUFACTURER, when Android 12 or later reports it.", "$ref": "#/$defs/name" },
-        "chipSource": { "description": "Where chip came from.", "enum": ["soc", "cpuinfo", "build", "unknown"] },
-        "ramGB": { "description": "Total memory in GB (1024^3 bytes), one decimal.", "type": "number", "minimum": 0.5, "maximum": 64 },
-        "lowRam": { "description": "Android counts the phone as a low-memory device.", "type": "boolean" },
-        "android": { "description": "The Android version, for example 15.", "type": "string", "pattern": "^[0-9]{1,2}(\\.[0-9]{1,2}){0,2}$" },
-        "api": { "description": "The Android API level.", "type": "integer", "minimum": 21, "maximum": 60 },
-        "abi": { "description": "The primary ABI.", "enum": ["arm64-v8a", "armeabi-v7a", "x86_64", "x86", "unknown"] },
-        "cores": { "description": "Every online CPU core.", "type": "integer", "minimum": 1, "maximum": 64 },
-        "coreMaxMHz": {
-          "description": "Each core's top clock in MHz, by core number; 0 where it couldn't be read.",
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 64,
-          "items": { "type": "integer", "minimum": 0, "maximum": 6000 }
-        },
-        "cpuFeatures": {
-          "description": "The CPU features llama.cpp's fast paths use.",
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["dotprod", "i8mm", "sve2", "sme2"],
-          "properties": {
-            "dotprod": { "type": "boolean" },
-            "i8mm": { "type": "boolean" },
-            "sve2": { "type": "boolean" },
-            "sme2": { "type": "boolean" }
-          }
-        }
-      }
+      "description": "What the phone is: an Android phone (version 1, or version 2 with platform android) or an iPhone (version 2 only).",
+      "oneOf": [{ "$ref": "#/$defs/androidDevice" }, { "$ref": "#/$defs/iosDevice" }]
     },
     "runtime": {
       "description": "How Hermit planned to run the model on this phone, and the conditions when the lab started.",
@@ -70,13 +36,15 @@
         "thinkingBudget": { "type": "integer", "minimum": 0, "maximum": 4096 },
         "fastRoute": { "type": "boolean" },
         "allowedCpus": {
-          "description": "The cores Android let the app use while the lab ran on screen, the way the kernel writes them (0-5).",
+          "description": "The cores Android let the app use while the lab ran on screen, the way the kernel writes them (0-5). Unknown on an iPhone, which has no cpusets.",
           "type": "string",
           "pattern": "^(unknown|[0-9]{1,2}(-[0-9]{1,2})?(,[0-9]{1,2}(-[0-9]{1,2})?){0,31})$"
         },
         "cpuset": { "description": "The cpuset the app was in, for example foreground or top-app.", "type": "string", "pattern": "^[a-z][a-z0-9-]{0,23}$" },
         "thermalStart": { "$ref": "#/$defs/thermal" },
         "thermalMax": { "$ref": "#/$defs/thermal" },
+        "osThermalStart": { "description": "iPhone reports only: iOS's own thermal state at the start. thermalStart is the same state on Android's scale.", "$ref": "#/$defs/iosThermal" },
+        "osThermalMax": { "description": "iPhone reports only: iOS's own hottest thermal state during the run. thermalMax is the same state on Android's scale.", "$ref": "#/$defs/iosThermal" },
         "batterySaver": { "type": "boolean" }
       }
     },
@@ -172,8 +140,71 @@
     "ms": { "type": "integer", "minimum": 0, "maximum": 3600000 },
     "rate": { "description": "Tokens per second.", "type": "number", "minimum": 0, "maximum": 5000 },
     "thermal": {
-      "description": "Android's thermal status: none, light, moderate, severe, critical, emergency, shutdown.",
+      "description": "Android's thermal status: none, light, moderate, severe, critical, emergency, shutdown. An iPhone's state is mapped onto it: nominal none, fair light, serious severe, critical critical.",
       "enum": ["none", "light", "moderate", "severe", "critical", "emergency", "shutdown", "unknown"]
+    },
+    "iosThermal": {
+      "description": "iOS's thermal state (ProcessInfo.ThermalState).",
+      "enum": ["nominal", "fair", "serious", "critical", "unknown"]
+    },
+    "version": { "type": "string", "pattern": "^[0-9]{1,2}(\\.[0-9]{1,2}){0,2}$" },
+    "ramGB": { "description": "Total memory in GB (1024^3 bytes), one decimal.", "type": "number", "minimum": 0.5, "maximum": 64 },
+    "cores": { "description": "Every online CPU core.", "type": "integer", "minimum": 1, "maximum": 64 },
+    "cpuFeatures": {
+      "description": "The CPU features llama.cpp's fast paths use.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dotprod", "i8mm", "sve2", "sme2"],
+      "properties": {
+        "dotprod": { "type": "boolean" },
+        "i8mm": { "type": "boolean" },
+        "sve2": { "type": "boolean" },
+        "sme2": { "type": "boolean" }
+      }
+    },
+    "androidDevice": {
+      "description": "An Android phone, as Android reports it. platform is required in version 2 and absent in version 1.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "model", "chip", "chipSource", "ramGB", "android", "api", "abi", "cores", "cpuFeatures"],
+      "properties": {
+        "platform": { "const": "android" },
+        "manufacturer": { "description": "Android's Build.MANUFACTURER.", "$ref": "#/$defs/name" },
+        "model": { "description": "Android's Build.MODEL, the maker's model code (never the device name a person sets).", "$ref": "#/$defs/name" },
+        "chip": { "description": "The system on chip: Build.SOC_MODEL on Android 12 and later, else the Hardware line of /proc/cpuinfo, else Build.HARDWARE.", "$ref": "#/$defs/name" },
+        "chipVendor": { "description": "Build.SOC_MANUFACTURER, when Android 12 or later reports it.", "$ref": "#/$defs/name" },
+        "chipSource": { "description": "Where chip came from.", "enum": ["soc", "cpuinfo", "build", "unknown"] },
+        "ramGB": { "$ref": "#/$defs/ramGB" },
+        "lowRam": { "description": "Android counts the phone as a low-memory device.", "type": "boolean" },
+        "android": { "description": "The Android version, for example 15.", "$ref": "#/$defs/version" },
+        "api": { "description": "The Android API level.", "type": "integer", "minimum": 21, "maximum": 60 },
+        "abi": { "description": "The primary ABI.", "enum": ["arm64-v8a", "armeabi-v7a", "x86_64", "x86", "unknown"] },
+        "cores": { "$ref": "#/$defs/cores" },
+        "coreMaxMHz": {
+          "description": "Each core's top clock in MHz, by core number; 0 where it couldn't be read.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "type": "integer", "minimum": 0, "maximum": 6000 }
+        },
+        "cpuFeatures": { "$ref": "#/$defs/cpuFeatures" }
+      }
+    },
+    "iosDevice": {
+      "description": "An iPhone, as iOS reports it. iOS doesn't name its chip, and has no API level, ABI, low-memory flag or per-core clocks.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "manufacturer", "model", "modelId", "ramGB", "ios", "cores", "cpuFeatures"],
+      "properties": {
+        "platform": { "const": "ios" },
+        "manufacturer": { "description": "The maker: Apple.", "$ref": "#/$defs/name" },
+        "model": { "description": "The model's name, for example iPhone 15 (never the device name a person sets).", "$ref": "#/$defs/name" },
+        "modelId": { "description": "The model identifier (hw.machine), for example iPhone16,2; unknown when it isn't one.", "type": "string", "pattern": "^(unknown|[A-Za-z]{1,16}[0-9]{1,3},[0-9]{1,3})$" },
+        "ramGB": { "$ref": "#/$defs/ramGB" },
+        "ios": { "description": "The iOS version, for example 18.1.", "$ref": "#/$defs/version" },
+        "cores": { "$ref": "#/$defs/cores" },
+        "cpuFeatures": { "$ref": "#/$defs/cpuFeatures" }
+      }
     }
   }
 }

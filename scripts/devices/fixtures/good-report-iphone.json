@@ -1,0 +1,137 @@
+{
+  "schema": "hermit-device-report/2",
+  "app": "0.1.0",
+  "model": "botpsy-q4-native-think256",
+  "device": {
+    "platform": "ios",
+    "manufacturer": "Apple",
+    "model": "iPhone 99 Example",
+    "modelId": "iPhone99,1",
+    "ramGB": 7.5,
+    "ios": "27.0",
+    "cores": 6,
+    "cpuFeatures": {
+      "dotprod": true,
+      "i8mm": true,
+      "sve2": false,
+      "sme2": false
+    }
+  },
+  "runtime": {
+    "tier": "mid",
+    "threads": 4,
+    "threadsBatch": 4,
+    "ctxSize": 8192,
+    "ubatch": 512,
+    "thinkingBudget": 256,
+    "fastRoute": false,
+    "allowedCpus": "unknown",
+    "thermalStart": "none",
+    "thermalMax": "severe",
+    "osThermalStart": "nominal",
+    "osThermalMax": "serious",
+    "batterySaver": false
+  },
+  "speed": {
+    "threads": 4,
+    "tokensPerSecond": 18.4,
+    "prefillTokensPerSecond": 72.5,
+    "firstTokenMs": 4800,
+    "loadMs": 3900,
+    "sweep": [
+      {
+        "threads": 2,
+        "tokensPerSecond": 11.2,
+        "prefillTokensPerSecond": 40.1,
+        "firstTokenMs": 8600,
+        "loadMs": 2100
+      }
+    ]
+  },
+  "eval": {
+    "score": 11,
+    "n": 12,
+    "firstActionMedianMs": 31000,
+    "p90Ms": 47000,
+    "perCase": [
+      {
+        "id": "es-remind-1",
+        "pass": true,
+        "ms": 30500,
+        "choice": "remind"
+      },
+      {
+        "id": "es-remember-2",
+        "pass": true,
+        "ms": 28800,
+        "choice": "remember"
+      },
+      {
+        "id": "es-recall-1",
+        "pass": true,
+        "ms": 25100,
+        "choice": "recall"
+      },
+      {
+        "id": "es-forget-1",
+        "pass": true,
+        "ms": 26400,
+        "choice": "forget"
+      },
+      {
+        "id": "es-cal-read-1",
+        "pass": true,
+        "ms": 31000,
+        "choice": "calendar_read"
+      },
+      {
+        "id": "es-read-1",
+        "pass": true,
+        "ms": 33200,
+        "choice": "read_messages"
+      },
+      {
+        "id": "en-remind-1",
+        "pass": true,
+        "ms": 34900,
+        "choice": "remind"
+      },
+      {
+        "id": "en-remember-2",
+        "pass": true,
+        "ms": 29700,
+        "choice": "remember"
+      },
+      {
+        "id": "en-cal-add-1",
+        "pass": false,
+        "ms": 47000,
+        "choice": "respond"
+      },
+      {
+        "id": "en-reply-1",
+        "pass": true,
+        "ms": 36100,
+        "choice": "read_messages"
+      },
+      {
+        "id": "en-ask-1",
+        "pass": true,
+        "ms": 22000,
+        "choice": "ask_user"
+      },
+      {
+        "id": "en-none-1",
+        "pass": true,
+        "ms": 51200,
+        "choice": "respond"
+      }
+    ]
+  },
+  "run": {
+    "durationMs": 552000,
+    "thermalPauses": 1,
+    "pausedMs": 45000,
+    "date": "2026-11-25"
+  }
+}

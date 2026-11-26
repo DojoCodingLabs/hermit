@@ -9,12 +9,15 @@ import { fileURLToPath } from "node:url";
 import { readEntries, renderTable, updateDoc, END, START } from "./table.mjs";
 import { writeReport } from "./validate.mjs";
 
+// A version 1 report, and version 2 reports from an Android phone and an iPhone.
 const GOOD = JSON.parse(readFileSync(new URL("./fixtures/good-report.json", import.meta.url), "utf8"));
+const ANDROID = JSON.parse(readFileSync(new URL("./fixtures/good-report-android.json", import.meta.url), "utf8"));
+const IPHONE = JSON.parse(readFileSync(new URL("./fixtures/good-report-iphone.json", import.meta.url), "utf8"));
 const SCRIPT = fileURLToPath(new URL("./table.mjs", import.meta.url));
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 const faster = () => {
-  const r = JSON.parse(JSON.stringify(GOOD));
+  const r = JSON.parse(JSON.stringify(ANDROID));
   r.device.manufacturer = "Samplemaker";
   r.device.model = "SM-200";
   r.device.chip = "SC-77";
@@ -37,11 +40,22 @@ test("one row per report, fastest first, with the plan's numbers in plain units"
     { file: "samplemaker-sm-200-bbbbbbbb.json", issue: 4, report: faster() },
   ]);
   const lines = table.split("\n");
-  assert.equal(lines[0], "| Phone | Chip | RAM | Android | Threads | Tokens/s | First token | Right | First action, median | First action, p90 | Notes | App | Date | Data |");
+  assert.equal(lines[0], "| Phone | Chip | RAM | System | Threads | Tokens/s | First token | Right | First action, median | First action, p90 | Notes | App | Date | Data |");
   assert.match(lines[1], /^\| :-+ \|/);
-  assert.equal(lines[2], "| Samplemaker SM-200 | SC-77 | 7.5 GB | 15 (API 35) | 4 | 35.3 | 1.3 s | 11/12 | 31.0 s | 47.0 s | battery saver on | 0.1.0 | 2026-11-25 | [json](../data/devices/samplemaker-sm-200-bbbbbbbb.json) |");
-  assert.equal(lines[3], "| Examplecorp EX-1000 | Examplechip XC9000 | 7.5 GB | 15 (API 35) | 4 | 18.4 | 4.8 s | 11/12 | 31.0 s | 47.0 s | paused once for heat | 0.1.0 | 2026-11-25 | [json](../data/devices/examplecorp-ex-1000-aaaaaaaa.json) |");
+  assert.equal(lines[2], "| Samplemaker SM-200 | SC-77 | 7.5 GB | Android 15 (API 35) | 4 | 35.3 | 1.3 s | 11/12 | 31.0 s | 47.0 s | battery saver on | 0.1.0 | 2026-11-25 | [json](../data/devices/samplemaker-sm-200-bbbbbbbb.json) |");
+  assert.equal(lines[3], "| Examplecorp EX-1000 | Examplechip XC9000 | 7.5 GB | Android 15 (API 35) | 4 | 18.4 | 4.8 s | 11/12 | 31.0 s | 47.0 s | paused once for heat | 0.1.0 | 2026-11-25 | [json](../data/devices/examplecorp-ex-1000-aaaaaaaa.json) |");
   assert.equal(lines.length, 4);
+});
+
+test("an iPhone shows its model identifier and iOS version, and a version 1 report reads as Android", () => {
+  const slower = JSON.parse(JSON.stringify(IPHONE));
+  slower.speed.tokensPerSecond = 9.5;
+  const lines = renderTable([
+    { file: "apple-iphone-99-example-cccccccc.json", issue: 5, report: slower },
+    { file: "examplecorp-ex-1000-aaaaaaaa.json", issue: 3, report: GOOD },
+  ]).split("\n");
+  assert.equal(lines[2], "| Examplecorp EX-1000 | Examplechip XC9000 | 7.5 GB | Android 15 (API 35) | 4 | 18.4 | 4.8 s | 11/12 | 31.0 s | 47.0 s | paused once for heat | 0.1.0 | 2026-11-25 | [json](../data/devices/examplecorp-ex-1000-aaaaaaaa.json) |");
+  assert.equal(lines[3], "| Apple iPhone 99 Example (iPhone99,1) | unknown | 7.5 GB | iOS 27.0 | 4 | 9.5 | 4.8 s | 11/12 | 31.0 s | 47.0 s | paused once for heat | 0.1.0 | 2026-11-25 | [json](../data/devices/apple-iphone-99-example-cccccccc.json) |");
 });
 
 test("a pipe can never break the table", () => {

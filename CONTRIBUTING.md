@@ -76,6 +76,28 @@ CI runs three workflows on pull requests, on GitHub-hosted runners with read-onl
 
 A red CI or Guard check blocks the merge, and a maintainer won't merge with a red Android check either. If you think a check is wrong, say so in the pull request rather than working around it.
 
+## Run part of the tests
+
+`pnpm test` runs every test in the repository. For a faster loop while you work, run one package or one file from the repository root after `pnpm install`:
+
+```sh
+pnpm --filter @hermit/core test                          # all tests in packages/core, with Vitest
+pnpm --filter @hermit/core test test/time.test.ts        # one test file in packages/core, with Vitest
+pnpm --filter @hermit/mobile test                        # all tests in apps/mobile, with node:test
+(cd apps/mobile && node --test --experimental-strip-types src/format.test.ts)   # one test file in apps/mobile, with node:test
+node --test scripts/devices/validate.test.mjs            # one test file for the scripts, with node:test
+```
+
+Vitest runs the tests in `packages/*`, `apps/site` and `apps/relay`. `node --test` runs the tests in `apps/mobile` and the scripts at the root. Add the file path after `test` to pick one Vitest file. The path is relative to the package, so `test/time.test.ts` means `packages/core/test/time.test.ts`.
+
+The guard's own tests are not part of `pnpm test`. Run them when you change the guard, as AGENTS.md asks:
+
+```sh
+node --test scripts/guard/check.test.mjs
+```
+
+The gates still run everything before a pull request. Use these commands only to check your work as you go.
+
 ## Make a change
 
 1. Find the issue, or open one. A feature needs the `accepted` label first. A change to a non-negotiable needs an accepted RFC.

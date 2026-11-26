@@ -111,7 +111,7 @@ jobs:
         run: node scripts/qvac-bundle.mjs
       - name: Wallet worklet bundle and addons again, last before Gradle (it only adds to bare-kit's addon folder)
         run: node apps/mobile/worklets/wallet/build.mjs
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.gradle/caches

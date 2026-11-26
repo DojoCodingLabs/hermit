@@ -15,5 +15,7 @@
   { "name": "privacy", "color": "0052cc", "description": "Touches what leaves the phone, or what could." },
   { "name": "docs", "color": "0075ca", "description": "Documentation." },
   { "name": "out-of-scope", "color": "e4e669", "description": "Conflicts with the vision or a non-negotiable, like data leaving the phone." },
-  { "name": "duplicate", "color": "cfd3d7", "description": "Already covered by another issue or pull request." }
+  { "name": "duplicate", "color": "cfd3d7", "description": "Already covered by another issue or pull request." },
+  { "name": "dependencies", "color": "0366d6", "description": "Updates a dependency. Dependabot adds it." },
+  { "name": "github_actions", "color": "000000", "description": "Updates a GitHub Action. Dependabot adds it." }
 ]

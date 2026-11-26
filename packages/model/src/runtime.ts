@@ -94,13 +94,19 @@ export interface RequestBudget {
 
 const GB = 1024 ** 3;
 
+/**
+ * iOS reports less memory than the phone has: an 8 GB iPhone 15 Pro Max reported a little under 7.5 GiB (#120), and a
+ * 6 GB iPhone reports under 6 GiB. The line sits between the two, so an 8 GB iPhone is `high` and a 6 GB one `mid`.
+ */
+const IOS_HIGH_RAM_BYTES = 7 * GB;
+
 /** First match wins (device-adaptive-runtime.md 2.6). */
 export function tierFor(f: HardwareFacts): Tier {
   if (f.totalRamBytes < 3 * GB) return "unsupported";
   if (f.platform === "android" && !f.cpuFeatures.dotprod) return "unsupported";
   if (f.platform === "ios") {
     // By performance cores and RAM: A17 Pro and newer have 8 GB; A15 to A16 have 6 GB.
-    if (f.totalRamBytes >= 7.5 * GB) return "high";
+    if (f.totalRamBytes >= IOS_HIGH_RAM_BYTES) return "high";
     if (f.totalRamBytes >= 5.5 * GB) return "mid";
     return "low";
   }
@@ -253,13 +259,36 @@ export function threadsReload(loaded: ThreadPlan, f: HardwareFacts, allowed: rea
   return same ? undefined : wanted;
 }
 
+/**
+ * Measured on an iPhone 15 Pro Max (2 performance and 4 efficiency cores) with the Device lab, four runs (#120):
+ *
+ * | Threads | Writing, mean | Reading the prompt, mean |
+ * | --- | --- | --- |
+ * | 2 (the performance cores) | 37.9 tok/s | 77.4 tok/s |
+ * | 4 | 46.4 tok/s (+22.4%) | 105.3 tok/s (+35.9%) |
+ *
+ * Only 2 and 4 were measured, so an iPhone plan never uses more than 4.
+ */
+export const IOS_MAX_THREADS = 4;
+
+/**
+ * iOS threads: the performance cores plus half the efficiency cores, at least 2 and at most IOS_MAX_THREADS. Apple's
+ * efficiency cores are fast enough to help (4 beat 2 on 2P+4E), and the other half stays free for the interface and
+ * the system. Apple has no core masks. Performance cores unknown: 2, as on every iPhone so far.
+ */
+function iosThreads(f: HardwareFacts): number {
+  const p = f.performanceCores ?? 2;
+  const efficiency = Math.max(0, f.logicalCores - p);
+  return Math.max(2, Math.min(p + Math.floor(efficiency / 2), IOS_MAX_THREADS));
+}
+
 /** Rules only, before any measurement. CPU on Android (GPU backends lost on the S26 and Vulkan broke grammar). */
 export function initialPlan(f: HardwareFacts): RuntimePlan {
   const tier = tierFor(f);
   const d = TIER_DEFAULTS[tier === "unsupported" ? "floor" : tier];
   if (f.platform === "ios") {
-    const p = Math.max(2, f.performanceCores ?? 2);
-    return { tier, device: "cpu", threads: p, threadsBatch: p, ...d };
+    const t = iosThreads(f);
+    return { tier, device: "cpu", threads: t, threadsBatch: t, ...d };
   }
   return { tier, device: "cpu", ...threadPlan(f, f.allowedCpus), ...d };
 }

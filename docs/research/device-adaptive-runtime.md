@@ -173,7 +173,7 @@ How (each candidate needs its own load, because llamacpp has no config reload):
 
 1. Build candidates from `DeviceFacts`, at most four loads:
    - Android: `threads = big cluster size` with its `cpuMask`; `threads = big + middle clusters` with that mask; QVAC default (unset, one per physical core, no mask) as the control. On the floor and low tiers add the best of those with `ubatch: 256`.
-   - iOS: CPU with `threads = performance cores` (no masks on Apple [web 3]); Metal (`device: "gpu"`, `backend: ["metal"]`).
+   - iOS: CPU with `threads = performance cores plus half the efficiency cores`, at most 4 (no masks on Apple [web 3]); Metal (`device: "gpu"`, `backend: ["metal"]`).
    - GPU on Android only if a future eval proves it (S26: it lost; Vulkan broke grammar).
 2. Per candidate: load; run one prefill-only request of a fixed 512-token prompt (the real tools plus system prefix, so the number is the one users get); then one decode of `predict: 48` at `temp: 0` and a fixed `seed`; read `promptTokensPerSecond`, `tokensPerSecond`, `timeToFirstToken`, `backendDevice` from `final.stats`.
 3. Sanity check on the candidate before it can win: (a) a native tool call with `tool_choice: "required"` on a canned request, which must parse to the expected tool name and argument keys; (b) a `responseFormat: json_schema` request that must validate. A backend that breaks grammar (as Vulkan did) fails here and is excluded.
@@ -225,7 +225,7 @@ The model weights (529 MB, memory-mapped) and our harness are the same on every 
 | low | RAM 4 to 6 GB, dotprod, no i8mm (Cortex-A76/A78 big cores) | Snapdragon 7-series older, Dimensity 700 to 1200 | ctx 8192, threads = big cluster (2 to 4), ubatch 256 or 512 (calibrate), thinking 192, checkpoints 3 |
 | mid | RAM 6 to 8 GB with i8mm (Cortex-A710 or newer) | Snapdragon 8 Gen 1 to 2, 7+ Gen 2/3 | ctx 8192, threads = prime plus performance cores, threadsBatch same, thinking 256, checkpoints 4 |
 | high | RAM 8 GB or more and a recent flagship (Oryon, X925, SME2) | S26 (SM8850), Snapdragon 8 Elite, Dimensity 9400/9500 | ctx 8192, threads calibrated (6 to 8), thinking 256, checkpoints 4; candidate for a Q8_0 or 2B profile if the eval shows an accuracy win that fits the speed bar |
-| iOS | by chip: A14 or older low; A15 to A16 mid; A17 Pro or newer high | | CPU with performance cores (2) vs Metal, calibrated |
+| iOS | by chip: A14 or older low; A15 to A16 mid; A17 Pro or newer high (an 8 GB iPhone reports a little under 7.5 GiB, so the line is 7 GiB) | | CPU with performance cores plus half the efficiency cores, at most 4 (4 on a 2P+4E iPhone, measured faster than 2 on 2026-11-26), vs Metal, calibrated |
 
 Model choice per tier: Q4_K_M everywhere until measurement says otherwise. Q4_0 for the floor tier only if our own imatrix Q4_0 is faster on an A55/A76 phone and keeps accuracy within the parity gate (Q31). Q8_0 for high tier only if it beats Q4_K_M on the 40-case eval at an acceptable decode speed.
 

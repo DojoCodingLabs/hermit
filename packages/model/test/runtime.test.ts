@@ -9,6 +9,7 @@ import {
   candidatesFor,
   cpuMask,
   initialPlan,
+  IOS_MAX_THREADS,
   MAX_MODEL_THREADS,
   pickBest,
   threadPlan,
@@ -32,6 +33,13 @@ const midrange: HardwareFacts = {
   clusters: [{ cpus: [7], maxFreqKHz: 2_800_000 }, { cpus: [4, 5, 6], maxFreqKHz: 2_400_000 }, { cpus: [0, 1, 2, 3], maxFreqKHz: 2_000_000 }],
   cpuFeatures: { dotprod: true, i8mm: false },
 };
+// A made-up 8 GB iPhone: 2 performance and 4 efficiency cores. iOS reports a little under 7.5 GiB to apps.
+const iphone8gb: HardwareFacts = {
+  platform: "ios", model: "iPhone99,1", soc: "iPhone99,1", totalRamBytes: 8_000_000_000, logicalCores: 6, clusters: [],
+  cpuFeatures: { dotprod: true, i8mm: true }, performanceCores: 2,
+};
+// A made-up 6 GB iPhone, same core layout.
+const iphone6gb: HardwareFacts = { ...iphone8gb, model: "iPhone98,1", soc: "iPhone98,1", totalRamBytes: 6_000_000_000 };
 const old: HardwareFacts = { platform: "android", model: "old", totalRamBytes: 2 * GB, logicalCores: 4, clusters: [], cpuFeatures: { dotprod: false, i8mm: false } };
 
 describe("device-adaptive runtime", () => {
@@ -213,6 +221,44 @@ describe("threads follow the cores Android allows", () => {
     expect(threadsFor(initialPlan({ ...s26, allowedCpus: BACKGROUND }), hot, true)).toBe(2);
     expect(threadsFor(initialPlan({ ...s26, allowedCpus: [2] }), hot, true)).toBe(1);
     expect(threadsFor(initialPlan({ ...s26, allowedCpus: FOREGROUND }), hot, false)).toBe(5);
+  });
+
+  test("iOS: an 8 GB iPhone is high even though it reports a little under 7.5 GiB; a 6 GB one stays mid (#120)", () => {
+    expect(iphone8gb.totalRamBytes).toBeLessThan(7.5 * GB);
+    expect(tierFor(iphone8gb)).toBe("high");
+    expect(tierFor(iphone6gb)).toBe("mid");
+    expect(tierFor({ ...iphone8gb, totalRamBytes: 4_000_000_000 })).toBe("low");
+    expect(initialPlan(iphone8gb)).toMatchObject({ tier: "high", thinkingBudget: 256, fastRoute: false });
+  });
+
+  test("iOS: performance cores plus half the efficiency cores, at most IOS_MAX_THREADS (#120: 4 threads beat 2 on 2P+4E)", () => {
+    expect(IOS_MAX_THREADS).toBe(4);
+    expect(initialPlan(iphone8gb)).toMatchObject({ device: "cpu", threads: 4, threadsBatch: 4 });
+    expect(initialPlan(iphone6gb)).toMatchObject({ threads: 4, threadsBatch: 4 });
+    expect(initialPlan(iphone8gb).cpuMask).toBeUndefined();
+    // Performance cores unknown: two are assumed, as before.
+    const unknownP: HardwareFacts = { ...iphone8gb };
+    delete unknownP.performanceCores;
+    expect(initialPlan(unknownP).threads).toBe(4);
+    // A 2P+2E chip gets one efficiency core; with no efficiency cores, the performance cores alone; never fewer than 2.
+    expect(initialPlan({ ...iphone8gb, logicalCores: 4 }).threads).toBe(3);
+    expect(initialPlan({ ...iphone8gb, logicalCores: 2 }).threads).toBe(2);
+    expect(initialPlan({ ...iphone8gb, logicalCores: 1, performanceCores: 1 }).threads).toBe(2);
+    // More cores never go past the cap.
+    expect(initialPlan({ ...iphone8gb, logicalCores: 10, performanceCores: 4 }).threads).toBe(IOS_MAX_THREADS);
+    // Calibration tries the planned count on CPU and Metal.
+    expect(candidatesFor(iphone8gb, initialPlan(iphone8gb)).map((c) => [c.device, c.threads])).toEqual([["cpu", 4], ["gpu", 4]]);
+  });
+
+  test("Android plans are unchanged by the iOS rules", () => {
+    expect(initialPlan(s26)).toEqual({ tier: "high", device: "cpu", threads: 5, threadsBatch: 5, ctxSize: 8192, ubatch: 512, cacheCheckpoints: 4, thinkingBudget: 256, maxReplyTokens: 120, longReplyTokens: 800, fastRoute: false });
+    expect(initialPlan({ ...s26, allowedCpus: BACKGROUND })).toMatchObject({ threads: 3, threadsBatch: 3 });
+    expect(initialPlan(midrange)).toEqual({ tier: "low", device: "cpu", threads: 4, threadsBatch: 4, cpuMask: "f0", ctxSize: 8192, ubatch: 256, cacheCheckpoints: 3, thinkingBudget: 192, maxReplyTokens: 120, longReplyTokens: 500, fastRoute: true });
+    // An Android phone reporting the 8 GB iPhone's bytes keeps Android's 7.5 GiB line: mid, not high.
+    const android8 = { ...s26, totalRamBytes: 8_000_000_000 };
+    expect(tierFor(android8)).toBe("mid");
+    expect(tierFor({ ...s26, totalRamBytes: 7.5 * GB })).toBe("high");
+    expect(initialPlan(android8)).toMatchObject({ tier: "mid", threads: 5 });
   });
 
   test("the allowed set is read as distinct valid cores and written the way the kernel writes it", () => {

@@ -1,5 +1,8 @@
 {
-  "platforms": ["android"],
+  "platforms": ["android", "apple"],
+  "apple": {
+    "modules": ["HermitNotificationsModule"]
+  },
   "android": {
     "modules": ["io.dojocoding.hermit.notifications.HermitNotificationsModule"]
   }

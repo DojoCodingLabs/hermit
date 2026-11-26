@@ -1,6 +1,6 @@
 // HM-SET-10: the Device lab (Settings, then Device lab). It measures how fast and how accurately Hermit runs on this
 // phone, offline, and builds a report with device and benchmark facts only (docs/devices.md, the schema in
-// docs/devices/schema.json). States: ready (what it does; no model yet; not Android), running (the step, a meter, the
+// docs/devices/schema.json). States: ready (what it does; no model yet; neither Android nor iOS), running (the step, a meter, the
 // time so far and Stop; paused while the phone is hot), stopped, failed (why), and the report: in plain words first,
 // then the exact text, then File it on GitHub, Copy and Share. Nothing leaves the phone unless the person does one of
 // those. Leaving the screen stops a run: in the background Android gives the app fewer cores.
@@ -101,7 +101,7 @@ export default function DeviceLab() {
     }
   };
 
-  // The lab runs on an iPhone too; its report is Android-shaped, so it is copied or shared, never filed.
+  // The lab runs on Android phones and iPhones; each report names its platform, so both can be filed.
   if (Platform.OS !== "android" && Platform.OS !== "ios") {
     return (
       <Page title={t("HM-SET-10.title")}>
@@ -246,7 +246,7 @@ function Report({ report, onAgain }: { report: DeviceReport; onAgain(): void }) 
       <Label>{t("HM-SET-10.shareTitle")}</Label>
       <T v="small" color="soft" style={{ marginBottom: s.md, paddingHorizontal: s.lg }}>{t("HM-SET-10.shareBody")}</T>
       <View style={{ gap: s.sm }}>
-        {Platform.OS === "android" ? <Btn label={t("HM-SET-10.file")} icon="arrow-up-right" full onPress={() => void file()} /> : null}
+        <Btn label={t("HM-SET-10.file")} icon="arrow-up-right" full onPress={() => void file()} />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: s.sm }}>
           <Btn label={t("HM-SET-10.copy")} kind="secondary" icon="copy" style={{ flexGrow: 1 }} onPress={() => void copy()} />
           <Btn label={t("HM-SET-10.share")} kind="secondary" icon="send" style={{ flexGrow: 1 }} onPress={() => void share()} />

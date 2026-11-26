@@ -1,5 +1,6 @@
 // What the runtime plan and the floor check read about the platform, from the native module's raw facts. Pure: tested
 // under Node with node --test (platform-facts.test.ts).
+import type { PhoneFacts } from "@hermit/eval";
 import type { HardwareFacts } from "@hermit/model";
 
 export interface NativeHardwareFacts {
@@ -56,6 +57,25 @@ export function thermalFromNative(os: string, t: NativeThermal): NativeThermal {
   if (hardwarePlatform(os) !== "ios") return t;
   const status = Number.isInteger(t.status) && t.status >= 0 && t.status < IOS_THERMAL.length ? IOS_THERMAL[t.status]! : Number.NaN;
   return { ...t, status };
+}
+
+/**
+ * The Device lab's facts on an iPhone, from what the app already reads: expo-device's maker, model name and iOS
+ * version, and the native module's model identifier (hw.machine), memory, cores and CPU features. Nothing Android-only:
+ * iOS has no chip name, API level, ABI, low-memory flag, clocks or cpusets to give.
+ */
+export function iosLabFacts(d: { manufacturer?: string | null; modelName?: string | null; osVersion?: string | null }, h: NativeHardwareFacts, batterySaver: boolean): PhoneFacts {
+  return {
+    platform: "ios",
+    manufacturer: d.manufacturer ?? "Apple",
+    model: d.modelName ?? h.model,
+    modelId: h.model,
+    ...(d.osVersion ? { iosVersion: d.osVersion } : {}),
+    totalRamBytes: h.totalRamBytes,
+    logicalCores: h.logicalCores,
+    cpuFeatures: { dotprod: h.dotprod, i8mm: h.i8mm, sve2: h.sve2, sme2: h.sme2 },
+    batterySaver,
+  };
 }
 
 /** A byte count from native code as a plain number. On iOS, expo-file-system returns 64-bit sizes as BigInt. */

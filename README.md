@@ -279,6 +279,8 @@ adb reverse tcp:8081 tcp:8081
 pnpm --filter @hermit/mobile start
 ```
 
+An iPhone development build also runs chat and the Device lab, with limits: [docs/devices.md](docs/devices.md#run-it-on-an-iphone-development-build).
+
 On first run the app downloads the model once (about 530 MB, on Wi-Fi) and checks its SHA-256 before loading it.
 
 **The eval lab.** The phone's exact GGUF, served on your computer by llama.cpp's `llama-server`. Accuracy carries over from the phone; speed doesn't.

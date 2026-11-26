@@ -134,7 +134,12 @@
         }
       ],
       "expo-calendar",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false
+        }
+      ],
       [
         "@qvac/sdk/expo-plugin",
         {

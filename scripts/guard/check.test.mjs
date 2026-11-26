@@ -10,6 +10,7 @@ import { fileURLToPath, URL } from "node:url";
 import {
   checkChange,
   deniedPackage,
+  findAiAttribution,
   findDashesInLocale,
   findInternalContent,
   findLocaleParityProblems,
@@ -365,6 +366,43 @@ describe("checkChange", () => {
   });
 });
 
+describe("AI co-author trailers", () => {
+  const commit = (message) => ({ sha: "a1b2c3d4e5f6a7b8", message });
+
+  test("an AI co-author trailer or an AI tool's footer is flagged, once per commit", () => {
+    for (const message of [
+      "Add the table\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+      "Add the table\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+      "Add the table\n\nCo-authored-by: Copilot <198982749+Copilot@users.noreply.github.com>",
+      "Add the table\n\nCo-authored-by: Cursor Agent <cursoragent@cursor.com>",
+      "Add the table\n\n\u{1F916} Generated with [Claude Code](https://claude.com/claude-code)",
+      "Add the table\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nCo-authored-by: Copilot <copilot@github.com>",
+    ]) {
+      const problems = findAiAttribution([commit(message)]);
+      assert.equal(problems.length, 1, message);
+      assert.equal(problems[0].check, "ai co-author");
+      assert.equal(problems[0].path, "commit a1b2c3d4e5f6");
+      assert.match(problems[0].message, /pull request's description/);
+    }
+  });
+
+  test("people, sign-offs and messages that only mention a tool pass", () => {
+    for (const message of [
+      "Add the table\n\nCo-authored-by: Claude Dupont <claude@example.fr>",
+      "Add the table\n\nCo-authored-by: Ana Prueba <123+anaprueba@users.noreply.github.com>",
+      "Add the table\n\nSigned-off-by: Ana Prueba <ana@example.org>",
+      "Explain how to turn off Copilot's co-author line in CONTRIBUTING.md",
+    ]) {
+      assert.deepEqual(findAiAttribution([commit(message)]), [], message);
+    }
+  });
+
+  test("checkChange reports it with the other checks", () => {
+    const problems = checkChange({ files: [], commits: [commit("x\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>")] }, {});
+    assert.deepEqual(problems.map((p) => p.check), ["ai co-author"]);
+  });
+});
+
 describe("the command line, on a real git repository", () => {
   const script = fileURLToPath(new URL("./check.mjs", import.meta.url));
 
@@ -393,6 +431,22 @@ describe("the command line, on a real git repository", () => {
     git("checkout", "-q", "-b", "change");
     return { dir, git, write, run, done: () => rmSync(dir, { recursive: true, force: true }) };
   }
+
+  test("a commit that credits an AI tool fails until it's amended", () => {
+    const r = repo();
+    try {
+      r.write("docs/guide.md", "# Guide\n\nMore words.\n");
+      r.git("commit", "-q", "-am", "docs\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>");
+      const out = r.run("--base", "main");
+      assert.equal(out.status, 1, out.stdout);
+      assert.match(out.stderr, /ai co-author: commit [0-9a-f]{12}: credits an AI tool/);
+      r.git("commit", "-q", "--amend", "-m", "docs");
+      const after = r.run("--base", "main");
+      assert.equal(after.status, 0, after.stderr);
+    } finally {
+      r.done();
+    }
+  });
 
   test("a clean change passes", () => {
     const r = repo();

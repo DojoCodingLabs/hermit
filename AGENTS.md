@@ -253,3 +253,4 @@ Follow this checklist on every task. If you can't do a step, say which one in th
 12. Fill in the pull request template honestly, including which agent you are and what you did.
 13. When something is unclear, ask in the issue instead of guessing.
 14. In docs, write a decision as what the product does, with its date ("Resolved 2026-11-25: bots message each other directly"). Never quote or paraphrase what someone asked or told you, never say which option was picked or how a question was asked, and never paste run logs, transcripts or paths from your machine.
+15. Never credit yourself in a commit: no `Co-authored-by` trailer and no "Generated with" line. Say which agent you are in the pull request's description, as the template asks. The PR guard refuses a commit that credits an AI tool.

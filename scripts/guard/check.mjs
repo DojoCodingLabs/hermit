@@ -6,7 +6,9 @@
 //   2. adds an em dash, an en dash or a look-alike to packages/copy/locales/*.json;
 //   3. leaves those locales without the same keys and the same {placeholders};
 //   4. adds a line under docs/, or to a top-level Markdown file, that matches a pattern in the patterns file
-//      (scripts/guard/patterns.txt ships with the repository; without --patterns this check is skipped).
+//      (scripts/guard/patterns.txt ships with the repository; without --patterns this check is skipped);
+//   5. adds a commit with an AI co-author trailer or an AI tool's "Generated with" line. Name the agent in the pull
+//      request's description instead (CONTRIBUTING.md, Working with AI agents).
 //
 // Plain Node with no dependencies:
 //
@@ -328,13 +330,41 @@ export function isRelevant(path) {
   return isManifest(path) || LOCKFILES.has(posix.basename(path)) || isNativeBuild(path) || isLocale(path) || isPublicDoc(path);
 }
 
-const ORDER = ["telemetry", "copy dash", "locale parity", "internal content"];
+// 5. AI co-author trailers -----------------------------------------------------------------------------------------
+
+/** Addresses only AI tools use, and names of AI products. A person who happens to be called Claude is not flagged. */
+const AI_ADDRESS = /(?:^|[.@])(?:anthropic\.com|openai\.com|cursor\.(?:com|sh)|codeium\.com|windsurf\.com|devin\.ai|cognition\.ai)$|^copilot@github\.com$|^\d+\+copilot@users\.noreply\.github\.com$/i;
+const AI_NAME = /\b(?:claude(?=[\s-]+(?:code|opus|sonnet|haiku|fable|instant|\d))|copilot|cursor[\s-]?agent|codex|devin|jules|aider|chatgpt|gemini code assist|windsurf)\b/i;
+const CO_AUTHOR = /^\s*co-authored-by:\s*(.*?)\s*<([^>]*)>\s*$/i;
+const GENERATED = /generated (?:with|by) \[?(?:claude(?: code)?|copilot|cursor|codex|chatgpt|devin|aider|windsurf|jules)\b/i;
+
+/** `commits` are { sha, message }. One problem per commit that credits an AI tool as a co-author or says it generated the change. */
+export function findAiAttribution(commits) {
+  const problems = [];
+  for (const { sha, message } of commits) {
+    const lines = message.split(/\r?\n/);
+    const hit = lines.find((text) => {
+      const m = CO_AUTHOR.exec(text);
+      return (m && (AI_ADDRESS.test(m[2].trim()) || AI_NAME.test(m[1]))) || GENERATED.test(text);
+    });
+    if (hit) {
+      problems.push({
+        check: "ai co-author",
+        path: `commit ${sha.slice(0, 12)}`,
+        message: `credits an AI tool ("${hit.trim()}"). Remove the line and amend the commit, and name the agent in the pull request's description instead (CONTRIBUTING.md, Working with AI agents).`,
+      });
+    }
+  }
+  return problems;
+}
+
+const ORDER = ["telemetry", "copy dash", "locale parity", "internal content", "ai co-author"];
 
 /**
  * Runs every check on a change: `files` are { status, path, oldPath?, before, after, added } and `locales` are the
  * locale files as they are after the change ({ path, text }). Parity runs only when the change touches a locale.
  */
-export function checkChange({ files, locales = [] }, { patterns = [] } = {}) {
+export function checkChange({ files, locales = [], commits = [] }, { patterns = [] } = {}) {
   const problems = [];
   let localeTouched = false;
   for (const f of files) {
@@ -354,6 +384,7 @@ export function checkChange({ files, locales = [] }, { patterns = [] } = {}) {
     if (patterns.length && isPublicDoc(f.path) && !gone) problems.push(...findInternalContent(f.path, f.added ?? [], patterns));
   }
   if (localeTouched) problems.push(...findLocaleParityProblems(locales));
+  problems.push(...findAiAttribution(commits));
   const rank = (p) => ORDER.indexOf(p.check);
   return problems.sort((a, b) => rank(a) - rank(b) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0) || (a.line ?? 0) - (b.line ?? 0));
 }
@@ -443,7 +474,17 @@ function collectChange(root, mergeBase) {
       locales.push({ path: `${dir}/${name}`, text: readFileSync(join(full, name), "utf8") });
     }
   }
-  return { files, locales };
+  // The commits this change adds, for their messages (check 5). A record ends with \x1e; the hash and the message are
+  // split by \x1f.
+  const commits = git(["log", "--format=%H%x1f%B%x1e", `${mergeBase}..HEAD`], root)
+    .split("\x1e")
+    .map((r) => r.replace(/^\n/, ""))
+    .filter((r) => r.includes("\x1f"))
+    .map((r) => {
+      const [sha, message] = r.split("\x1f");
+      return { sha, message };
+    });
+  return { files, locales, commits };
 }
 
 function defaultBase(root) {

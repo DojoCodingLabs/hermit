@@ -124,6 +124,8 @@ You're welcome to code with Codex, Claude Code, Cursor, Copilot, Gemini, Jules o
 
 You are responsible for every line you submit: read it, run it, and be ready to explain it. The pull request template asks whether an agent helped and which one. That's for transparency, not a filter: agent-written changes are reviewed exactly like any other. Pull requests whose author hasn't read or run them will be closed.
 
+Don't credit an agent in your commits: no `Co-authored-by` trailer for an AI tool and no "Generated with" line. Many agents add one by default; turn it off in the agent's settings, or remove the line and amend before you push. Name the agent in the pull request's description instead, as the template asks. The PR guard refuses a commit that credits an AI tool.
+
 ## Review
 
 - A maintainer reviews every pull request from a contributor. CODEOWNERS requests the maintainer for the cage, the core, the privacy check, the guard and the workflows.

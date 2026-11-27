@@ -216,7 +216,7 @@ Boost is not built yet. It is planned work in [ROADMAP.md](../ROADMAP.md) and [E
 - **Boost.** A bigger model on the user's own computer, paired directly with the phone. The cage, approvals and signed log stay on the phone. [EP-18, ADR-010]
 - **Paired device.** A phone or a Boost that the user has paired, with an id, a kind, a public key and a pairing time. [ENT-PairedDevice]
 - **Pairing.** One device shows a QR code with a one-time key. The other scans it and both screens show a 6-digit code to compare. Boost pairing uses the same flow. [ADR-016, FR-MOVE-01, US-BOOST-01]
-- **Holepunch.** The peer-to-peer transport used for phone-to-phone transfer and later for Boost. Hyperswarm is the library that carries it. [ADR-016]
+- **Holepunch.** The peer-to-peer transport chosen for phone-to-phone transfer and later for Boost. Hyperswarm is the library that carries it. [ADR-016]
 - **Boost turn.** A turn answered by the paired computer. The header chip reads "On your computer" while the turn runs; the cage, approvals and signed log stay on the phone. [US-BOOST-02]
 - **What never goes to Boost.** Vault, wallet and tainted turns. The user can add more exclusions. [US-BOOST-03]
 - **Task family and the gate.** A kind of task that moves from Boost to the phone when it passes on the phone the same eval that Boost passes. [PDR-026]

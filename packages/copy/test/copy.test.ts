@@ -32,6 +32,45 @@ describe("locale files (CT-10)", () => {
   });
 });
 
+// AGENTS.md rule 9: the app's Spanish uses tú. Only voseo forms that can't be read another way are listed, so
+// "elegí" or "escribí" (also the first person past tense) stay out. \b doesn't count accented letters as letters,
+// so the edges are (?<!\p{L}) and (?!\p{L}).
+const VOSEO_FORMS = [
+  "podés", "tenés", "querés", "sabés", "hacés", "decís", "necesitás", "preferís", "tocá", "mirá", "probá", "activá", "revisá",
+  "volvé", "poné", "usá", "agregá", "cambiá", "guardá", "confirmá", "dejá", "buscá", "esperá", "fijate", "acordate", "decime",
+  "avisame", "mandale", "contame",
+];
+const VOSEO = new RegExp(`(?<!\\p{L})(?:${VOSEO_FORMS.join("|")})(?!\\p{L})`, "iu");
+
+describe("tú, not vos (AGENTS.md rule 9)", () => {
+  test("the matcher flags voseo", () => {
+    for (const s of [
+      "Tocá el botón", "Si querés, te aviso", "¿Podés esperar?", "Ya tenés todo.", "Si sabés la hora, dime.", "¿Qué hacés?",
+      "Decís que sí.", "Si necesitás algo, escribe.", "Si preferís, después.", "Mirá esto.", "Probá de nuevo.", "Activá las notificaciones.",
+      "Revisá el correo.", "Volvé a la lista.", "Poné tu huella.", "Usá la otra cuenta.", "Agregá un recordatorio.", "Cambiá la hora.",
+      "Guardá el cambio.", "Confirmá el pago.", "Dejá un mensaje.", "Buscá el archivo.", "Esperá un momento.", "Fijate en la fecha.",
+      "Acordate del lunes.", "Decime cuándo.", "Avisame mañana.", "Mandale un saludo a Ana.", "Contame más.",
+    ]) expect(s, s).toMatch(VOSEO);
+  });
+
+  test("the matcher ignores case, accented capitals included", () => {
+    expect("TOCÁ EL BOTÓN").toMatch(VOSEO);
+    expect("Querés").toMatch(VOSEO);
+  });
+
+  test("the matcher leaves tú and other words alone", () => {
+    for (const s of ["Toca el botón", "Si quieres, te aviso", "No abrí nada", "Elegí la primera.", "Le escribí a Luis."]) expect(s, s).not.toMatch(VOSEO);
+  });
+
+  test("the matcher counts accented letters as letters at both edges", () => {
+    for (const s of ["Antes tocábamos el timbre.", "Siempre dejábamos la llave.", "ñtocá", "étocá"]) expect(s, s).not.toMatch(VOSEO);
+  });
+
+  test("no value in es-419 uses voseo", () => {
+    for (const [k, v] of Object.entries(es)) expect(v, k).not.toMatch(VOSEO);
+  });
+});
+
 describe("translator", () => {
   test("fills placeholders", () => {
     expect(createTranslator(es)("HM-ACT-03.title", { index: 7 })).toBe("Cadena rota en la entrada 7");

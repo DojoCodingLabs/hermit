@@ -39,3 +39,4 @@ export * from "./web-login.ts";
 export * from "./pay.ts";
 export * from "./site-domain.ts";
 export * from "./quote.ts";
+export * from "./agent-card.ts";

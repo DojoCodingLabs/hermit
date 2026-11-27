@@ -20,6 +20,9 @@ export function base64ToBytes(text: string): Uint8Array {
   return out.slice(0, o);
 }
 
+/** The smallest code point each sequence length may carry, by the number of continuation bytes. */
+const MIN_CODE_POINT = [0, 0x80, 0x800, 0x10000];
+
 /** UTF-8 bytes to text; a malformed sequence becomes U+FFFD instead of throwing. */
 export function utf8Decode(bytes: Uint8Array): string {
   let out = "";
@@ -46,7 +49,8 @@ export function utf8Decode(bytes: Uint8Array): string {
       }
       cp = (cp << 6) | (c & 0x3f);
     }
-    if (!ok || cp > 0x10ffff) {
+    // Only the shortest form is UTF-8, and it never encodes the surrogates U+D800 to U+DFFF (RFC 3629).
+    if (!ok || cp < MIN_CODE_POINT[need]! || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff)) {
       out += "�";
       i++;
       continue;

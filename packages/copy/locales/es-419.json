@@ -385,6 +385,7 @@
   "HM-SET-08.licensesTitle": "Licencias de código abierto",
   "HM-SET-08.trademarks": "El código de Hermit es Apache 2.0 y el arte del cangrejo es CC BY 4.0. El nombre Hermit, su símbolo y su logotipo son marcas y no están cubiertos por esas licencias. Hermit está hecho con:",
   "HM-SET-08.licenseA11y": "{name}, licencia {license}",
+  "HM-SET-08.version": "Versión {version}",
   "HM-REM-01.title": "Recordatorios",
   "HM-REM-01.loading": "Cargando recordatorios…",
   "HM-REM-01.emptyTitle": "Aún no tienes recordatorios",

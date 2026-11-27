@@ -5,6 +5,7 @@
 // them, Delete everything in coral outline, and the licenses as a grouped list of links.
 import { useRouter } from "expo-router";
 import { Image, Linking, Pressable, View } from "react-native";
+import { appVersion } from "../adapters/device-lab";
 import { Btn, Card, Group, Label, Page, Row, T } from "../components/kit";
 import { logos } from "../brand";
 import { t } from "../i18n";
@@ -27,6 +28,7 @@ export default function About() {
           <T v="title" style={{ flex: 1 }}>{"Does everything.\nTells no one."}</T>
         </View>
         <T v="body" color="soft">{t("HM-SET-08.body")}</T>
+        <T v="small" color="soft" selectable>{t("HM-SET-08.version", { version: appVersion() })}</T>
 
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: s.xl }} accessibilityRole="summary">

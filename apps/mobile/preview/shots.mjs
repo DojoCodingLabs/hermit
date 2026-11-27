@@ -224,7 +224,7 @@ export const shots = [
   other({ id: "HM-SET-03", name: "Delete everything, the wallet still holds money", route: "delete" }),
   other({ id: "HM-SET-03", name: "Delete everything, type the word", route: "delete", variant: "confirm", act: tap(/^(Entiendo, continuar|I understand, continue)$/) }),
   other({ id: "HM-SET-06", name: "Appearance", route: "appearance" }),
-  other({ id: "HM-SET-08", name: "About", route: "about" }),
+  core({ id: "HM-SET-08", name: "About", route: "about" }),
 
   // Activity, messages, memory, reminders, calendar
   other({ id: "HM-ACT-01", name: "Activity", route: "activity", mockup: "settings-activity" }),

@@ -385,6 +385,7 @@
   "HM-SET-08.licensesTitle": "Open-source licenses",
   "HM-SET-08.trademarks": "Hermit's code is Apache 2.0 and the crab's art is CC BY 4.0. The Hermit name, logo and wordmark are trademarks and are not covered by those licenses. Hermit is built with:",
   "HM-SET-08.licenseA11y": "{name}, {license} license",
+  "HM-SET-08.version": "Version {version}",
   "HM-REM-01.title": "Reminders",
   "HM-REM-01.loading": "Loading reminders…",
   "HM-REM-01.emptyTitle": "No reminders yet",

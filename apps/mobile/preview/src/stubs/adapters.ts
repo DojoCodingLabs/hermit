@@ -150,4 +150,5 @@ export const clearSiteData = ok(true);
 export const copyAddress = ok(true);
 export const copyLogValue = ok(true);
 export const walletBundleAvailable = () => false;
+export const appVersion = () => "0.1.0-preview.1";
 export const startWalletWorklet = () => ({});

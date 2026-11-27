@@ -114,8 +114,11 @@ export function oneLine(text: string): string {
   return [...text].map((c) => (c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f ? " " : c)).join("").replace(/\|/g, "/").replace(/\s+/g, " ").trim();
 }
 
+/** Text cut to at most `max` characters, ending in "..." when the limit has room for it. */
 export function clip(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max - 3).trimEnd()}...`;
+  if (text.length <= max) return text;
+  if (max < 4) return text.slice(0, Math.max(0, max));
+  return `${text.slice(0, max - 3).trimEnd()}...`;
 }
 
 /** Splits an address header ("Ana <a@x.com>, \"Pérez, Luis\" <l@x.com>") at commas outside quotes and brackets. */

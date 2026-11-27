@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { RESERVED_GROUPS, SKILL_GROUPS, type BotLook } from "@hermit/core/bots";
 import type { BotProposalView } from "../../../packages/runtime/src/bot-api.ts";
 import { BOT_REFUSALS } from "../../../packages/runtime/src/bot-api.ts";
-import { BOT_TEMPLATES, formPatch, fromBot, fromProposal, fromTemplate, formNeedsFingerprint, formProblems, noteActions, proposalCard, refusalLine, settingsResult, shownGroups, toNewBot, type BotForm } from "./bot-form-view.ts";
+import { BOT_TEMPLATES, capBotName, formPatch, fromBot, fromProposal, fromTemplate, formNeedsFingerprint, formProblems, noteActions, proposalCard, refusalLine, settingsResult, shownGroups, toNewBot, type BotForm } from "./bot-form-view.ts";
 
 const LOOK: BotLook = { shape: "whelk", color: "sand" };
 const form = (over: Partial<BotForm> = {}): BotForm => ({ name: "Viajes", role: "Planeas los viajes de la familia Prueba.", look: LOOK, grants: ["web_read", "notes"], sites: "wikivoyage.org", connectors: [], mode: null, ...over });
@@ -18,6 +18,18 @@ test("HM-BOT-03: the form's problems match the runtime's limits", () => {
   assert.deepEqual(formProblems(form({ name: "n".repeat(41), role: "r".repeat(801), sites: "wikivoyage.org, 192.168.0.1" })), ["name_too_long", "role_too_long", "bad_site"]);
   assert.deepEqual(formProblems(form()), []);
 });
+test("HM-BOT-03: a bot name is capped at 40 code points, keeping emoji whole", () => {
+  assert.equal(capBotName("😀".repeat(40)), "😀".repeat(40));
+  assert.equal(capBotName("😀".repeat(41)), "😀".repeat(40));
+  assert.equal(capBotName("n".repeat(41)), "n".repeat(40));
+  assert.equal(capBotName("Viajes"), "Viajes");
+});
+
+test("HM-BOT-03: a role of 800 emoji passes, 801 does not", () => {
+  assert.deepEqual(formProblems(form({ role: "😀".repeat(800) })), []);
+  assert.deepEqual(formProblems(form({ role: "😀".repeat(801) })), ["role_too_long"]);
+});
+
 test("HM-BOT-03: the fingerprint for mail send, logins, pay or Don't ask, and only when newly granted", () => {
   assert.equal(formNeedsFingerprint(form({ grants: ["mail_read"] })), false);
   assert.equal(formNeedsFingerprint(form({ grants: ["mail_send"] })), true);

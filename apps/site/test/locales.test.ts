@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import en from "../locales/en.json";
 import es from "../locales/es-419.json";
+import appEn from "../../../packages/copy/locales/en.json";
+import appEs from "../../../packages/copy/locales/es-419.json";
 import { translator } from "../lib/i18n";
 
 const KEY_PATTERN = /^(HM-SITE-\d{2}|common)\.[a-z][a-zA-Z0-9]*$/;
@@ -50,6 +52,17 @@ describe("site copy", () => {
     for (const k of ["common.badgeAppleAlt", "common.badgeGoogleAlt"]) {
       expect(enDict[k], k).toMatch(/, coming soon$/);
       expect(esDict[k], k).toMatch(/, muy pronto$/);
+    }
+  });
+
+  test("the lab's kicker is the name the app gives the Device lab, in both languages", () => {
+    expect(en["HM-SITE-01.labKicker"]).toBe(appEn["HM-SET-10.title"]);
+    expect(es["HM-SITE-01.labKicker"]).toBe(appEs["HM-SET-10.title"]);
+  });
+
+  test("in Spanish the lab's report is an informe, as in the app, and the lab is never a laboratorio de dispositivos", () => {
+    for (const k of ["HM-SITE-01.labBody", "HM-SITE-01.labStep2Title", "HM-SITE-01.labStep2Body", "HM-SITE-01.getBody"] as const) {
+      expect(es[k], k).not.toMatch(/reporte|laboratorio de dispositivos/i);
     }
   });
 

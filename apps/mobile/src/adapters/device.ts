@@ -6,6 +6,7 @@ import { HermitNotifications } from "../../modules/hermit-notifications";
 import { nightDeviceState, type NightDeviceState } from "../night-device";
 import { byteCount, hardwareFactsFor, hardwarePlatform, thermalFromNative, type NativeThermal } from "../platform-facts";
 import { observedTokensPerSecond } from "./qvac-engine";
+import { keepOutOfBackups } from "./backup";
 
 /** Calls back when the phone comes back online, so an interrupted download can resume. Returns unsubscribe. */
 export function onReconnect(listener: () => void): () => void {
@@ -36,7 +37,11 @@ const CHUNK = 4 * 1024 * 1024;
 /** The model file's home: app documents (not cache, which the system may clear). */
 export function modelFile(name: string): File {
   const dir = new Directory(Paths.document, "models");
-  if (!dir.exists) dir.create();
+  if (!dir.exists) {
+    dir.create();
+    // #126: on iOS the model folder stays out of backups from the moment it exists (and again at every launch).
+    void keepOutOfBackups();
+  }
   return new File(dir, name);
 }
 

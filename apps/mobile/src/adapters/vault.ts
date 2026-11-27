@@ -3,7 +3,7 @@ import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { VAULT_KEY, type SecureRandom, type VaultCipherPort, type VaultKeyPort } from "@hermit/core";
 import { HermitVault, type PickedDocument } from "../../modules/hermit-vault";
-import { fromHex } from "./secure";
+import { fromHex, keychain } from "./secure";
 import { trackPrompt } from "./app-lock";
 
 /**
@@ -33,7 +33,7 @@ export function wrappedKeyPort(entry: { key: string; service: string }): VaultKe
       if (!SecureStore.canUseBiometricAuthentication()) return "unavailable";
       try {
         // trackPrompt: the app lock must not read the prompt's trip away as the user leaving.
-        await trackPrompt(() => SecureStore.setItemAsync(entry.key, hex(key), { ...OPTIONS, requireAuthentication: true, authenticationPrompt: prompt }));
+        await trackPrompt(() => SecureStore.setItemAsync(entry.key, hex(key), keychain({ ...OPTIONS, requireAuthentication: true, authenticationPrompt: prompt })));
         return "stored";
       } catch {
         return "cancelled";

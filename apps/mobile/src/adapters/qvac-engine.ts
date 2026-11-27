@@ -5,6 +5,7 @@ import {
   afterWrite, botOfKey, cacheFailureLine, cacheSizeLine, engineCacheKey, evictKeys, forgetBotCachesOn, hermitTurnKey, loadCaches, MAX_NAMED_CACHES,
   touchCacheKey, type CacheDisk, type CacheFile, type CacheOwners,
 } from "../cache-keys";
+import { keepOutOfBackups } from "./backup";
 
 type QvacTool = Extract<NonNullable<Parameters<typeof completion>[0]["tools"]>[number], { type: "function" }>;
 
@@ -145,6 +146,8 @@ export async function qvacEngine(modelPath: string, profile: ModelProfile, tunin
   const keep = [hermitTurnKey(profile.id)];
   const owners = await caches?.owners().catch((err: unknown) => void qvacDisk.failed("load", err));
   let order = await loadCaches(qvacDisk, { keep, ...(owners ? { owners } : {}) });
+  // #126: on iOS QVAC's folder (`.qvac`, made by the first load) stays out of backups, like the rest of documents.
+  void keepOutOfBackups();
   const ledger = {
     drop(keys: readonly string[]) {
       order = order.filter((k) => !keys.includes(k));

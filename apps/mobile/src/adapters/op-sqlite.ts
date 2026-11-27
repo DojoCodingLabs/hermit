@@ -2,6 +2,7 @@ import { open, type DB } from "@op-engineering/op-sqlite";
 import { File } from "expo-file-system";
 import type { SqlPort } from "@hermit/core";
 import { splitStatements } from "../sql-split";
+import { keepOutOfBackups } from "./backup";
 
 /**
  * SL-10 (spike S2): SqlPort over op-sqlite built with SQLCipher and FTS5 (ADR-006).
@@ -14,6 +15,8 @@ let live: DB | undefined;
 export function encryptedSql(encryptionKey: string): SqlPort {
   const db = open({ name: NAME, encryptionKey });
   live = db;
+  // #126: on iOS the file (made here on the first run, opened here at every launch) stays out of backups.
+  void keepOutOfBackups(db.getDbPath());
   let queue: Promise<unknown> = Promise.resolve();
   const port: SqlPort = {
     async exec(sql, params) {

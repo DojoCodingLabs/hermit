@@ -12,6 +12,7 @@ import { qvacEngine } from "./qvac-engine";
 import type { CacheOwners } from "../cache-keys";
 import { reminderNotifier, requestReminderAccess } from "./notifier";
 import { plainSecret } from "./secure";
+import { moveKeychainToThisDevice } from "./backup";
 import { deviceSigner } from "./signer";
 import { calendarPermissionGranted, requestCalendarPermission } from "./calendar";
 import { allowedCpus, loadPlan, modelFile, partialBytes, phoneDownload, phoneFacts, reloadPlan, runtimeConditions, verifiedSha256 } from "./device";
@@ -127,7 +128,9 @@ export function openDatabase(): SqlPort | undefined {
 
 export async function createPorts(approvals: HermitPorts["approvals"]): Promise<HermitPorts> {
   const profile = PROFILES[0]!;
-  const dbKey = Array.from(await plainSecret(SECRET_KEYS.db), (b) => b.toString(16).padStart(2, "0")).join("");
+  // #126: on iOS, plain Keychain items written before ThisDeviceOnly move in place, before any of them is read.
+  await moveKeychainToThisDevice();
+  const dbKey =Array.from(await plainSecret(SECRET_KEYS.db), (b) => b.toString(16).padStart(2, "0")).join("");
   liveSql = encryptedSql(dbKey);
   const wallet = walletPorts();
   logCoresOnAppState();

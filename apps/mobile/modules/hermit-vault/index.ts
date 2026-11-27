@@ -1,4 +1,5 @@
 import { NativeModule, requireNativeModule } from "expo";
+import type { KeychainMove } from "../../src/backup-guard";
 
 declare class HermitVaultNative extends NativeModule {
   /** A wrapped value and its Keystore key both exist (checked without a fingerprint prompt). */
@@ -24,7 +25,15 @@ declare class HermitVaultNative extends NativeModule {
   readDocument(uri: string, maxBytes: number): Promise<Uint8Array>;
   /** Deletes the picked file through the picker's grant; false when its provider refuses or can't. */
   deleteDocument(uri: string): Promise<boolean>;
+  /** #126, iOS only: flags each existing path as excluded from backup; the flag as read back, per path. */
+  excludeFromBackup(paths: string[]): Promise<Record<string, boolean>>;
+  /** #126, iOS only: a Keychain item's protection class (`ak`, `aku`, ...), without a prompt; null when absent. */
+  keychainAccessibility(service: string, key: string): Promise<string | null>;
+  /** #126, iOS only: moves the plain items under these services to WhenUnlockedThisDeviceOnly, in place. */
+  keychainToThisDevice(services: readonly string[]): Promise<KeychainMove[]>;
 }
+
+export type { KeychainMove };
 
 export interface PickedDocument {
   uri: string;

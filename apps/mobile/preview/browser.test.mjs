@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { BROWSER_VAR, findChromium, playwrightCache } from "./browser.mjs";
 
 // A made-up disk: the folders in each directory, and the files that exist. Nothing here touches the real machine.
@@ -130,9 +130,9 @@ test("a relative PLAYWRIGHT_BROWSERS_PATH resolves against INIT_CWD, then the wo
   const preview = join(project, "apps", "mobile", "preview");
   assert.equal(
     playwrightCache({ env: { PLAYWRIGHT_BROWSERS_PATH: "browsers", INIT_CWD: project }, platform: "linux", home, cwd: preview }),
-    join(project, "browsers"),
+    resolve(project, "browsers"),
   );
-  assert.equal(playwrightCache({ env: { PLAYWRIGHT_BROWSERS_PATH: "browsers" }, platform: "linux", home, cwd: preview }), join(preview, "browsers"));
+  assert.equal(playwrightCache({ env: { PLAYWRIGHT_BROWSERS_PATH: "browsers" }, platform: "linux", home, cwd: preview }), resolve(preview, "browsers"));
 });
 
 test(`${BROWSER_VAR} wins over the cache when the file exists`, () => {

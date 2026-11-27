@@ -6,9 +6,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
-import { MAX_BOT_NAME_CHARS } from "@hermit/core/bots";
 import { HERMIT_BOT_ID, type Bot, type MemoryCursor, type Note as Fact, type PermissionMode } from "@hermit/core";
-import { formNeedsFingerprint, formPatch, formProblems, fromBot, noteActions, settingsResult, type BotForm } from "../bot-form-view";
+import { capBotName, formNeedsFingerprint, formPatch, formProblems, fromBot, noteActions, settingsResult, type BotForm } from "../bot-form-view";
 import { forgetBotCaches } from "../adapters";
 import { BotAvatar } from "../components/BotAvatar";
 import { ConfirmSheet, ConnectorsList, GroupsList, LookPicker, Refusal, modeLine, useSourceChoices } from "../components/BotFormParts";
@@ -230,7 +229,7 @@ export default function BotSettings() {
           {hermitBot ? (
             <T v="body" color="soft" style={{ flex: 1 }}>{t("HM-BOT-04.hermitRole")}</T>
           ) : (
-            <Input label={t("HM-BOT-03.name")} value={form.name} onChange={(name) => edit({ name })} invalid={problems.includes("name_too_long") || problems.includes("name_empty")} style={{ flex: 1 }} field={{ autoCapitalize: "words", maxLength: MAX_BOT_NAME_CHARS }} />
+            <Input label={t("HM-BOT-03.name")} value={form.name} onChange={(name) => edit({ name: capBotName(name) })} invalid={problems.includes("name_too_long") || problems.includes("name_empty")} style={{ flex: 1 }} field={{ autoCapitalize: "words" }} />
           )}
         </View>
         {problems.includes("name_empty") ? <Refusal reason="name_empty" name={bot.name} /> : null}

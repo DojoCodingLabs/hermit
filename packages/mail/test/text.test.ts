@@ -135,3 +135,21 @@ describe("splitAddresses", () => {
     expect(splitAddresses(" , ")).toEqual([]);
   });
 });
+
+describe("decodeEntities numeric references", () => {
+  it("replaces a surrogate reference with U+FFFD", () => {
+    expect(decodeEntities("a&#xD800;b")).toBe("a\uFFFDb");
+    expect(decodeEntities("a&#55296;b")).toBe("a\uFFFDb");
+  });
+
+  it("replaces zero and out-of-range references with U+FFFD", () => {
+    expect(decodeEntities("a&#0;b")).toBe("a\uFFFDb");
+    expect(decodeEntities("a&#x110000;b")).toBe("a\uFFFDb");
+  });
+
+  it("keeps valid references as before", () => {
+    expect(decodeEntities("a&#xE9;b")).toBe("a\u00E9b");
+    expect(decodeEntities("a&#128512;b")).toBe("a\uD83D\uDE00b");
+    expect(decodeEntities("a&amp;b")).toBe("a&b");
+  });
+});

@@ -75,7 +75,9 @@ export function decodeEntities(text: string): string {
   return text.replace(/&(#x[0-9a-f]{1,6}|#[0-9]{1,7}|[a-z]{2,8});/gi, (whole, ref: string) => {
     if (ref[0] === "#") {
       const cp = ref[1] === "x" || ref[1] === "X" ? parseInt(ref.slice(2), 16) : parseInt(ref.slice(1), 10);
-      return cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : whole;
+      // HTML numeric references must be valid scalar values: zero, surrogates and
+      // anything past U+10FFFF are replaced, not emitted as broken UTF-16.
+      return cp > 0 && cp <= 0x10ffff && (cp < 0xd800 || cp > 0xdfff) ? String.fromCodePoint(cp) : "\uFFFD";
     }
     return NAMED[ref] ?? whole;
   });

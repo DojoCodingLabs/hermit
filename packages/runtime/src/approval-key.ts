@@ -1,4 +1,4 @@
-import type { ApprovalKeyLevel, ApprovalKeyPort, ApprovalKeyState, SqlPort } from "@hermit/core";
+import { APPROVAL_KEY_LEVELS, type ApprovalKeyLevel, type ApprovalKeyPort, type ApprovalKeyState, type SqlPort } from "@hermit/core";
 import { createNonceStore, createSignedApprovals, enrollmentMessage, verifyEnrollment, type AuditLog, type SignedApprovals } from "@hermit/cage";
 
 const bytesToHex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
@@ -46,8 +46,8 @@ function parseEnrolled(raw: string | undefined): EnrolledApprovalKey | undefined
   if (!raw) return undefined;
   try {
     const v = JSON.parse(raw) as Partial<EnrolledApprovalKey>;
-    if (typeof v.publicKey !== "string" || (v.level !== "strongbox" && v.level !== "tee") || typeof v.enrolledAt !== "number") return undefined;
-    return { publicKey: v.publicKey, level: v.level, enrolledAt: v.enrolledAt };
+    if (typeof v.publicKey !== "string" || !APPROVAL_KEY_LEVELS.includes(v.level as ApprovalKeyLevel) || typeof v.enrolledAt !== "number") return undefined;
+    return { publicKey: v.publicKey, level: v.level as ApprovalKeyLevel, enrolledAt: v.enrolledAt };
   } catch {
     return undefined;
   }

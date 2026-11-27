@@ -5,7 +5,7 @@
 import { describe, expect, test } from "vitest";
 import { webcrypto } from "node:crypto";
 import { nodeSql } from "@hermit/sql-node";
-import { migrate, type ApprovalKeyPort, type ApprovalKeyState } from "@hermit/core";
+import { migrate, type ApprovalKeyLevel, type ApprovalKeyPort, type ApprovalKeyState } from "@hermit/core";
 import { createAuditLog, ed25519Signer } from "@hermit/cage";
 import { softwareApprovalKey } from "@hermit/cage/testing";
 import { profileById } from "@hermit/model";
@@ -18,13 +18,13 @@ const random = (n: number) => webcrypto.getRandomValues(new Uint8Array(n));
 function fakeKeystore() {
   let seed = 10;
   let key: ReturnType<typeof softwareApprovalKey> | undefined;
-  const s = { next: "ok" as "ok" | "cancelled" | "no_secure_hardware" | "forge", retired: false, noBiometric: false, destroyed: 0 };
+  const s = { next: "ok" as "ok" | "cancelled" | "no_secure_hardware" | "forge", retired: false, noBiometric: false, destroyed: 0, level: "strongbox" as ApprovalKeyLevel };
   const port: ApprovalKeyPort = {
     async state(): Promise<ApprovalKeyState> {
       if (s.noBiometric) return { state: "no_biometric" };
       if (!key) return { state: "none" };
       if (s.retired) return { state: "lost" };
-      return { state: "ready", publicKey: key.spki, level: "strongbox" };
+      return { state: "ready", publicKey: key.spki, level: s.level };
     },
     async enroll(message) {
       key = undefined;
@@ -38,7 +38,7 @@ function fakeKeystore() {
       // "forge": a key that returns a signature not made over the challenge (a broken or hostile native side).
       const signature = s.next === "forge" ? softwareApprovalKey(99).sign(message) : key.sign(message);
       s.next = "ok";
-      return { publicKey: key.spki, level: "strongbox", signature };
+      return { publicKey: key.spki, level: s.level, signature };
     },
     async destroy() {
       key = undefined;
@@ -107,6 +107,17 @@ describe("createApprovalKey", () => {
     expect(await service.view()).toEqual({ kind: "not_set_up" });
     ks.s.next = "no_secure_hardware";
     expect(await service.enroll(prompt)).toEqual({ ok: false, reason: "no_secure_hardware" });
+  });
+
+  test("an iPhone's Secure Enclave key is pinned with its level and reads back as ready", async () => {
+    const { service, store, ks } = await setup();
+    ks.s.level = "secure_enclave";
+    expect(await service.enroll(prompt)).toEqual({ ok: true, view: { kind: "ready", level: "secure_enclave" } });
+    expect(JSON.parse(store.get("approval.key")!)).toEqual({ publicKey: ks.key()!.spki, level: "secure_enclave", enrolledAt: 5_000 });
+    expect(await service.view()).toEqual({ kind: "ready", level: "secure_enclave" });
+    // A level nobody makes is not a pin: the screen asks to set the key up, never trusts it.
+    store.set("approval.key", JSON.stringify({ publicKey: ks.key()!.spki, level: "software", enrolledAt: 5_000 }));
+    expect(await service.view()).toEqual({ kind: "not_set_up" });
   });
 
   test("an enrollment whose signature isn't the new key's over the challenge is refused and the key destroyed", async () => {

@@ -69,13 +69,18 @@ export interface SignedApprovalRequest {
   message: string;
 }
 
-/** Where the key is kept. Software keys are refused at enrollment, so there is no "software" level. */
-export type ApprovalKeyLevel = "strongbox" | "tee";
+/**
+ * Where the key is kept: Android's StrongBox or TEE, or an iPhone's Secure Enclave. Software keys are refused at
+ * enrollment, so there is no "software" level.
+ */
+export const APPROVAL_KEY_LEVELS = ["strongbox", "tee", "secure_enclave"] as const;
+export type ApprovalKeyLevel = (typeof APPROVAL_KEY_LEVELS)[number];
 
 /**
  * The Keystore key as the native module sees it, read without a prompt.
  * - none: never set up (or erased).
- * - lost: Android retired it because a fingerprint was added or removed (`KeyPermanentlyInvalidatedException`).
+ * - lost: retired because a fingerprint (or on iOS a face or a finger) was added or removed (Android's
+ *   `KeyPermanentlyInvalidatedException`, iOS's `.biometryCurrentSet`).
  * - no_biometric: the phone has no strong biometric enrolled, so a key that needs one can't be made or used.
  * - ready: usable; `publicKey` is the X.509 SubjectPublicKeyInfo in lowercase hex.
  */

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { readFileSync } from "node:fs";
-import { OUTCOMES, outcomeCopyKey } from "@hermit/core";
+import { APPROVAL_KEY_LEVELS, OUTCOMES, outcomeCopyKey } from "@hermit/core";
 import { createTranslator, CopyError, KEY_PATTERN, placeholders, resolveLocale, type Dictionary } from "../src/index.ts";
 
 const load = (name: string): Dictionary => JSON.parse(readFileSync(new URL(`../locales/${name}.json`, import.meta.url), "utf8"));
@@ -24,6 +24,13 @@ describe("locale files (CT-10)", () => {
     for (const o of OUTCOMES) {
       expect(en[outcomeCopyKey(o)], o).toBeTruthy();
       expect(es[outcomeCopyKey(o)], o).toBeTruthy();
+    }
+  });
+
+  test("every place an approval key can be kept has its line on the approval key screen", () => {
+    for (const level of APPROVAL_KEY_LEVELS) {
+      expect(en[`HM-APPR-01.key.level.${level}`], level).toBeTruthy();
+      expect(es[`HM-APPR-01.key.level.${level}`], level).toBeTruthy();
     }
   });
 

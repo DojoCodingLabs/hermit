@@ -45,6 +45,7 @@ export const floorFacts = ok(scene.variant === "below"
   : { platform: "android" as const, apiLevel: 36, abis: ["arm64-v8a"], totalRamBytes: 11.2 * 1024 ** 3, isLowRamDevice: false, dotprod: true, manufacturer: "samsung", model: "SM-S942B", soc: "SM8850" });
 export const nightConditions = ok({ charging: true, batteryLevel: 0.82, network: "wifi", screenOn: false, idleMinutes: 45 });
 export const onReconnect = off;
+export const pauseDownloadWhenLeaving = off;
 export const openStorageSettings = ok(undefined);
 export const modelFile = () => ({ exists: false, uri: "file:///model.gguf", size: 0 });
 export const verifiedSha256 = () => undefined;
@@ -90,6 +91,8 @@ export const actOnPermission = ok(undefined);
 // App lock and fingerprint.
 export const appLockEnabled = () => scene.variant === "locked";
 export const saveAppLock = ok(undefined);
+// The copy keeps its default biometric name: an Android phone's fingerprint.
+export const applyBiometricName = ok(undefined);
 export const phoneSecurity = ok("biometric" as const);
 // The lock screen's shot waits at its own prompt, as on the phone before the fingerprint.
 export const confirmOwner = () => (scene.variant === "locked" ? new Promise<boolean>(() => {}) : Promise.resolve(true));

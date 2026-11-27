@@ -1,10 +1,11 @@
 // Dev-only: serves dist/ and captures every shot in shots.mjs with headless Chromium at a 412x915 phone viewport,
 // into out/screens, then writes out/index.html (both gitignored). Usage: node shoot.mjs [filter]
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "node:fs";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { chromiumPath } from "./browser.mjs";
 import { shots } from "./shots.mjs";
 import { audit, words } from "./audit.mjs";
 
@@ -27,14 +28,6 @@ const server = createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}/`;
-
-/** The Chromium already on this Mac (Playwright's cache); nothing is downloaded. */
-function chromiumPath() {
-  const cache = join(process.env.HOME, "Library/Caches/ms-playwright");
-  const shell = readdirSync(cache).filter((d) => d.startsWith("chromium_headless_shell-")).sort().pop();
-  if (!shell) throw new Error("no headless Chromium in ~/Library/Caches/ms-playwright");
-  return join(cache, shell, "chrome-headless-shell-mac-arm64", "chrome-headless-shell");
-}
 
 const filter = process.argv[2];
 const browser = await chromium.launch({ executablePath: chromiumPath() });

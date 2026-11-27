@@ -1,5 +1,5 @@
 // Dev-only: bundles the real apps/mobile screens for a browser. react-native resolves to react-native-web; native
-// modules, adapters and the runtime's ports resolve to the stubs in src/stubs (see README in docs/preview).
+// modules, adapters and the runtime's ports resolve to the stubs in src/stubs (CONTRIBUTING.md, Screenshots for a UI change).
 import { build } from "esbuild";
 import { copyFileSync, existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";

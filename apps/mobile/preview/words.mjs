@@ -2,10 +2,11 @@
 // preview bundle, for the copy diet's before and after. Usage: node words.mjs <dist dir> <out.json>
 // (build the bundle of the commit to compare with its own build.mjs first).
 import { createServer } from "node:http";
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
 import { chromium } from "playwright-core";
 import { words } from "./audit.mjs";
+import { chromiumPath } from "./browser.mjs";
 
 const [distArg, outArg] = process.argv.slice(2);
 if (!distArg || !outArg) throw new Error("usage: node words.mjs <dist dir> <out.json>");
@@ -23,8 +24,6 @@ const server = createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}/`;
-const cache = join(process.env.HOME, "Library/Caches/ms-playwright");
-const shell = readdirSync(cache).filter((d) => d.startsWith("chromium_headless_shell-")).sort().pop();
 
 /** The hero states, as in shots.mjs. */
 export const HERO = [
@@ -36,7 +35,7 @@ export const HERO = [
   { key: "welcome", screen: "welcome", variant: "" },
 ];
 
-const browser = await chromium.launch({ executablePath: join(cache, shell, "chrome-headless-shell-mac-arm64", "chrome-headless-shell") });
+const browser = await chromium.launch({ executablePath: chromiumPath() });
 const out = {};
 for (const h of HERO) {
   const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1, locale: "es-419" });

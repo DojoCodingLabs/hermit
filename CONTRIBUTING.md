@@ -102,7 +102,7 @@ The gates still run everything before a pull request. Use these commands only to
 
 ## Screenshots for a UI change
 
-AGENTS.md asks every UI pull request for screenshots in both themes and both languages. The preview harness in `apps/mobile/preview` takes them for you: it renders the real screens in a browser with made-up data. It's dev-only, outside the pnpm workspace, and nothing in the app imports it.
+AGENTS.md asks every UI pull request for screenshots in both themes and both languages. The preview harness in `apps/mobile/preview` takes them for you: it renders the real screens in a browser with made-up data. It's dev-only, outside the pnpm workspace, and nothing in the app imports it. Run `pnpm install` at the root first, as in Set up: the bundle reads the app's `tsconfig.json`, which extends Expo's.
 
 ```sh
 cd apps/mobile/preview

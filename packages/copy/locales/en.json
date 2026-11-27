@@ -624,6 +624,7 @@
   "HM-APPR-01.key.readyBody": "Payments and passwords will ask for your fingerprint every time.",
   "HM-APPR-01.key.level.strongbox": "Kept in this phone's StrongBox security chip.",
   "HM-APPR-01.key.level.tee": "Kept in this phone's secure hardware.",
+  "HM-APPR-01.key.level.secure_enclave": "Kept in this iPhone's Secure Enclave.",
   "HM-APPR-01.key.setUp": "Set up with fingerprint",
   "HM-APPR-01.key.setUpAgain": "Set up again with fingerprint",
   "HM-APPR-01.key.note.done": "Done. The approval key is set up.",

@@ -624,6 +624,7 @@
   "HM-APPR-01.key.readyBody": "Los pagos y las contraseñas pedirán tu huella cada vez.",
   "HM-APPR-01.key.level.strongbox": "Guardada en el chip de seguridad StrongBox de este teléfono.",
   "HM-APPR-01.key.level.tee": "Guardada en el hardware seguro de este teléfono.",
+  "HM-APPR-01.key.level.secure_enclave": "Guardada en el Secure Enclave de este iPhone.",
   "HM-APPR-01.key.setUp": "Configurar con huella",
   "HM-APPR-01.key.setUpAgain": "Configurar de nuevo con huella",
   "HM-APPR-01.key.note.done": "Listo. La clave de aprobación está configurada.",

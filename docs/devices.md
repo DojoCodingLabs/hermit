@@ -80,8 +80,9 @@ Device Management.
 
 On an iPhone, Hermit is still missing pieces. Today:
 
-- Payments and logins are refused, because there is no Secure Enclave approval key yet. The vault and the wallet are
-  off.
+- The approval key for payments and logins can be set up: it is made in the Secure Enclave, never leaves it, and needs
+  Face ID or Touch ID for every signature. Payments and logins are still refused, because the vault and the wallet are
+  off: iOS has no hardware-wrapped vault or wallet key yet.
 - There is no WhatsApp capture and no night shift.
 - **Delete everything** before you delete the app: iOS keeps an app's Keychain entries (Hermit's database key and
   tokens) after the app is gone.

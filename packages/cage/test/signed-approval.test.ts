@@ -207,6 +207,36 @@ describe("enrollment proof", () => {
   });
 });
 
+describe("an iPhone's Secure Enclave key (iOS module)", () => {
+  // A known vector, made once on a Mac with a throwaway software P-256 SecKey and the calls the iOS module makes:
+  // SecKeyCopyExternalRepresentation (X9.63, 0x04 X Y) behind the SPKI header (ApprovalKeyFormat.spki), and
+  // SecKeyCreateSignature(.ecdsaSignatureMessageX962SHA256), which is SHA256withECDSA in DER, as on Android.
+  const IOS_SPKI = "3059301306072a8648ce3d020106082a8648ce3d03010703420004f4c4b0fa0e50f6d9c585110cde10f5c640e702c7362cc7494524ce9e83e95fd5e483629a03cb510982694e34212fb9ed36c47327d6f47782e24896f72dcbb533";
+  const IOS_ENROLL_SIG = "3045022100fefc6ce44df7f06f1a7ced461c1859db6c0f835a8b81fbb53ca6659012ef873102201954ff1284f24f52ca3af01663729975e13ceb1e5d8396d0fd16f2c80e42bc06";
+  const IOS_SPEND_SIG = "3045022100ff44e09dc9f46e5a388dea7dc0d3cd579dd946662422f521360fa5379faa12fa02206716c1cdd70b32094f97221840caff99c74520adce47bcc781782663ba8c57a4";
+  const iosTerms = spendTerms({ amount: money(5_000_000n, "USDT", "eip155:2201") });
+
+  test("its public key and its enrollment signature verify as they come from the module, with no conversion in JavaScript", () => {
+    const key = publicKeyFromSpki(IOS_SPKI);
+    expect(key).toBeDefined();
+    expect(spkiFromPublicKey(key!)).toBe(IOS_SPKI);
+    expect(verifyEnrollment(enrollmentMessage("cd".repeat(32), NOW), IOS_ENROLL_SIG, IOS_SPKI)).toBe(true);
+    expect(verifyEnrollment(enrollmentMessage("ef".repeat(32), NOW), IOS_ENROLL_SIG, IOS_SPKI)).toBe(false);
+  });
+
+  test("its signature approves exactly the payment it was made over, and nothing changed from it", () => {
+    const { message } = built(iosTerms);
+    const publicKey = publicKeyFromSpki(IOS_SPKI)!;
+    expect(verifySignedApproval({ message, signature: IOS_SPEND_SIG, publicKey, expected: expected(iosTerms), now: NOW + 1 })).toMatchObject({ ok: true });
+    // Another amount: the cage's expected call no longer matches the payload.
+    const more = spendTerms({ amount: money(6_000_000n, "USDT", "eip155:2201") });
+    expect(verifySignedApproval({ message, signature: IOS_SPEND_SIG, publicKey, expected: expected(more), now: NOW + 1 })).toEqual({ ok: false, reason: "mismatch" });
+    // The changed payload itself, offered with the old signature: not the key's signature over it.
+    const changed = built(more).message;
+    expect(verifySignedApproval({ message: changed, signature: IOS_SPEND_SIG, publicKey, expected: expected(more), now: NOW + 1 })).toEqual({ ok: false, reason: "bad_signature" });
+  });
+});
+
 describe("createSignedApprovals (what the loop calls)", () => {
   const setup = (state: ApprovalKeyState, enrolled: string | null = spki) => {
     let n = 0;

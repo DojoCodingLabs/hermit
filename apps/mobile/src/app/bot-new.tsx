@@ -7,9 +7,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import type { PermissionMode } from "@hermit/core";
-import { MAX_BOT_NAME_CHARS } from "@hermit/core/bots";
 import type { BotProposalView } from "@hermit/runtime";
-import { BOT_TEMPLATES, fromProposal, fromTemplate, formNeedsFingerprint, formProblems, toNewBot, type BotForm, type BotTemplateId } from "../bot-form-view";
+import { BOT_TEMPLATES, capBotName, fromProposal, fromTemplate, formNeedsFingerprint, formProblems, toNewBot, type BotForm, type BotTemplateId } from "../bot-form-view";
 import { BLANK_LOOK, TEMPLATE_LOOKS } from "../bot-templates";
 import { BotAvatar } from "../components/BotAvatar";
 import { ModeSheet } from "../components/ModeSheet";
@@ -136,10 +135,10 @@ export default function BotNew() {
           <Input
             label={t("HM-BOT-03.name")}
             value={f.name}
-            onChange={(name) => edit({ name })}
+            onChange={(name) => edit({ name: capBotName(name) })}
             invalid={problems.includes("name_too_long")}
             style={{ flex: 1 }}
-            field={{ autoCapitalize: "words", maxLength: MAX_BOT_NAME_CHARS }}
+            field={{ autoCapitalize: "words" }}
           />
         </View>
         {problems.includes("name_too_long") ? <Refusal reason="name_too_long" name={f.name.trim()} /> : null}

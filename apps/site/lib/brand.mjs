@@ -22,7 +22,7 @@ export const BRAND_FILES = [
   "logo/favicon.svg",
   "logo/png/favicon-32.png",
   "icons/app-icon-light.png",
-  "applications/og.png",
+  "applications/og-v2.png",
   ...POSES.flatMap((pose) => [`mascot/rig/${pose}.svg`, `mascot/rig/${pose}-dark.svg`]),
   ...(SHOW_PARTNERS ? PARTNER_FILES : []),
   "fonts/fonts.css",

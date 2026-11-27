@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { LOCALE, href, translator, type Lang, type Page } from "./i18n";
 import { SITE_URL } from "./site-config.mjs";
 
-/** The link preview image (docs/brand/applications/og.png, 1200x630): the brand line, in English like all brand art. */
-export const OG_IMAGE = { url: "/brand/applications/og.png", width: 1200, height: 630 } as const;
+/**
+ * The link preview image (docs/brand/applications/og-v2.png, 1200x630), in English like all brand art: the brand line,
+ * the partners line (Dojo Coding, QVAC, Tether) and the Tether stack Hermit uses. A new look gets a new file name, so
+ * link cards that cached the old one fetch it again.
+ */
+export const OG_IMAGE = { url: "/brand/applications/og-v2.png", width: 1200, height: 630 } as const;
 
 /** Open Graph locale names (language_TERRITORY); es_LA is the one link previews know for Latin American Spanish. */
 const OG_LOCALE: Readonly<Record<Lang, string>> = { en: "en_US", es: "es_LA" };

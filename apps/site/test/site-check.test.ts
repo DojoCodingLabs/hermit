@@ -86,7 +86,7 @@ describe("checkNoPartners (the partners line switched off)", () => {
 
 describe("checkMeta (joinhermit.com)", () => {
   const site = "https://joinhermit.com";
-  const head = (url: string, image = `${site}/brand/applications/og.png`) =>
+  const head = (url: string, image = `${site}/brand/applications/og-v2.png`) =>
     `<link rel="canonical" href="${url}"/><link rel="alternate" hrefLang="es-419" href="${site}/es/"/>` +
     `<link rel="alternate" hrefLang="en" href="${site}/en/"/><meta property="og:title" content="Hermit"/>` +
     `<meta property="og:description" content="x"/><meta property="og:url" content="${url}"/>` +

@@ -2,6 +2,7 @@
 // per credential plus an index of ids. The meta it returns never carries the secret. Delete everything wipes it all.
 import * as SecureStore from "expo-secure-store";
 import type { CredentialMeta, CredentialSecret, CredentialStorePort } from "@hermit/core";
+import { keychain } from "./secure";
 
 const INDEX = "hermit.cred.index";
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -35,9 +36,9 @@ async function item(id: string): Promise<Item | undefined> {
 export const phoneCredentials: CredentialStorePort = {
   async save(meta, secret) {
     if (meta.kind !== secret.kind) throw new Error(`credential ${meta.id}: a ${secret.kind} secret can't be saved as ${meta.kind}`);
-    await SecureStore.setItemAsync(keyOf(meta.id), JSON.stringify({ meta, secret }));
+    await SecureStore.setItemAsync(keyOf(meta.id), JSON.stringify({ meta, secret }), keychain());
     const all = await ids();
-    if (!all.includes(meta.id)) await SecureStore.setItemAsync(INDEX, JSON.stringify([...all, meta.id]));
+    if (!all.includes(meta.id)) await SecureStore.setItemAsync(INDEX, JSON.stringify([...all, meta.id]), keychain());
   },
   async list() {
     const out: CredentialMeta[] = [];
@@ -56,14 +57,14 @@ export const phoneCredentials: CredentialStorePort = {
   async markUsed(id, at) {
     const i = await item(id);
     if (!i) return false;
-    await SecureStore.setItemAsync(keyOf(id), JSON.stringify({ ...i, meta: { ...i.meta, lastUsedAt: at } }));
+    await SecureStore.setItemAsync(keyOf(id), JSON.stringify({ ...i, meta: { ...i.meta, lastUsedAt: at } }), keychain());
     return true;
   },
   async delete(id) {
     const existed = (await item(id)) !== undefined;
     if (SAFE_ID.test(id)) await SecureStore.deleteItemAsync(keyOf(id));
     const all = await ids();
-    if (all.includes(id)) await SecureStore.setItemAsync(INDEX, JSON.stringify(all.filter((x) => x !== id)));
+    if (all.includes(id)) await SecureStore.setItemAsync(INDEX, JSON.stringify(all.filter((x) => x !== id)), keychain());
     return existed;
   },
 };

@@ -85,6 +85,9 @@ On an iPhone, Hermit is still missing pieces. Today:
 - There is no WhatsApp capture and no night shift.
 - **Delete everything** before you delete the app: iOS keeps an app's Keychain entries (Hermit's database key and
   tokens) after the app is gone.
+- Nothing of Hermit's goes into an iCloud or computer backup: its database, the model and QVAC's caches are excluded
+  from backup, and its Keychain entries are kept on this phone only. Restoring a backup onto a phone starts Hermit
+  empty, and it downloads the model again. A backup made before this change may still hold them.
 - A stopped model download starts again from zero.
 - iOS thermal states are mapped onto Android's scale: nominal 0, fair 1, serious 3, critical 4. An iPhone report keeps
   both: the mapped state, and iOS's own name for it.

@@ -1,5 +1,6 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { keychain } from "./secure";
 
 /**
  * US-SET-09: the app lock's switch and its unlock. The switch lives in SecureStore, not the database,
@@ -16,7 +17,7 @@ export function appLockEnabled(): boolean {
 }
 
 export async function saveAppLock(on: boolean): Promise<void> {
-  if (on) await SecureStore.setItemAsync(KEY, "1");
+  if (on) await SecureStore.setItemAsync(KEY, "1", keychain());
   else await SecureStore.deleteItemAsync(KEY);
 }
 

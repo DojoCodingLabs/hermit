@@ -11,6 +11,7 @@ import { HermitVault } from "../../modules/hermit-vault";
 import { landedAt } from "../mcp-request";
 import { decodeBody, readCapped } from "../web-body";
 import { counted, countOutbound } from "./net";
+import { keychain } from "./secure";
 import { vaultOnScreen, vaultRandom, wrappedKeyPort } from "./vault";
 import { sharedWalletClient, stopSharedWalletWorklet, walletBundleAvailable } from "./wallet-worklet";
 import { LIST_MIN_DECIMALS } from "../wallet-view";
@@ -33,7 +34,7 @@ export const walletRecordPort: WalletRecordPort = {
   async read() {
     return (await SecureStore.getItemAsync(WALLET_RECORD_KEY)) ?? undefined;
   },
-  write: (text) => SecureStore.setItemAsync(WALLET_RECORD_KEY, text),
+  write: (text) => SecureStore.setItemAsync(WALLET_RECORD_KEY, text, keychain()),
   remove: () => SecureStore.deleteItemAsync(WALLET_RECORD_KEY),
 };
 

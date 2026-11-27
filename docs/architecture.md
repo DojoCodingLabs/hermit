@@ -60,7 +60,7 @@ Screens and adapters live in `apps/mobile`. The filled boxes are packages under 
 | App | Its job |
 | :-- | :-- |
 | [`apps/mobile`](../apps/mobile) | The Expo app (SDK 58, React Native 0.88, Android first). Screens, adapters, Kotlin modules in `modules/`, and the wallet worklet in `worklets/wallet`. |
-| [`apps/relay`](../apps/relay) | An optional sign-in relay you can host yourself, for services that demand a client secret. It swaps a sign-in code for tokens, returns them encrypted to the phone and stores nothing. Hermit works without it. |
+| [`apps/relay`](../apps/relay) | An optional sign-in relay you can host yourself, for services that demand a client secret. It swaps a sign-in code for tokens, returns them encrypted to the phone and stores nothing. Hermit works without it. [How to run it](../apps/relay/README.md). |
 | [`apps/site`](../apps/site) | The website, [joinhermit.com](https://joinhermit.com). |
 
 ## One turn, end to end

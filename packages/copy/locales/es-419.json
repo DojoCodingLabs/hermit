@@ -133,6 +133,7 @@
   "HM-APPR-01.taintFrom.web": "Sugerido después de leer una página web",
   "HM-APPR-01.taintFrom.file": "Sugerido después de leer un archivo",
   "HM-APPR-01.taintFrom.notification": "Sugerido después de leer una notificación",
+  "HM-APPR-01.taintFrom.bot": "Sugerido después de leer el mensaje de otro bot",
   "HM-APPR-01.approve": "Aprobar con {biometric}",
   "HM-APPR-01.deny": "No enviar",
   "HM-APPR-01.denied": "No se envió.",

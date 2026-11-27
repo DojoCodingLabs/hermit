@@ -32,6 +32,7 @@ const TAINT_WARNING: Record<string, string> = {
   email: "Suggested overnight after reading email",
   inbound_message: "Suggested overnight after reading messages",
   web: "Suggested overnight after reading a web page",
+  bot: "Suggested overnight after reading another bot's message",
 };
 
 /**

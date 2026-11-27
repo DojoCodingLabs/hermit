@@ -426,7 +426,7 @@ const SCREEN_APPROVAL_MS = 120_000;
 /** The loop's English taint warning by what was read (the sheet words it from the kind, HM-APPR-01.taintFrom.*). */
 const SCREEN_TAINT_WARNING: Readonly<Record<string, string>> = {
   email: "Suggested after reading email", inbound_message: "Suggested after reading messages", web: "Suggested after reading a web page",
-  file: "Suggested after reading a file", notification: "Suggested after reading a notification",
+  file: "Suggested after reading a file", notification: "Suggested after reading a notification", bot: "Suggested after reading another bot's message",
 };
 const CANCEL = skillId("reminder_cancel");
 const CANCEL_RISK = firstWinSkills.find((s) => s.id === CANCEL)!.risk;

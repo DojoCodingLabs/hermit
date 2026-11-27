@@ -187,7 +187,7 @@ export interface ToolCall {
 }
 
 export interface TaintSource {
-  kind: "web" | "email" | "inbound_message" | "file" | "notification";
+  kind: "web" | "email" | "inbound_message" | "file" | "notification" | "bot";
   ref: string;
   at: number;
 }

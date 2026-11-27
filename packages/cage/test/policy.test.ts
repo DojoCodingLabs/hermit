@@ -64,6 +64,13 @@ describe("hard limits no rule set can loosen", () => {
       expect(d.signedApproval).toBeUndefined();
     });
 
+    test(`${risk} is denied in a session tainted with bot input, whatever the rules`, () => {
+      const botTainted = session({ taint: [{ kind: "bot", ref: "viajes", at: 1 }] });
+      const d = decide(call(skill), risk, botTainted, allowAll);
+      expect(d).toMatchObject({ effect: "deny", ruleId: "hard-tainted-money", taintInfluenced: true });
+      expect(d.signedApproval).toBeUndefined();
+    });
+
     test(`${risk} is denied in an unattended session (the night shift never gets these approvals)`, () => {
       const d = decide(call(skill), risk, session({ unattended: true }), allowAll);
       expect(d).toMatchObject({ effect: "deny", ruleId: "hard-unattended-money" });

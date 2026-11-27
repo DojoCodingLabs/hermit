@@ -16,6 +16,7 @@ const TAINT_WORDS: Record<TaintSource["kind"], string> = {
   web: "a web page",
   file: "a file",
   notification: "a notification",
+  bot: "another bot's message",
 };
 
 /** What the chat and the model are told when a money or password call can't be asked (SL-37). Words only, no payload. */

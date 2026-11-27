@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { PERMISSION_MODES, type PermissionMode, type ReadKind, type Risk, type SkillGroup, type SkillId } from "@hermit/core";
+import { PERMISSION_MODES, type PermissionMode, type ReadKind, type Risk, type SkillGroup, type SkillId, type TaintSource } from "@hermit/core";
 import { holds, inSources, type SkillFacts } from "../src/modes.ts";
-import { decide, defaultRules, loginRules, webTaskRules, withPay } from "../src/policy.ts";
+import { decide, defaultRules, loginRules, webTaskRules, withPay, type PolicyRule } from "../src/policy.ts";
 import { cage, call, CLEAN, PAY_CALL, REMEMBER_CALL, session, TODAY_CASES, WEB, WEB_PAY_CALL } from "./policy-cases.ts";
 
 interface Turn {
@@ -216,5 +216,78 @@ describe("permission modes in the cage (spec 6.4, 6.4.1)", () => {
     const onSite = "https://www.wikivoyage.org/search";
     expect(inSources({ ...call("search_web", { query: "Ana Prueba", url: onSite }), destination: onSite }, READ_WEB, b.sources)).toBe(false);
     expect([inSources(call("conn_x_list"), { source: "x" }, b.sources), inSources(call("conn_y_list"), { source: "y" }, b.sources)]).toEqual([true, false]);
+  });
+
+  test("bot taint: a link or search from another bot's text never counts as the user's own words", () => {
+    const botTaint: TaintSource = { kind: "bot", ref: "viajes", at: 1 };
+    const linkCall = call("read_web", { url: "https://otro.example/deal" });
+    const searchCall = { ...call("search_web", { query: "vuelos a cusco" }), destination: DDG };
+
+    for (const mode of ["ask", "auto"] as const) {
+      const chatLink = decide(linkCall, "network", session({ taint: [botTaint] }), defaultRules(), {
+        bot: cage(mode),
+        skill: READ_WEB,
+      });
+      expect(chatLink.effect, `chat link ${mode}`).toBe("ask");
+
+      const aloneLink = decide(linkCall, "network", session({ unattended: true, taint: [botTaint] }), defaultRules(), {
+        bot: cage(mode),
+        skill: READ_WEB,
+      });
+      expect([aloneLink.effect, aloneLink.ruleId, aloneLink.followUp], `alone link ${mode}`).toEqual(["deny", "bot-alone-suggest", "suggestion"]);
+
+      const aloneSearch = decide(
+        searchCall,
+        "network",
+        session({ unattended: true, taint: [botTaint], approvedSearchProviders: [DDG] }),
+        defaultRules(),
+        { bot: cage(mode), skill: READ_WEB },
+      );
+      expect([aloneSearch.effect, aloneSearch.followUp], `alone search ${mode}`).toEqual(["deny", "suggestion"]);
+    }
+
+    const chatAskSearch = decide(
+      searchCall,
+      "network",
+      session({ taint: [botTaint], approvedSearchProviders: [DDG] }),
+      defaultRules(),
+      { bot: cage("ask"), skill: READ_WEB },
+    );
+    expect(chatAskSearch.effect).toBe("ask");
+    expect(chatAskSearch.taintInfluenced).toBe(true);
+  });
+
+  test("bot taint denies spend and credential in every mode, even with configurable rules opened", () => {
+    const botTaint: TaintSource = { kind: "bot", ref: "viajes", at: 1 };
+    const allowAll: PolicyRule[] = [{ id: "allow-all", skill: "*", effect: "allow" }];
+
+    for (const mode of PERMISSION_MODES) {
+      for (const [c, risk, group] of [
+        [PAY_CALL, "spend", "wallet_pay"],
+        [call("fill_password"), "credential", "vault_logins"],
+      ] as const) {
+        const chat = decide(c, risk, session({ taint: [botTaint] }), allowAll, {
+          bot: cage(mode),
+          skill: { tier: "low", group },
+        });
+        expect([chat.effect, chat.ruleId, chat.taintInfluenced, chat.signedApproval], `chat ${mode} ${risk}`).toEqual([
+          "deny",
+          "hard-tainted-money",
+          true,
+          undefined,
+        ]);
+
+        const alone = decide(c, risk, session({ unattended: true, taint: [botTaint] }), allowAll, {
+          bot: cage(mode),
+          skill: { tier: "low", group },
+        });
+        expect([alone.effect, alone.ruleId, alone.followUp, alone.signedApproval], `alone ${mode} ${risk}`).toEqual([
+          "deny",
+          "bot-alone-money",
+          "money_note",
+          undefined,
+        ]);
+      }
+    }
   });
 });

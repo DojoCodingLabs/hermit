@@ -16,9 +16,14 @@ export function formProblems(f: BotForm): Array<"name_empty" | "name_too_long" |
   const name = f.name.trim();
   if (!name) out.push("name_empty");
   else if ([...name].length > MAX_BOT_NAME_CHARS) out.push("name_too_long");
-  if (f.role.trim().length > MAX_ROLE_CHARS) out.push("role_too_long");
+  if ([...f.role.trim()].length > MAX_ROLE_CHARS) out.push("role_too_long");
   if (siteWords(f.sites).some((w) => normalizeSite(w) === undefined)) out.push("bad_site");
   return out;
+}
+
+/** Cap a typed bot name at MAX_BOT_NAME_CHARS code points, keeping emoji whole. React Native's `maxLength` counts UTF-16 units, so it stops a name of 40 emoji at 20; this caps by code point instead, like the store does. */
+export function capBotName(text: string): string {
+  return [...text].slice(0, MAX_BOT_NAME_CHARS).join("");
 }
 
 /**

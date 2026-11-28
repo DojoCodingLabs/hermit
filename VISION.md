@@ -37,7 +37,7 @@ If it can run on the phone, it runs on the phone: the model, memory, reminders, 
 
 ### 2. Nothing leaves without consent
 
-Hermit uses the network only when a task needs it, and only to reach the place that task names. Anything that sends, pays or logs in shows the exact action and waits for your fingerprint. The few honest exceptions, like the model's first download or a calendar that syncs on its own, are listed where you can read them, and the app counts every host it contacts so you can check.
+Hermit uses the network only when a task needs it, and only to reach the place that task names. Anything that pays or logs in shows the exact action and waits for your fingerprint. Sends show the exact action and ask first, unless you put a bot in Don't ask. The few honest exceptions, like the model's first download or a calendar that syncs on its own, are listed where you can read them, and the app counts every host it contacts so you can check.
 
 Future permission modes may let you pre-approve some actions for a bot you trust, after a plain warning you read and confirm. Payments and logins will always wait for you.
 

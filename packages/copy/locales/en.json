@@ -1431,6 +1431,7 @@
   "HM-BOT-02.olderTitle": "Older chats",
   "HM-BOT-02.newFailed": "Couldn't start a new chat.",
   "HM-BOT-02.olderFailed": "Couldn't open that chat.",
+  "HM-BOT-02.clearing": "This conversation is being cleared. Write again in a moment.",
   "HM-BOT-03.title": "New bot",
   "HM-BOT-03.templatesIntro": "Start from a template or from scratch. You adjust everything after.",
   "HM-BOT-03.blank": "Start from scratch",

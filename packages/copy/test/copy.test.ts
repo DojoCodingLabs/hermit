@@ -27,6 +27,20 @@ describe("locale files (CT-10)", () => {
     }
   });
 
+  test("every TaintSource kind has HM-APPR-01.taintFrom copy in both locales", () => {
+    const types = readFileSync(new URL("../../core/src/types.ts", import.meta.url), "utf8");
+    const kinds = /interface TaintSource \{\s*kind: ([^;]+);/
+      .exec(types)![1]!
+      .split("|")
+      .map((k) => k.trim().replace(/"/g, ""));
+    expect(kinds.length).toBeGreaterThanOrEqual(6);
+    for (const kind of kinds) {
+      const key = `HM-APPR-01.taintFrom.${kind}`;
+      expect(en[key], key).toBeTruthy();
+      expect(es[key], key).toBeTruthy();
+    }
+  });
+
   test("no em or en dashes in copy (house style)", () => {
     for (const [k, v] of [...Object.entries(en), ...Object.entries(es)]) expect(v, k).not.toMatch(/[–—]/);
   });

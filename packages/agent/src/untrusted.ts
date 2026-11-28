@@ -10,6 +10,13 @@ export function wrapUntrusted(text: string, source: string, id: string): string 
   return `<untrusted source="${source}" seal="${id}">\n${safe}\n</untrusted seal="${id}">`;
 }
 
+export interface BotInputOptions {
+  botId: string;
+  text: string;
+  seal: string;
+  at: number;
+}
+
 export interface BotInput {
   text: string;
   taint: TaintSource;
@@ -19,10 +26,12 @@ export interface BotInput {
  * Wraps another bot's message as untrusted data and returns the matching taint record (spec 6.4).
  * Another bot's words never count as the user's own words.
  */
-export function botInput(botId: string, text: string, id: string, at: number): BotInput {
+export function botInput({ botId, text, seal, at }: BotInputOptions): BotInput {
+  // The XML source attribute uses safeId so special characters can't break out of the wrapper,
+  // while taint.ref intentionally keeps the raw botId to match the stored bot record.
   const safeId = botId.replace(/["<>\\\r\n]/g, "");
   return {
-    text: wrapUntrusted(text, `bot:${safeId}`, id),
+    text: wrapUntrusted(text, `bot:${safeId}`, seal),
     taint: { kind: "bot", ref: botId, at },
   };
 }

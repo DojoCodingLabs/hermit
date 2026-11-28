@@ -9,7 +9,9 @@ import { contrast, stripComments, unlabelledControls } from "./a11y-scan.ts";
 import { palettes } from "./theme.ts";
 
 const SRC = new URL(".", import.meta.url).pathname;
-const files = ["app", "components"].flatMap((dir) => readdirSync(join(SRC, dir)).filter((f) => f.endsWith(".tsx")).map((f) => join(dir, f))).concat(["app-lock.tsx"]);
+const files = ["app", "components"]
+  .flatMap((dir) => readdirSync(join(SRC, dir), { recursive: true }).map(String).filter((f) => f.endsWith(".tsx")).map((f) => join(dir, f)))
+  .concat(readdirSync(SRC).filter((f) => f.endsWith(".tsx")));
 
 test("the scanner flags a Pressable without a role or a label", () => {
   const src = `<Pressable onPress={() => go("/x")} style={s}>\n<Text>{t("a.b")}</Text></Pressable>`;
@@ -34,6 +36,12 @@ test("the scanner ignores tags inside comments and reads arrows inside braces", 
 test("every control on every screen has a role and a label from copy", () => {
   const found = files.flatMap((f) => unlabelledControls(readFileSync(join(SRC, f), "utf8")).map((u) => `${f}:${u.line} ${u.tag} lacks ${u.missing.join(", ")}`));
   assert.deepEqual(found, []);
+});
+
+test("the scan includes nested route folders and top-level tsx screens in src", () => {
+  assert.ok(files.includes(join("app", "oauth", "mcp.tsx")));
+  assert.ok(files.includes(join("app", "oauth", "microsoft.tsx")));
+  assert.ok(files.includes("app-lock.tsx"));
 });
 
 test("contrast is computed as WCAG defines it", () => {

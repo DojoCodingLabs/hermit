@@ -19,7 +19,7 @@
 
 <p align="center">
   The model runs on your Android phone. Your memories stay there, encrypted.<br>
-  Anything that sends, pays or logs in waits for your fingerprint.
+  Payments and logins wait for your fingerprint. Sends ask first, unless you put a bot in Don't ask.
 </p>
 
 <p align="center">
@@ -212,7 +212,7 @@ The whole path, with the packages that own each step: [docs/architecture.md](doc
 | What | When | Where it goes |
 | :-- | :-- | :-- |
 | The model file | Once, on first run | From Hugging Face over HTTPS, checked against a pinned SHA-256 |
-| A WhatsApp reply | After your fingerprint | WhatsApp sends it from your account |
+| A WhatsApp reply | Asks first, unless the bot is in Don't ask | WhatsApp sends it from your account |
 | Calendar events | When you add one | Wherever your calendar already syncs |
 | Email | When you ask, or at night if you turned on the email job | Straight to your own mail provider. Sending asks first |
 | A web page or search (experimental) | When you ask. The first visit to each site in a chat asks you first | The site, or the search provider you pick |

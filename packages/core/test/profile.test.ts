@@ -76,7 +76,9 @@ describe("profile values (US-FORM-03)", () => {
   test("a sealed value opens only with its key and for its own kind", async () => {
     const key = webcrypto.getRandomValues(new Uint8Array(32));
     const sealed = await sealProfileValue(cipher, key, "id_number", "1-2345-6789");
-    expect(sealed).not.toContain("2345");
+    // The sealed value is hex: check the decoded bytes, not the hex text.
+    const sealedBytes = Buffer.from(sealed, "hex");
+    expect(sealedBytes.includes(Buffer.from("1-2345-6789", "utf8"))).toBe(false);
     expect(await openProfileValue(cipher, key, "id_number", sealed)).toBe("1-2345-6789");
     await expect(openProfileValue(cipher, key, "passport_number", sealed)).rejects.toThrow();
     await expect(openProfileValue(cipher, new Uint8Array(32), "id_number", sealed)).rejects.toThrow();

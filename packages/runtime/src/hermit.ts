@@ -481,6 +481,10 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
     store, sessions, memory, settings: table, audit,
     clear: (botId) => api.clearConversation(botId),
     busy: (botId) => running.has(botId),
+    setClearing: (botId, active) => {
+      if (active) clearing.add(botId);
+      else clearing.delete(botId);
+    },
     ...(ports.bots ? { confirm: (prompt: string) => ports.bots!.confirm(prompt) } : {}),
     ...(ports.copy ? { say: (key: string) => ports.copy!(ports.language(), key) } : {}),
     proposals,
@@ -887,7 +891,16 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
    * send already sees it.
    */
   const running = new Map<string, string[]>();
+  const clearing = new Set<string>();
   const botOf = new Map<string, string>();
+  class ClearingError extends Error {
+    constructor() {
+      super("This conversation is being cleared.");
+      this.name = "ClearingError";
+    }
+  }
+  const clearingReply = (): string =>
+    ports.copy ? ports.copy(ports.language(), "HM-BOT-02.clearing") : "This conversation is being cleared. Write again in a moment.";
   const markRunning = (botId: string, sessionId: string): (() => void) => {
     running.set(botId, [...(running.get(botId) ?? []), sessionId]);
     let ended = false;
@@ -907,14 +920,16 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
    * so lower-priority work waits for the whole turn, not just its current call (spec 6.6), and its bot is marked running.
    */
   const inTurn = <T>(sessionId: string, priority: RunPriority, run: (session: SessionState, botId: string) => Promise<T>): Promise<T> => {
-    const release = queue.hold(priority);
     const handedOut = botOf.get(sessionId);
+    if (handedOut !== undefined && clearing.has(handedOut)) return Promise.reject(new ClearingError());
+    const release = queue.hold(priority);
     let unmark = handedOut !== undefined ? markRunning(handedOut, sessionId) : undefined;
     return (async () => {
       try {
         const session = await sessions.load(sessionId);
         if (!session) throw new Error(`No session ${sessionId}.`);
         const botId = session.botId ?? HERMIT_BOT_ID;
+        if (clearing.has(botId)) throw new ClearingError();
         botOf.set(sessionId, botId);
         unmark ??= markRunning(botId, sessionId);
         return await run(session, botId);
@@ -1111,6 +1126,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
     },
     async startSession(opts = {}) {
       const botId = opts.botId ?? HERMIT_BOT_ID;
+      if (clearing.has(botId)) throw new ClearingError();
       // Only for a bot that exists (Hermit's row is the migration's own): a session of no bot could never run a turn.
       if (botId !== HERMIT_BOT_ID && !(await store.get(botId))) throw new Error(`No bot ${botId}.`);
       const id = ports.newId();
@@ -1120,6 +1136,7 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       return id;
     },
     async resumeSession(botId = HERMIT_BOT_ID) {
+      if (clearing.has(botId)) throw new ClearingError();
       const last = await sessions.latest(botId);
       if (!last) return api.startSession({ botId });
       botOf.set(last, botId);
@@ -1137,7 +1154,12 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       // F-M14: while a turn of that bot runs nothing is cleared, so its late writes never land in a chat that is gone.
       const runningIn = running.get(botId)?.at(-1);
       if (runningIn !== undefined) return runningIn;
-      await sessions.clear(botId);
+      clearing.add(botId);
+      try {
+        await sessions.clear(botId);
+      } finally {
+        clearing.delete(botId);
+      }
       return api.startSession({ botId });
     },
     memories: {
@@ -1154,7 +1176,9 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
       },
     },
     // The user's own turn, run as the session's bot (spec 6.6): its values are this turn's, built for that bot.
-    send: (sessionId, text, live = {}) => inTurn(sessionId, "user", async (session, botId) => {
+    send: async (sessionId, text, live = {}) => {
+      try {
+        return await inTurn(sessionId, "user", async (session, botId) => {
       const turn = await turnFor(botId);
       // Security review 00:40: what the prompt's notes were read from, this session has read too, before any model call.
       addReads(session, turn.profileReads);
@@ -1307,7 +1331,12 @@ export function createHermit(ports: HermitPorts, profile: ModelProfile): Hermit 
         },
       });
       return view;
-    }),
+    });
+      } catch (err) {
+        if (err instanceof ClearingError) return { kind: "reply", text: clearingReply() };
+        throw err;
+      }
+    },
     // Seguir, a reply the user is waiting for: it holds that priority, as the session's bot, with the bot's cache key (a
     // long reply's Seguir reads under the bot's own long key).
     continueReply: (sessionId, live = {}) => inTurn(sessionId, "reply", async (session, botId) => {

@@ -483,3 +483,158 @@ describe("a proposal's offer (F-M15)", () => {
     expect(p.used).toEqual(["o1"]);
   });
 });
+
+describe("refuse turns, startSession and resumeSession while a bot is being cleared (#108)", () => {
+  function defer() {
+    let open = () => {};
+    const promise = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    return { promise, open };
+  }
+
+  /** Wraps a SqlPort so the first write matching `match` waits on a deferred gate. */
+  function holdSqlOn(match: RegExp) {
+    const base = nodeSql();
+    const gate = defer();
+    const entered = defer();
+    let held = false;
+    const sql: typeof base = {
+      exec: async (q, params) => {
+        if (!held && match.test(q)) {
+          held = true;
+          entered.open();
+          await gate.promise;
+        }
+        return base.exec(q, params);
+      },
+      query: (q, params) => base.query(q, params),
+      transaction: (fn) => base.transaction((tx) => fn({
+        ...tx,
+        exec: async (q, params) => {
+          if (!held && match.test(q)) {
+            held = true;
+            entered.open();
+            await gate.promise;
+          }
+          return tx.exec(q, params);
+        },
+      })),
+      close: () => base.close(),
+    };
+    return { sql, entered: entered.promise, release: gate.open };
+  }
+
+  test("bots.reset refuses a concurrent send, startSession, and resumeSession without orphan chat_turns", async () => {
+    const h = holdSqlOn(/DELETE FROM sessions WHERE bot_id = \?/i);
+    const { createHermit } = await import("../src/hermit.ts");
+    const { PROFILE } = await import("./bot-harness.ts");
+    const store = createBotsStore(h.sql, () => NOW);
+    await migrate(h.sql);
+    await store.create({ id: "b1", name: "Viajes", role: "Planeas viajes.", grants: ["notes"], sources: none, mode: null });
+    let n = 0;
+    const hermit = createHermit({
+      sql: h.sql,
+      signer: ed25519Signer(new Uint8Array(32).fill(8)),
+      notifier: { schedule: async () => "n", cancel: async () => {} },
+      calendar: { list: async () => [], add: async () => {}, calendars: async () => [] },
+      replySender: { send: async () => "sent" },
+      engine: { complete: async () => ({ text: '{"choice":"respond"}', toolCalls: [] }) },
+      approvals: { request: async () => ({ kind: "denied" }) },
+      now: () => NOW,
+      timeZone: () => "America/Costa_Rica",
+      language: () => "es-419",
+      newId: () => `id${++n}`,
+      copy,
+    }, PROFILE);
+
+    const oldSession = await hermit.resumeSession("b1");
+    const resetting = hermit.bots.reset("b1");
+    await h.entered;
+
+    const refused = await hermit.send(oldSession, "hola durante reset");
+    expect(refused).toEqual({ kind: "reply", text: copy("es-419", "HM-BOT-02.clearing") });
+    await expect(hermit.startSession({ botId: "b1" })).rejects.toThrow();
+    await expect(hermit.resumeSession("b1")).rejects.toThrow();
+
+    h.release();
+    const res = await resetting;
+    expect(res.kind).toBe("done");
+    const orphans = await h.sql.query("SELECT id FROM chat_turns WHERE session_id NOT IN (SELECT id FROM sessions)");
+    expect(orphans).toEqual([]);
+  });
+
+  test("bots.remove refuses a concurrent send, startSession, and resumeSession without orphan chat_turns", async () => {
+    const h = holdSqlOn(/DELETE FROM bots WHERE id = \?/i);
+    const { createHermit } = await import("../src/hermit.ts");
+    const { PROFILE } = await import("./bot-harness.ts");
+    await migrate(h.sql);
+    const store = createBotsStore(h.sql, () => NOW);
+    await store.create({ id: "b1", name: "Viajes", role: "Planeas viajes.", grants: ["notes"], sources: none, mode: null });
+    let n = 0;
+    const hermit = createHermit({
+      sql: h.sql,
+      signer: ed25519Signer(new Uint8Array(32).fill(8)),
+      notifier: { schedule: async () => "n", cancel: async () => {} },
+      calendar: { list: async () => [], add: async () => {}, calendars: async () => [] },
+      replySender: { send: async () => "sent" },
+      engine: { complete: async () => ({ text: '{"choice":"respond"}', toolCalls: [] }) },
+      approvals: { request: async () => ({ kind: "denied" }) },
+      now: () => NOW,
+      timeZone: () => "America/Costa_Rica",
+      language: () => "en",
+      newId: () => `id${++n}`,
+      copy,
+    }, PROFILE);
+
+    const oldSession = await hermit.resumeSession("b1");
+    const removing = hermit.bots.remove("b1");
+    await h.entered;
+
+    const refused = await hermit.send(oldSession, "hello during remove");
+    expect(refused).toEqual({ kind: "reply", text: copy("en", "HM-BOT-02.clearing") });
+    await expect(hermit.startSession({ botId: "b1" })).rejects.toThrow();
+    await expect(hermit.resumeSession("b1")).rejects.toThrow();
+
+    h.release();
+    const res = await removing;
+    expect(res.kind).toBe("done");
+    const orphans = await h.sql.query("SELECT id FROM chat_turns WHERE session_id NOT IN (SELECT id FROM sessions)");
+    expect(orphans).toEqual([]);
+  });
+
+  test("clearConversation refuses a concurrent send without orphan chat_turns", async () => {
+    const h = holdSqlOn(/DELETE FROM sessions WHERE bot_id = \?/i);
+    const { createHermit } = await import("../src/hermit.ts");
+    const { PROFILE } = await import("./bot-harness.ts");
+    await migrate(h.sql);
+    let n = 0;
+    const hermit = createHermit({
+      sql: h.sql,
+      signer: ed25519Signer(new Uint8Array(32).fill(8)),
+      notifier: { schedule: async () => "n", cancel: async () => {} },
+      calendar: { list: async () => [], add: async () => {}, calendars: async () => [] },
+      replySender: { send: async () => "sent" },
+      engine: { complete: async () => ({ text: '{"choice":"respond"}', toolCalls: [] }) },
+      approvals: { request: async () => ({ kind: "denied" }) },
+      now: () => NOW,
+      timeZone: () => "America/Costa_Rica",
+      language: () => "es-419",
+      newId: () => `id${++n}`,
+      copy,
+    }, PROFILE);
+
+    const oldSession = await hermit.resumeSession();
+    const clearing = hermit.clearConversation();
+    await h.entered;
+
+    const refused = await hermit.send(oldSession, "hola durante clear");
+    expect(refused).toEqual({ kind: "reply", text: copy("es-419", "HM-BOT-02.clearing") });
+
+    h.release();
+    const fresh = await clearing;
+    expect(fresh).toBeTruthy();
+    const orphans = await h.sql.query("SELECT id FROM chat_turns WHERE session_id NOT IN (SELECT id FROM sessions)");
+    expect(orphans).toEqual([]);
+  });
+});

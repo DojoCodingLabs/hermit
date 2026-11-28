@@ -34,6 +34,8 @@ export interface BotsApiDeps {
   clear(botId: string): Promise<string>;
   /** A turn of that bot is running (Review Focus 1). */
   busy(botId: string): boolean;
+  /** Marks a bot as clearing while its chats or row are being deleted (#108). */
+  setClearing?(botId: string, active: boolean): void;
   /** The fingerprint. Without it, every change that needs one is declined. */
   confirm?: BotPorts["confirm"];
   /** A copy key in the app's language, for the fingerprint's prompt; English without it. */
@@ -333,15 +335,20 @@ export function createBotsApi(deps: BotsApiDeps): { bots: HermitBots; modes: Her
       if (bot.primary) return refused("primary");
       // Review Focus 1: never under a running turn, whose late writes would leave chats or notes for a bot that is gone.
       if (deps.busy(id)) return refused("busy");
+      deps.setClearing?.(id, true);
       try {
-        await store.remove(id);
-      } catch (err) {
-        return storeRefusal(err);
+        try {
+          await store.remove(id);
+        } catch (err) {
+          return storeRefusal(err);
+        }
+        // The store deleted its chats, notes, grants and sources; this also drops its sessions kept in memory.
+        await deps.sessions.clear(id);
+        await log(id, "bot.deleted");
+        return done(bot);
+      } finally {
+        deps.setClearing?.(id, false);
       }
-      // The store deleted its chats, notes, grants and sources; this also drops its sessions kept in memory.
-      await deps.sessions.clear(id);
-      await log(id, "bot.deleted");
-      return done(bot);
     },
 
     async notes(id, opts = {}) {

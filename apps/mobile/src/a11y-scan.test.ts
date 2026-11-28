@@ -5,11 +5,25 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { contrast, stripComments, unlabelledControls } from "./a11y-scan.ts";
 import { palettes } from "./theme.ts";
 
-const SRC = new URL(".", import.meta.url).pathname;
-const files = ["app", "components"].flatMap((dir) => readdirSync(join(SRC, dir)).filter((f) => f.endsWith(".tsx")).map((f) => join(dir, f))).concat(["app-lock.tsx"]);
+const SRC = fileURLToPath(new URL(".", import.meta.url));
+const files = [
+  ...["app", "components"].flatMap((dir) =>
+    readdirSync(join(SRC, dir), { recursive: true })
+      .map(String)
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => join(dir, f))
+  ),
+  ...readdirSync(SRC).filter((f) => f.endsWith(".tsx")),
+];
+
+test("the scanner walks nested route folders and top-level screens", () => {
+  assert.ok(files.includes(join("app", "oauth", "mcp.tsx")));
+  assert.ok(files.includes("app-lock.tsx"));
+});
 
 test("the scanner flags a Pressable without a role or a label", () => {
   const src = `<Pressable onPress={() => go("/x")} style={s}>\n<Text>{t("a.b")}</Text></Pressable>`;
